@@ -85,6 +85,7 @@ export default defineSchema({
         ga: v.string(), // "172/8"
         result: v.union(v.literal("W"), v.literal("L")),
         margin: v.string(), // "15 runs" / "6 wkts (8 balls left)"
+        superOver: v.optional(v.string()), // "SO 6/0-2/0" when it went the distance
       })
     ),
     playoffs: v.optional(
@@ -162,6 +163,9 @@ export default defineSchema({
         picks: v.array(v.string()), // playerSeason ids
         seed: v.string(),
         submittedAt: v.number(),
+        // set when this manager has watched their season out — used to hold
+        // back the room result so nobody gets spoiled early
+        finishedAt: v.optional(v.number()),
       })
     ),
     createdAt: v.number(),
