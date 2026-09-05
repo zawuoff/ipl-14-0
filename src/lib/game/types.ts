@@ -69,22 +69,22 @@ export interface StyleTemplate {
 export const STYLE_TEMPLATES: StyleTemplate[] = [
   {
     name: "Balanced",
-    blurb: "2-3-1-2-2-1 · the classic",
+    blurb: "The classic",
     config: { Opener: 2, Middle: 3, WK: 1, AR: 2, Pace: 2, Spin: 1 },
   },
   {
     name: "Pace Attack",
-    blurb: "3 quicks, 1 spinner",
+    blurb: "Three quicks, one spinner",
     config: { Opener: 2, Middle: 3, WK: 1, AR: 1, Pace: 3, Spin: 1 },
   },
   {
     name: "Spin Twins",
-    blurb: "2 spinners strangle",
+    blurb: "Two spinners strangle",
     config: { Opener: 2, Middle: 3, WK: 1, AR: 2, Pace: 1, Spin: 2 },
   },
   {
     name: "Batting Heavy",
-    blurb: "4 middle-order guns",
+    blurb: "Four middle-order guns",
     config: { Opener: 2, Middle: 4, WK: 1, AR: 1, Pace: 2, Spin: 1 },
   },
 ];

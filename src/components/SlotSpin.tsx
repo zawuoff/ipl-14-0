@@ -1,8 +1,9 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Flap, PrimaryButton } from "./ui";
 
-// 38-0-style slot reveal: CLUB × SEASON boxes cycle, decelerate, lock.
-// Outcome-first (target predetermined), theater-second.
+// The board: SQUAD x SEASON cells cycle, decelerate, then lock.
+// Outcome-first (the target is already decided), theatre second.
 
 interface Props {
   targetTeamId: string;
@@ -104,7 +105,7 @@ export function SlotSpin({ targetTeamId, targetName, targetColour, clubPool, spi
     step();
   }, [targetTeamId, clubPool]);
 
-  // Space / tap-anywhere to spin (38-0 style)
+  // Space or tap anywhere to spin
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (e.code === "Space") {
@@ -116,7 +117,6 @@ export function SlotSpin({ targetTeamId, targetName, targetColour, clubPool, spi
     return () => window.removeEventListener("keydown", h);
   }, [start]);
 
-  // reset when a new spin arrives
   useEffect(() => {
     setClub("");
     setSeason("");
@@ -125,49 +125,45 @@ export function SlotSpin({ targetTeamId, targetName, targetColour, clubPool, spi
     stateRef.current.cycling = false;
   }, [spinKey]);
 
-  return (
-    <div className="text-center cursor-pointer" onClick={start}>
-      <div className="flex items-center justify-center gap-2 sm:gap-3">
-        <div className="flex-1 max-w-[220px]">
-          <div className="text-[10px] tracking-[0.25em] text-zinc-500 mb-1">CLUB</div>
-          <div
-            className={`rounded-xl border bg-[#12121f] px-3 py-4 font-black text-xl sm:text-2xl min-h-[64px] flex items-center justify-center transition-colors ${
-              locked ? "border-emerald-400/70" : "border-white/10"
-            }`}
-            style={locked ? { color: targetColour, boxShadow: `0 0 24px -6px ${targetColour}` } : undefined}
-          >
-            {club || "···"}
-          </div>
-        </div>
-        <div className="text-zinc-600 font-black text-xl">×</div>
-        <div className="w-[120px] sm:w-[150px]">
-          <div className="text-[10px] tracking-[0.25em] text-zinc-500 mb-1">SEASON</div>
-          <div
-            className={`rounded-xl border bg-[#12121f] px-3 py-4 font-black text-xl sm:text-2xl min-h-[64px] flex items-center justify-center transition-colors ${
-              locked ? "border-emerald-400/70 text-amber-300" : "border-white/10"
-            }`}
-          >
-            {season || "···"}
-          </div>
-        </div>
-      </div>
+  const dim = !club && !locked;
 
-      {locked ? (
-        <div className="mt-3 text-sm text-zinc-300">
-          <span className="font-bold text-white">{targetName}</span>
+  return (
+    <div className="bg-ink text-white px-5 lg:px-16 py-6 lg:py-7" onClick={start}>
+      <div className="mx-auto w-full max-w-[1440px] flex flex-col gap-4 lg:gap-5">
+        <div className="flex gap-3 lg:gap-3.5">
+          <div className="flex-1 min-w-0">
+            <Flap
+              label="Squad"
+              value={<span className={dim ? "text-[#3A3A3A]" : ""}>{club || "···"}</span>}
+              tone={locked ? "team" : "plate"}
+              colour={targetColour}
+              className="h-[112px] lg:h-[116px]"
+              valueClassName="text-[56px] leading-[52px] sm:text-[64px] sm:leading-[58px] lg:text-[72px] lg:leading-[66px]"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <Flap
+              label="Season"
+              value={<span className={dim ? "text-[#3A3A3A]" : ""}>{season || "····"}</span>}
+              className="h-[112px] lg:h-[116px]"
+              valueClassName="text-[56px] leading-[52px] sm:text-[64px] sm:leading-[58px] lg:text-[72px] lg:leading-[66px]"
+            />
+          </div>
         </div>
-      ) : (
-        <button
-          onClick={start}
-          disabled={cycling}
-          className="mt-5 px-8 py-3.5 rounded-xl bg-emerald-400 text-black font-black text-lg hover:bg-emerald-300 disabled:opacity-70 shadow-[0_0_36px_-8px_rgba(52,211,153,.8)]"
-        >
-          {cycling ? "Spinning…" : "🎰 Spin the Wheel"}
-        </button>
-      )}
-      {!locked && !cycling && (
-        <p className="text-[11px] text-zinc-500 mt-2">or tap anywhere, or press Space</p>
-      )}
+
+        {locked ? (
+          <p className="font-semibold text-[17px] leading-[22px]">{targetName}</p>
+        ) : (
+          <>
+            <PrimaryButton className="w-full" disabled={cycling} onClick={start}>
+              {cycling ? "Spinning…" : "Spin the board"}
+            </PrimaryButton>
+            <p className="text-[13px] leading-[18px] text-muted-plate text-center">
+              156 real team-seasons, 2008 to 2025. Tap the board or press space.
+            </p>
+          </>
+        )}
+      </div>
     </div>
   );
 }

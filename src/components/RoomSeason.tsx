@@ -17,6 +17,7 @@ import { mulberry32, type Difficulty, type PlayerSeason } from "@/lib/game/types
 import { PlayoffMatch, type PlayoffDetail } from "./PlayoffMatch";
 import { SeasonReport } from "./SeasonReport";
 import { copyText } from "@/lib/clipboard";
+import { Flap, PrimaryButton, OutlineButton, PlateButton, SectionHead, WhatsAppIcon } from "./ui";
 
 const ALL_PLAYERS = buildPlayerSeasons();
 const BY_ID = new Map(ALL_PLAYERS.map((p) => [p.id, p]));
@@ -285,7 +286,7 @@ export function RoomSeason({ room }: { room: any }) {
   }, [league, myIdx, myName, myFixtures, members, me, room]);
 
   if (!league || myIdx < 0 || !report) {
-    return <p className="text-sm text-zinc-500 mt-4">Computing the shared season…</p>;
+    return <p className="text-[15px] text-muted py-4">Working out the shared season…</p>;
   }
 
   const nonFinals = league.playoffs.filter((p) => p.stage !== "Final");
@@ -296,102 +297,131 @@ export function RoomSeason({ room }: { room: any }) {
   const share = `${myName} went ${report.wins}-${report.losses} in a shared 18-game room season${report.champion ? " and WON IT" : ""} — ${typeof window !== "undefined" ? window.location.origin : "14-0.app"}/m/${room.code}`;
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-6">
       {(phase === "league" || phase === "leagueDone") && (
-        <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] tracking-[0.25em] text-zinc-500">
-              {phase === "league" ? `ROUND ${myFixtures[Math.min(simIdx, myFixtures.length - 1)]?.round ?? 18} / 18` : "SEASON COMPLETE"}
-            </span>
-            <span
-              className={`px-3 py-1 rounded-full font-black text-sm ${
-                losses === 0 && phase === "league" ? "bg-emerald-400 text-black animate-pulse" : "bg-white/10 text-white"
-              }`}
-            >
-              {wins}-{losses}
-            </span>
-            <span className="ml-auto flex items-center gap-1.5">
-              <button onClick={() => setSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))} className="text-xs px-2.5 py-1.5 rounded bg-white/10 border border-white/10">
-                {speed}x ⏩
-              </button>
+        <>
+          <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-5 lg:px-7 lg:py-6 flex flex-col sm:flex-row sm:items-end gap-5 sm:gap-10">
+            <div className="flex gap-3 sm:shrink-0">
+              <Flap
+                label="Won"
+                value={wins}
+                tone={losses === 0 && wins > 0 ? "turf" : "plate"}
+                wrapClassName="flex-1 sm:flex-none sm:w-[124px]"
+                className="h-[88px] sm:h-[112px]"
+                valueClassName="text-[72px] leading-[64px] sm:text-[88px] sm:leading-[78px]"
+              />
+              <Flap
+                label="Lost"
+                value={losses}
+                wrapClassName="flex-1 sm:flex-none sm:w-[124px]"
+                className="h-[88px] sm:h-[112px]"
+                valueClassName="text-[72px] leading-[64px] sm:text-[88px] sm:leading-[78px]"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5 flex-1 sm:pb-1">
+              <span className="font-semibold text-[20px] leading-[26px] sm:text-[24px] sm:leading-8">
+                {phase === "league"
+                  ? `Round ${myFixtures[Math.min(simIdx, myFixtures.length - 1)]?.round ?? 18} of 18`
+                  : "League complete"}
+              </span>
+              <span className="text-[15px] leading-[22px] text-body-plate">
+                Playing as {myName}{mate ? ` against ${mate.name}` : ""}
+              </span>
+            </div>
+            <div className="flex gap-2.5 sm:shrink-0 sm:pb-1.5">
+              <PlateButton className="h-11 flex-1 sm:flex-none" onClick={() => setSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}>
+                Speed {speed}x
+              </PlateButton>
               {phase === "league" && (
-                <button
+                <PlateButton
+                  className="h-11 flex-1 sm:flex-none"
                   onClick={() => {
                     setSimIdx(myFixtures.length);
                     setPhase("leagueDone");
                   }}
-                  className="text-xs px-2.5 py-1.5 rounded bg-white/10 border border-white/10"
                 >
-                  Skip ⏭
-                </button>
+                  Skip to end
+                </PlateButton>
               )}
-            </span>
+            </div>
           </div>
 
-          <div ref={feedRef} className="mt-3 space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
-            {shown.map((f, i) => {
-              const iAmHome = f.home === myIdx;
-              const opp = league.teams[iAmHome ? f.away : f.home].name;
-              const isH2H = league.teams[f.home].human && league.teams[f.away].human;
-              const won = f.winner === myIdx;
-              const st = report.matchStars[i];
-              const hero = f.superOverNote
-                ? `Super Over ${f.superOverNote}`
-                : won
-                  ? f.margin.includes("runs")
-                    ? `${shortName(st.bowl.player)} ${st.bowl.wickets}/${st.bowl.runsConceded}`
-                    : `${shortName(st.bat.player)} ${st.bat.runs}(${st.bat.balls})`
-                  : "their night";
-              return (
-                <div key={i}>
-                  <button
-                    onClick={() => (isH2H && f.detail ? setExpanded(expanded === i ? null : i) : undefined)}
-                    className={`w-full flex items-center gap-2 text-sm rounded-lg px-3 py-2 border text-left ${
-                      won ? "border-emerald-400/30 bg-emerald-500/10" : "border-red-400/30 bg-red-500/10"
-                    }`}
-                  >
-                    <span className="text-zinc-500 w-8 text-xs">R{f.round}</span>
-                    <span>{won ? "🟩" : "🟥"}</span>
-                    <span className="font-mono font-bold">
-                      {iAmHome ? f.hs : f.as} <span className="text-zinc-500 font-normal">vs {iAmHome ? f.as : f.hs}</span>
-                    </span>
-                    <span className="text-xs">
-                      {isH2H ? <>⚔️ <b>{opp}</b></> : <span className="text-zinc-400">{opp}</span>}
-                    </span>
-                    <span className="ml-auto text-[11px] text-zinc-400">{f.margin === "Super Over" ? "SO" : (won ? "won by " : "lost by ") + f.margin}</span>
-                  </button>
-                  <div className="text-[11px] text-zinc-500 ml-11 mb-1">⚾ {hero}{isH2H && f.detail ? " · tap for ball-by-ball" : ""}</div>
-                  {expanded === i && isH2H && f.detail && (
-                    <div className="mt-1 mb-2">
-                      <PlayoffMatch
-                        stage={`Rivalry · Round ${f.round}`}
-                        detail={toDetail(f.detail, f.home, f.away, myIdx, myName, opp, f.winner === myIdx)}
-                        userTag={myName}
-                        speed={speed}
-                        nextLabel="Close"
-                        onDone={() => setExpanded(null)}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          <div>
+            <SectionHead title="Your results" note="Head-to-head games open ball by ball" />
+            <div ref={feedRef} className="mt-2.5">
+              {shown.map((f, i) => {
+                const iAmHome = f.home === myIdx;
+                const opp = league.teams[iAmHome ? f.away : f.home].name;
+                const isH2H = league.teams[f.home].human && league.teams[f.away].human;
+                const won = f.winner === myIdx;
+                const st = report.matchStars[i];
+                const hero = f.superOverNote
+                  ? `Super over, ${f.superOverNote}`
+                  : won
+                    ? f.margin.includes("runs")
+                      ? `${shortName(st.bowl.player)} ${st.bowl.wickets} for ${st.bowl.runsConceded}`
+                      : `${shortName(st.bat.player)} ${st.bat.runs} off ${st.bat.balls}`
+                    : "their night";
+                return (
+                  <div key={i}>
+                    <button
+                      onClick={() => (isH2H && f.detail ? setExpanded(expanded === i ? null : i) : undefined)}
+                      className={`w-full flex items-center gap-2.5 lg:gap-3.5 py-2.5 text-left border-t border-hairline ${
+                        i === shown.length - 1 ? "border-b" : ""
+                      } ${isH2H && f.detail ? "hover:bg-panel" : ""}`}
+                    >
+                      <span className="w-7 shrink-0 text-[13px] leading-[18px] text-muted">R{f.round}</span>
+                      <span
+                        className="w-6 h-6 shrink-0 flex items-center justify-center rounded font-display font-bold text-[18px] leading-none text-white pt-[2px]"
+                        style={{ backgroundColor: won ? "#1A8A3C" : "#D8321F" }}
+                      >
+                        {won ? "W" : "L"}
+                      </span>
+                      <span className="flex flex-col flex-1 min-w-0 lg:flex-row lg:items-baseline lg:gap-3.5">
+                        <span className="font-medium text-[15px] leading-5 lg:w-[220px] lg:shrink-0 truncate">
+                          {isH2H ? "Head to head with " : ""}
+                          {opp}
+                        </span>
+                        <span className="text-[13px] leading-[18px] lg:text-[14px] text-muted truncate">
+                          {f.margin === "Super Over" ? "Super over" : `${won ? "Won" : "Lost"} by ${f.margin}`} · {hero}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-right font-display font-semibold text-[19px] leading-5 lg:text-[22px] tabular pt-[3px] whitespace-nowrap">
+                        {iAmHome ? f.hs : f.as} · {iAmHome ? f.as : f.hs}
+                      </span>
+                    </button>
+                    {expanded === i && isH2H && f.detail && (
+                      <div className="py-4">
+                        <PlayoffMatch
+                          stage={`Head to head, round ${f.round}`}
+                          detail={toDetail(f.detail, f.home, f.away, myIdx, myName, opp, f.winner === myIdx)}
+                          userTag={myName}
+                          speed={speed}
+                          nextLabel="Close"
+                          onDone={() => setExpanded(null)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {phase === "leagueDone" && (
-            <div className="mt-4">
+            <div>
               {report.madePlayoffs ? (
                 <>
                   <SeasonReport result={report} forecast={null} bat={report._st.bat} bowl={report._st.bowl} leagueOnly slim />
-                  <button
+                  <PrimaryButton
+                    className="w-full sm:w-auto sm:px-10 mt-5"
                     onClick={() => {
                       setPoIdx(0);
                       setPhase("playoffs");
                     }}
-                    className="mt-4 w-full py-4 rounded-2xl bg-amber-400 text-black font-black text-xl hover:bg-amber-300"
                   >
-                    ⚔️ Finished #{report.rank} — Start Playoffs →
-                  </button>
+                    Finished #{report.rank} — start the playoffs
+                  </PrimaryButton>
                 </>
               ) : (
                 <>
@@ -402,14 +432,16 @@ export function RoomSeason({ room }: { room: any }) {
               )}
             </div>
           )}
-        </div>
+        </>
       )}
 
       {phase === "playoffs" && (
-        <div className="rounded-2xl border border-amber-300/25 bg-black/40 p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] tracking-[0.25em] text-amber-200 font-bold">⚔️ PLAYOFFS</span>
-            <span className="text-[11px] text-zinc-400">via {report.wins}-{report.losses} · #{report.rank}</span>
+        <div className="flex flex-col gap-3.5">
+          <div className="flex items-baseline gap-3">
+            <h2 className="font-semibold text-[20px] leading-[26px]">Playoffs</h2>
+            <span className="text-[14px] leading-5 text-muted">
+              in as #{report.rank} on {report.wins}-{report.losses}
+            </span>
           </div>
           {myNonFinals.slice(0, poIdx).map((p, i) => (
             <PlayoffSummary key={i} p={p} myIdx={myIdx} teams={league.teams} />
@@ -432,52 +464,54 @@ export function RoomSeason({ room }: { room: any }) {
             />
           )}
           {myNonFinals[poIdx] && !myNonFinals[poIdx].detail && (
-            <div className="text-sm text-zinc-400">Result pending…</div>
+            <p className="text-[15px] text-muted">Result pending…</p>
           )}
         </div>
       )}
 
       {phase === "preFinal" && myFinal && (
-        <div className="rounded-2xl border border-amber-300/50 bg-gradient-to-b from-amber-400/15 to-black p-6 text-center">
-          <div className="text-[11px] tracking-[0.3em] text-amber-200 font-bold">THE FINAL</div>
-          <div className="font-black text-3xl mt-2">
-            {myName} <span className="text-zinc-500 text-xl">vs</span> {oppOf(myFinal, myIdx, league)}
-          </div>
-          <button
-            onClick={() => setPhase("final")}
-            className="mt-4 px-10 py-4 rounded-2xl bg-amber-400 text-black font-black text-xl hover:bg-amber-300"
-          >
-            🏆 Play the Final
-          </button>
+        <div className="-mx-5 lg:mx-0 lg:rounded-control bg-ink text-white px-5 py-8 lg:px-10 lg:py-12 text-center flex flex-col items-center gap-3">
+          <span className="text-[13px] leading-[18px] text-muted-plate">The final</span>
+          <span className="font-semibold text-[26px] leading-8 lg:text-[36px] lg:leading-[44px]">
+            {myName} versus {oppOf(myFinal, myIdx, league)}
+          </span>
+          <PrimaryButton className="mt-3 w-full sm:w-auto sm:px-10" onClick={() => setPhase("final")}>
+            Play the final
+          </PrimaryButton>
         </div>
       )}
 
       {phase === "final" && myFinal?.detail && (
-        <div className="rounded-2xl border border-amber-300/25 bg-black/40 p-4">
-          <PlayoffMatch
-            stage="Final"
-            detail={toDetail(myFinal.detail, myFinal.t1, myFinal.t2, myIdx, myName, oppOf(myFinal, myIdx, league), myFinal.winner === myIdx)!}
-            userTag={myName}
-            speed={speed}
-            fullMatch
-            nextLabel={myFinal.winner === myIdx ? "🏆 Lift the trophy" : "Full-time — results"}
-            onDone={() => setPhase("done")}
-          />
-        </div>
+        <PlayoffMatch
+          stage="Final"
+          detail={toDetail(myFinal.detail, myFinal.t1, myFinal.t2, myIdx, myName, oppOf(myFinal, myIdx, league), myFinal.winner === myIdx)!}
+          userTag={myName}
+          speed={speed}
+          fullMatch
+          nextLabel={myFinal.winner === myIdx ? "Lift the trophy" : "Full time — see the results"}
+          onDone={() => setPhase("done")}
+        />
       )}
 
       {phase === "done" && (
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-          <div className="font-black text-2xl text-center">
-            {report.champion
-              ? `🏆 ${myName.toUpperCase()} WINS THE ROOM`
-              : report.madePlayoffs
-                ? `💔 Knocked out — ${report.playoffs[report.playoffs.length - 1]?.stage ?? "playoffs"}`
-                : `📉 ${report.wins}-${report.losses}`}
-          </div>
-          <div className="text-xs text-zinc-400 mt-1 text-center">
-            #{report.rank} · {report.points} pts · NRR {report.nrr > 0 ? "+" : ""}
-            {report.nrr}
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-2">
+            <h2
+              className={`font-semibold text-[26px] leading-8 lg:text-[32px] lg:leading-10 ${
+                report.champion ? "text-trophy" : ""
+              }`}
+            >
+              {report.champion
+                ? `${myName} wins the room.`
+                : report.madePlayoffs
+                  ? `Knocked out in ${report.playoffs[report.playoffs.length - 1]?.stage ?? "the playoffs"}.`
+                  : `${report.wins}-${report.losses}, no playoffs.`}
+            </h2>
+            <p className="text-[15px] leading-[22px] text-muted">
+              Finished #{report.rank} on {report.points} points, net run rate{" "}
+              {report.nrr > 0 ? "+" : ""}
+              {report.nrr}.
+            </p>
           </div>
           <SeasonReport result={report} forecast={null} bat={report._st.bat} bowl={report._st.bowl} compact />
           <RoomTable rows={report.table} me={myName} mate={mate?.name} />
@@ -545,86 +579,120 @@ function PlayoffSummary({ p, myIdx, teams }: { p: SharedPlayoff; myIdx: number; 
   const iAmHome = p.t1 === myIdx;
   const win = p.winner === myIdx;
   return (
-    <div className={`rounded-lg px-3 py-2 border text-sm ${win ? "border-amber-300/40 bg-amber-400/[0.07]" : "border-red-400/30 bg-red-500/10"}`}>
-      <div className="text-[10px] tracking-[0.2em] text-zinc-400">{p.stage.toUpperCase()}</div>
-      <div className="flex items-center gap-2 mt-0.5">
-        <span>{win ? "🟩" : "🟥"}</span>
-        <span className="font-mono font-bold">{iAmHome ? p.s1 : p.s2}</span>
-        <span className="text-zinc-500">vs</span>
-        <span className="font-mono">{iAmHome ? p.s2 : p.s1} {teams[iAmHome ? p.t2 : p.t1].name}</span>
-        <span className="ml-auto text-xs text-zinc-300">{win ? "won by " : "lost by"}{p.margin}</span>
-      </div>
+    <div className="flex items-center gap-3 py-3 border-t border-hairline">
+      <span className="w-[110px] shrink-0 text-[13px] leading-[18px] text-muted">{p.stage}</span>
+      <span
+        className="w-6 h-6 shrink-0 flex items-center justify-center rounded font-display font-bold text-[18px] leading-none pt-[2px]"
+        style={{ backgroundColor: win ? "#E0A81C" : "#D8321F", color: win ? "#000" : "#fff" }}
+      >
+        {win ? "W" : "L"}
+      </span>
+      <span className="flex-1 min-w-0 text-[15px] leading-5 truncate">
+        {win ? "Won" : "Lost"} by {p.margin} against {teams[iAmHome ? p.t2 : p.t1].name}
+      </span>
+      <span className="shrink-0 font-display font-semibold text-[20px] leading-5 pt-[3px] tabular">
+        {iAmHome ? p.s1 : p.s2} · {iAmHome ? p.s2 : p.s1}
+      </span>
     </div>
   );
 }
 
 function RoomTable({ rows, me, mate }: { rows: TableRow[]; me: string; mate?: string }) {
   return (
-    <div className="mt-4 overflow-hidden rounded-xl border border-white/10">
-      <div className="text-[10px] tracking-[0.25em] text-zinc-500 px-3 pt-2.5">SHARED TABLE · TOP 4 PLAYOFFS</div>
-      <table className="w-full text-sm mt-1">
-        <thead>
-          <tr className="text-[10px] text-zinc-500 border-b border-white/10">
-            <th className="text-left font-semibold px-3 py-1.5">#</th>
-            <th className="text-left font-semibold px-1 py-1.5">TEAM</th>
-            <th className="font-semibold px-1 py-1.5">P</th>
-            <th className="font-semibold px-1 py-1.5">W</th>
-            <th className="font-semibold px-1 py-1.5">L</th>
-            <th className="font-semibold px-1 py-1.5">PTS</th>
-            <th className="text-right font-semibold px-3 py-1.5">NRR</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <>
-              <tr key={r.team} className={r.team === me ? "bg-emerald-400/15 font-bold" : r.team === mate ? "bg-sky-400/10 font-bold" : i % 2 ? "bg-white/[0.02]" : ""}>
-                <td className="px-3 py-1.5 text-zinc-400">{i + 1}</td>
-                <td className="px-1 py-1.5">
-                  {r.team === me ? "⭐ " : r.team === mate ? "⚔️ " : ""}
-                  {r.team}
-                </td>
-                <td className="px-1 py-1.5 text-center text-zinc-400">{r.p}</td>
-                <td className="px-1 py-1.5 text-center">{r.w}</td>
-                <td className="px-1 py-1.5 text-center text-zinc-400">{r.l}</td>
-                <td className="px-1 py-1.5 text-center font-bold">{r.pts}</td>
-                <td className="px-3 py-1.5 text-right font-mono text-xs">
-                  {r.nrr > 0 ? "+" : ""}
-                  {r.nrr}
-                </td>
-              </tr>
-              {i === 3 && (
-                <tr key="cut">
-                  <td colSpan={7} className="border-b-2 border-dashed border-emerald-400/50 h-0 p-0" />
-                </tr>
-              )}
-            </>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <section className="flex flex-col mt-6">
+      <SectionHead title="The shared table" note="Top 4 go through" />
+      <div className="flex items-center gap-2 h-7 mt-1 text-[12px] leading-4 text-muted">
+        <span className="w-[22px] shrink-0" />
+        <span className="flex-1">Team</span>
+        <span className="w-[26px] shrink-0 text-right">P</span>
+        <span className="w-[26px] shrink-0 text-right">W</span>
+        <span className="w-[26px] shrink-0 text-right">L</span>
+        <span className="w-[34px] shrink-0 text-right">Pts</span>
+        <span className="w-[54px] shrink-0 text-right">NRR</span>
+      </div>
+      {rows.map((r, i) => {
+        const isMe = r.team === me;
+        const isMate = r.team === mate;
+        const faded = !isMe && !isMate && i > 3;
+        return (
+          <div key={r.team}>
+            <div
+              className={`flex items-center gap-2 h-[42px] px-2 ${
+                isMe ? "bg-ink text-white rounded-control" : "border-t border-hairline"
+              } ${i === rows.length - 1 && !isMe ? "border-b" : ""}`}
+            >
+              <span className="w-[22px] shrink-0 font-display font-semibold text-[20px] leading-[18px] pt-[3px] tabular">
+                {i + 1}
+              </span>
+              <span
+                className={`flex-1 min-w-0 truncate ${
+                  isMe || isMate ? "font-semibold text-[16px] leading-[22px]" : "text-[15px] leading-5"
+                } ${faded ? "text-muted" : ""}`}
+              >
+                {r.team}
+                {isMe ? " (you)" : ""}
+              </span>
+              {(["p", "w", "l"] as const).map((k) => (
+                <span
+                  key={k}
+                  className={`w-[26px] shrink-0 text-right font-display font-medium text-[19px] leading-[18px] pt-[3px] tabular ${
+                    faded ? "text-muted" : ""
+                  }`}
+                >
+                  {r[k]}
+                </span>
+              ))}
+              <span
+                className={`w-[34px] shrink-0 text-right font-display font-semibold text-[19px] leading-[18px] pt-[3px] tabular ${
+                  faded ? "text-muted" : ""
+                }`}
+              >
+                {r.pts}
+              </span>
+              <span
+                className={`w-[54px] shrink-0 text-right font-display font-medium text-[19px] leading-[18px] pt-[3px] tabular ${
+                  faded ? "text-muted" : ""
+                }`}
+              >
+                {r.nrr > 0 ? "+" : ""}
+                {r.nrr}
+              </span>
+            </div>
+            {i === 3 && (
+              <div className="flex items-center h-7 pt-1.5 border-t-2 border-ink">
+                <span className="text-[12px] leading-4 text-muted">Playoff cut</span>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </section>
   );
 }
 
 function RoomShare({ share, copied, setCopied, code }: { share: string; copied: boolean; setCopied: (v: boolean) => void; code: string }) {
   return (
-    <div className="mt-4 rounded-xl border border-emerald-300/30 bg-emerald-400/[0.07] p-3">
-      <div className="text-xs text-emerald-100/80 font-mono break-all">{share}</div>
-      <div className="flex gap-2 mt-2">
-        <button
-          onClick={async () => {
-            if (await copyText(share)) {
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            }
-          }}
-          className="px-4 py-2 rounded-lg bg-emerald-400 text-black font-bold text-sm"
-        >
-          {copied ? "✅ Copied!" : "📋 Copy result"}
-        </button>
-        <a href={`/m/${code}`} className="px-4 py-2 rounded-lg bg-white/10 border border-white/15 text-sm">
-          🔗 Room /m/{code}
-        </a>
-      </div>
+    <div className="mt-6 flex flex-col gap-2.5 max-w-[420px]">
+      <a
+        href={`https://wa.me/?text=${encodeURIComponent(share)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2.5 h-14 rounded-control bg-turf text-white font-semibold text-[16px] hover:bg-[#15702f] transition-colors"
+      >
+        <WhatsAppIcon />
+        Share on WhatsApp
+      </a>
+      <OutlineButton
+        onClick={async () => {
+          if (await copyText(share)) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }
+        }}
+      >
+        {copied ? "Copied" : "Copy the result"}
+      </OutlineButton>
+      <p className="text-[13px] leading-[18px] text-muted">This room lives at /m/{code}</p>
     </div>
   );
 }

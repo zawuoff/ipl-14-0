@@ -15,6 +15,7 @@ import {
   type DraftState,
   type GameMode,
   type PlayerSeason,
+  type Role,
   type TeamSeason,
   type XIConfig,
 } from "@/lib/game/types";
@@ -22,7 +23,17 @@ import { buildPlayerSeasons, buildTeamSeasons } from "@/lib/game/data";
 import { forecastSeason, simSeason, teamStrength, type GameResult, type SeasonResult } from "@/lib/sim/engine";
 import { SlotSpin } from "./SlotSpin";
 import { SquadList } from "./SquadList";
-import { XIPanel } from "./XIPanel";
+import { XIPanel, unitWord } from "./XIPanel";
+import {
+  Flap,
+  SlotStrip,
+  PrimaryButton,
+  OutlineButton,
+  PlateButton,
+  SectionHead,
+  WhatsAppIcon,
+  readableOn,
+} from "./ui";
 import { PlayoffMatch } from "./PlayoffMatch";
 import { SeasonReport } from "./SeasonReport";
 import { copyText } from "@/lib/clipboard";
@@ -369,7 +380,8 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
           madePlayoffs: r.madePlayoffs,
           champion: r.champion,
           perfect14: r.perfect14,
-          games: r.games.map((g) => ({ opp: g.opp, gf: g.gf, ga: g.ga, result: g.result, margin: g.margin, superOver: g.superOver })),
+          // the simResults validator has no superOver field — sending it rejects the whole save
+          games: r.games.map((g) => ({ opp: g.opp, gf: g.gf, ga: g.ga, result: g.result, margin: g.margin })),
           playoffs: r.playoffs.map((p) => ({ stage: p.stage, gf: p.gf, ga: p.ga, result: p.result, margin: p.margin })),
           teamBat: st0.bat,
           teamBowl: st0.bowl,
@@ -478,77 +490,95 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
   const slotsLeft = draft ? 11 - pickedXI.length : 11;
   const spunTeam = currentSpin ? TEAM_MAP.get(currentSpin.teamId) : undefined;
 
+  const teamMeta = (teamId: string) => {
+    const t = TEAM_MAP.get(teamId);
+    return t ? { code: t.code, season: t.season, colour: t.colour } : undefined;
+  };
+  const picked = pickedXI.length;
+  const modeLabel = initialRoom
+    ? `Room ${initialRoom.toUpperCase()}`
+    : draft?.mode === "daily"
+      ? `Today's challenge · ${today}`
+      : "Classic";
+
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 pb-24">
-      {/* slim status HUD once playing (settings live on the setup screen) */}
+    <div className="flex-1 flex flex-col">
       {draft && (
-      <div className="flex flex-wrap items-center gap-2 mt-4">
-        <div className="text-xs text-zinc-400 capitalize">
-          {initialRoom ? `⚔️ Room /m/${initialRoom.toUpperCase()} · ` : draft.mode === "daily" ? `📅 Daily ${today.slice(5)} · ` : "🎡 Classic · "}{draft.difficulty} ·{" "}
-          {STYLE_TEMPLATES.find((t) => JSON.stringify(t.config) === JSON.stringify(draft.config))?.name ?? "Custom"}
+        <div className="border-b border-hairline">
+          <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 py-2.5 lg:py-3.5 flex items-center gap-3">
+            <span className="text-[13px] lg:text-[14px] leading-5 text-muted truncate">
+              {modeLabel} · {draft.difficulty}
+            </span>
+            <span className="flex-1" />
+            {draft.status === "drafting" && (
+              <span className="hidden sm:block text-[14px] leading-5 font-medium">
+                {draft.rerollsLeft} re-spins left
+              </span>
+            )}
+            <button
+              onClick={() => {
+                const m = !muted;
+                setMuted(m);
+                try {
+                  localStorage.setItem("14-0-mute", m ? "1" : "0");
+                } catch {}
+              }}
+              className="h-9 px-3 rounded-control border border-ink text-[13px] lg:text-[14px] font-medium hover:bg-panel transition-colors"
+            >
+              {muted ? "Sound off" : "Sound on"}
+            </button>
+            <button
+              onClick={() => {
+                setDraft(null);
+                setResult(null);
+                setSimPhase("idle");
+                setSimIdx(0);
+                setPoIdx(0);
+              }}
+              className="h-9 px-3 rounded-control border border-ink text-[13px] lg:text-[14px] font-medium hover:bg-panel transition-colors"
+            >
+              Restart run
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => {
-            setDraft(null);
-            setResult(null);
-            setSimPhase("idle");
-            setSimIdx(0);
-            setPoIdx(0);
-          }}
-          className="text-sm px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 ml-auto"
-        >
-          ↻ Restart run
-        </button>
-        <button
-          onClick={() => {
-            const m = !muted;
-            setMuted(m);
-            try {
-              localStorage.setItem("14-0-mute", m ? "1" : "0");
-            } catch {}
-          }}
-          className="text-sm px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10"
-          title="Toggle sounds"
-        >
-          {muted ? "🔇" : "🔊"}
-        </button>
-        {streak > 0 && (
-          <span className="text-sm text-amber-300 font-semibold">🔥 {streak}-title streak</span>
-        )}
-      </div>
       )}
 
-
+      {/* ------------------------------------------------------ set up a run */}
       {!draft && (
-        <div className="mt-6 max-w-2xl mx-auto">
+        <div className="mx-auto w-full max-w-[720px] px-5 lg:px-8 pt-5 lg:pt-8 pb-10">
           {initialRoom && !roomQ && (
-            <p className="text-sm text-zinc-400 text-center">Loading room {initialRoom.toUpperCase()}…</p>
+            <p className="text-[15px] text-muted text-center py-6">
+              Finding room {initialRoom.toUpperCase()}…
+            </p>
           )}
           {initialRoom && roomQ === null && (
-            <div className="rounded-xl border border-red-400/40 bg-red-500/10 p-4 text-center text-sm">
-              Room not found — it may have expired. <button className="underline" onClick={() => window.location.search = ""}>Start a normal run</button>
+            <div className="border border-loss rounded-control p-4 text-center text-[15px]">
+              No room with that code. It may have expired.{" "}
+              <button className="underline font-medium" onClick={() => (window.location.search = "")}>
+                Start a normal run
+              </button>
             </div>
           )}
           {initialRoom && roomQ && !myRoomMember && (
-            <div className="rounded-2xl border border-fuchsia-400/40 bg-fuchsia-500/[0.07] p-5 text-center">
-              <div className="text-[11px] tracking-[0.25em] text-fuchsia-200 font-bold">⚔️ SHARED LEAGUE INVITE</div>
-              <div className="font-black text-xl mt-1">
+            <div className="bg-ink text-white rounded-control p-5 flex flex-col gap-3">
+              <span className="text-[13px] leading-[18px] text-muted-plate">Shared league invite</span>
+              <span className="font-semibold text-[22px] leading-7">
                 {roomQ.members?.map((m: any) => m.name).join("  vs  ") || "1v1"}
                 {roomQ.members?.length < 2 ? " · one seat open" : ""}
-              </div>
-              <div className="text-xs text-zinc-300 mt-1 capitalize">
-                {roomQ.difficulty} · your own spins, your own style · one 18-game table
-              </div>
-              <div className="flex gap-2 mt-3">
+              </span>
+              <span className="text-[15px] leading-[22px] text-body-plate">
+                {roomQ.difficulty} · your own spins, your own style, one 18-game table
+              </span>
+              <div className="flex gap-2 pt-1">
                 <input
                   value={roomName}
                   onChange={(e) => setRoomName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                  placeholder="Your name (e.g. Yuvi)"
+                  placeholder="Your name"
                   maxLength={14}
-                  className="flex-1 rounded-lg bg-black/40 border border-white/15 px-3 py-2.5 text-sm outline-none focus:border-fuchsia-300"
+                  className="flex-1 h-13 rounded-control bg-plate border border-plate-line px-3.5 text-[16px] outline-none focus:border-white"
                 />
-                <button
+                <PrimaryButton
+                  disabled={!roomName.trim() || roomBusy}
                   onClick={async () => {
                     if (!roomName.trim() || roomBusy) return;
                     setRoomBusy(true);
@@ -557,460 +587,577 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     } catch {}
                     setRoomBusy(false);
                   }}
-                  disabled={!roomName.trim() || roomBusy}
-                  className="px-5 py-2.5 rounded-lg bg-fuchsia-400 text-black font-black text-sm disabled:opacity-40"
                 >
-                  {roomBusy ? "…" : "Join"}
-                </button>
+                  {roomBusy ? "Joining…" : "Join"}
+                </PrimaryButton>
               </div>
             </div>
           )}
           {initialRoom && roomQ && myRoomMember && (
-            <div className="rounded-2xl border border-emerald-300/40 bg-emerald-400/[0.06] p-4 text-center text-sm">
-              Playing as <b>{myRoomMember.name}</b> · {roomQ.difficulty} locked · draft your own XI below, then lock it in.
-            </div>
+            <p className="text-[15px] leading-[22px] text-center border border-hairline rounded-control p-4">
+              Playing as <b>{myRoomMember.name}</b>. Draft your own XI below, then lock it in.
+            </p>
           )}
+
           {(!initialRoom || myRoomMember) && (
-          <>
-          {!initialRoom && (
-          <>
-          <div className="text-[11px] tracking-[0.25em] text-zinc-500 text-center">MODE</div>
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            {(["classic", "daily"] as GameMode[]).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={`rounded-xl border p-3 transition ${
-                  mode === m
-                    ? "border-emerald-300 bg-emerald-400/[0.08]"
-                    : "border-white/10 bg-white/[0.03] hover:border-white/25"
-                }`}
-              >
-                <div className={`font-black ${mode === m ? "text-emerald-300" : ""}`}>
-                  {m === "daily" ? "📅 Daily" : "🎡 Classic"}
-                </div>
-                <div className="text-[11px] text-zinc-500 mt-0.5">
-                  {m === "daily" ? `Same 11 spins for everyone · ${today.slice(5)}` : "Fresh random wheel every run"}
-                </div>
-              </button>
-            ))}
-          </div>
-          </>
-          )}
+            <>
+              <h1 className="font-semibold text-[26px] leading-8 lg:text-[32px] lg:leading-10 mt-2">
+                Set up your run
+              </h1>
+              <p className="text-[15px] leading-[22px] text-muted mt-1">
+                Three choices, then the board starts spinning.
+              </p>
 
-          <div className="text-[11px] tracking-[0.25em] text-zinc-500 text-center mt-5">CHOOSE YOUR STYLE</div>
-          <h2 className="font-black text-2xl mt-1 text-center">How will your XI look?</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-left">
-            {STYLE_TEMPLATES.map((t, i) => (
-              <button
-                key={t.name}
-                onClick={() => setStyleIdx(i)}
-                className={`rounded-xl border p-3.5 transition ${
-                  styleIdx === i
-                    ? "border-emerald-300 bg-emerald-400/[0.08] shadow-[0_0_24px_-8px_rgba(52,211,153,.7)]"
-                    : "border-white/10 bg-white/[0.03] hover:border-white/25"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className={`w-4 h-4 rounded-full border-2 ${styleIdx === i ? "border-emerald-300 bg-emerald-300" : "border-zinc-600"}`} />
-                  <span className="font-black">{t.name}</span>
+              {!initialRoom && (
+                <div className="mt-6 flex flex-col gap-2.5">
+                  <h2 className="font-semibold text-[17px] leading-[22px]">Mode</h2>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["classic", "daily"] as GameMode[]).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setMode(m)}
+                        className={`flex flex-col gap-0.5 p-3.5 rounded-control text-left transition-colors ${
+                          mode === m ? "bg-ink text-white" : "border border-[#D4D4D4] hover:bg-panel"
+                        }`}
+                      >
+                        <span className="font-semibold text-[16px] leading-[22px]">
+                          {m === "daily" ? "Today's challenge" : "Classic"}
+                        </span>
+                        <span
+                          className={`text-[13px] leading-[18px] ${
+                            mode === m ? "text-body-plate" : "text-muted"
+                          }`}
+                        >
+                          {m === "daily" ? "Same 11 squads for all" : "Fresh spins every run"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="text-xs text-zinc-400 mt-1">{t.blurb}</div>
-                <div className="text-[11px] text-zinc-500 mt-1.5">
-                  {(['Opener', 'Middle', 'WK', 'AR', 'Pace', 'Spin'] as const)
-                    .map((r) => `${t.config[r]} ${roleWord(r, t.config[r])}`)
-                    .join(" · ")}
+              )}
+
+              <div className="mt-6 flex flex-col gap-2.5">
+                <div className="flex items-baseline gap-2">
+                  <h2 className="font-semibold text-[17px] leading-[22px]">Shape of your XI</h2>
+                  <span className="text-[13px] leading-[18px] text-muted">Always 11 players</span>
                 </div>
-              </button>
-            ))}
-          </div>
+                {STYLE_TEMPLATES.map((t, i) => {
+                  const on = styleIdx === i;
+                  return (
+                    <button
+                      key={t.name}
+                      onClick={() => setStyleIdx(i)}
+                      className={`flex items-center gap-3 p-3.5 rounded-control text-left transition-colors ${
+                        on ? "border-2 border-ink" : "border border-[#D4D4D4] hover:bg-panel"
+                      }`}
+                    >
+                      <span
+                        className={`w-5 h-5 shrink-0 rounded-full ${
+                          on ? "border-[6px] border-ink" : "border-[1.5px] border-[#8A8A8A]"
+                        }`}
+                      />
+                      <span className="flex flex-col gap-1.5 flex-1 min-w-0">
+                        <span className="flex items-baseline gap-2 flex-wrap">
+                          <span className="font-semibold text-[16px] leading-5">{t.name}</span>
+                          <span className="text-[13px] leading-[18px] text-muted">{t.blurb}</span>
+                        </span>
+                        {on && <StyleStrip config={t.config} />}
+                        <span className="text-[13px] leading-[18px] text-muted">
+                          {(["Opener", "Middle", "WK", "AR", "Pace", "Spin"] as Role[])
+                            .filter((r) => (t.config[r] ?? 0) > 0)
+                            .map((r) => `${t.config[r]} ${roleWord(r, t.config[r])}`)
+                            .join(", ")}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
 
-          {initialRoom && roomQ ? (
-            <div className="text-center mt-5 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm">
-              Room rules locked: <b className="capitalize">{roomQ.difficulty}</b> · your own spins, your own style
-            </div>
-          ) : (
-          <>
-          <div className="text-[11px] tracking-[0.25em] text-zinc-500 text-center mt-5">DIFFICULTY</div>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            {(
-              [
-                { d: "Rookie", sub: "Gentler opps" },
-                { d: "Pro", sub: "True sim" },
-                { d: "Legend", sub: "Harder · ratings hidden" },
-              ] as { d: Difficulty; sub: string }[]
-            ).map(({ d, sub }) => (
-              <button
-                key={d}
-                onClick={() => setDifficulty(d)}
-                className={`rounded-xl border p-3 transition ${
-                  difficulty === d
-                    ? "border-amber-300 bg-amber-400/[0.08]"
-                    : "border-white/10 bg-white/[0.03] hover:border-white/25"
-                }`}
-              >
-                <div className={`font-black ${difficulty === d ? "text-amber-300" : ""}`}>{d}</div>
-                <div className="text-[11px] text-zinc-500 mt-0.5">{sub}</div>
-              </button>
-            ))}
-          </div>
-          </>
-          )}
+              {initialRoom && roomQ ? (
+                <p className="mt-6 text-[15px] leading-[22px] text-center border border-hairline rounded-control p-3.5">
+                  Room rules are locked: <b className="capitalize">{roomQ.difficulty}</b>
+                </p>
+              ) : (
+                <div className="mt-6 flex flex-col gap-2.5">
+                  <h2 className="font-semibold text-[17px] leading-[22px]">Difficulty</h2>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(
+                      [
+                        { d: "Rookie", sub: "Weaker teams" },
+                        { d: "Pro", sub: "True sim" },
+                        { d: "Legend", sub: "Ratings hidden" },
+                      ] as { d: Difficulty; sub: string }[]
+                    ).map(({ d, sub }) => (
+                      <button
+                        key={d}
+                        onClick={() => setDifficulty(d)}
+                        className={`flex flex-col gap-0.5 p-3 rounded-control text-left transition-colors ${
+                          difficulty === d ? "bg-ink text-white" : "border border-[#D4D4D4] hover:bg-panel"
+                        }`}
+                      >
+                        <span className="font-semibold text-[16px] leading-[22px]">{d}</span>
+                        <span
+                          className={`text-[13px] leading-[18px] ${
+                            difficulty === d ? "text-body-plate" : "text-muted"
+                          }`}
+                        >
+                          {sub}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          <button
-            onClick={() => {
-              const diff = initialRoom && roomQ ? (roomQ.difficulty as Difficulty) : difficulty;
-              if (initialRoom && roomQ) setDifficulty(roomQ.difficulty as Difficulty);
-              startDraft("classic", STYLE_TEMPLATES[styleIdx].config, { difficulty: diff });
-            }}
-            className="mt-5 w-full py-4 rounded-2xl bg-emerald-400 text-black font-black text-xl hover:bg-emerald-300 shadow-[0_0_50px_-10px_rgba(52,211,153,.8)]"
-          >
-            Start Draft → 11 spins
-          </button>
-          <p className="text-[11px] text-zinc-500 mt-2 text-center">
-            {initialRoom && roomQ ? roomQ.difficulty : difficulty} · 2 re-rolls · max 4 overseas
-          </p>
-          {!initialRoom && (
-          <div className="mt-4 rounded-2xl border border-fuchsia-400/30 bg-fuchsia-500/[0.05] p-3.5">
-            <div className="text-[11px] tracking-[0.25em] text-fuchsia-200 font-bold text-center">⚔️ MULTIPLAYER — SHARED LEAGUE</div>
-            <p className="text-[11px] text-zinc-400 text-center mt-1">You + a mate · one 18-game table · head-to-head counts for both</p>
-            <div className="mt-2.5 flex gap-2">
-              <input
-                value={roomName}
-                onChange={(e) => setRoomName(e.target.value)}
-                placeholder="Your name (e.g. Yuvi)"
-                maxLength={14}
-                className="flex-1 rounded-lg bg-black/40 border border-white/15 px-3 py-2.5 text-sm outline-none focus:border-fuchsia-300"
-              />
-              <button
-                onClick={async () => {
-                  if (!roomName.trim() || roomBusy) return;
-                  setRoomBusy(true);
-                  try {
-                    const r = (await createRoom2({
-                      name: roomName.trim(),
-                      difficulty,
-                      deviceId: deviceId(),
-                    })) as unknown as { code: string } | null;
-                    if (r?.code) window.location.href = `/m/${r.code}`;
-                  } catch {}
-                  setRoomBusy(false);
-                }}
-                disabled={!roomName.trim() || roomBusy}
-                className="px-5 py-2.5 rounded-lg bg-fuchsia-400 text-black font-black text-sm disabled:opacity-40"
-              >
-                {roomBusy ? "…" : "Create room"}
-              </button>
-            </div>
-          </div>
-          )}
-          </>
+              <div className="mt-7 pt-5 border-t border-hairline flex flex-col gap-2.5">
+                <PrimaryButton
+                  className="w-full"
+                  onClick={() => {
+                    const diff = initialRoom && roomQ ? (roomQ.difficulty as Difficulty) : difficulty;
+                    if (initialRoom && roomQ) setDifficulty(roomQ.difficulty as Difficulty);
+                    startDraft(initialRoom ? "classic" : mode, STYLE_TEMPLATES[styleIdx].config, {
+                      difficulty: diff,
+                    });
+                  }}
+                >
+                  Start the draft
+                </PrimaryButton>
+                <p className="text-[13px] leading-[18px] text-muted text-center">
+                  11 spins · 2 re-spins · max 4 overseas players
+                </p>
+              </div>
+
+              {!initialRoom && (
+                <div className="mt-7 pt-6 border-t border-hairline flex flex-col gap-2.5">
+                  <h2 className="font-semibold text-[17px] leading-[22px]">Play a friend</h2>
+                  <p className="text-[14px] leading-5 text-muted">
+                    You both draft your own XI, then one 18-game league decides it.
+                  </p>
+                  <div className="flex gap-2 mt-1">
+                    <input
+                      value={roomName}
+                      onChange={(e) => setRoomName(e.target.value)}
+                      placeholder="Your name"
+                      maxLength={14}
+                      className="flex-1 h-13 rounded-control border border-[#8A8A8A] px-3.5 text-[16px] outline-none focus:border-ink"
+                    />
+                    <OutlineButton
+                      className="h-13"
+                      disabled={!roomName.trim() || roomBusy}
+                      onClick={async () => {
+                        if (!roomName.trim() || roomBusy) return;
+                        setRoomBusy(true);
+                        try {
+                          const r = (await createRoom2({
+                            name: roomName.trim(),
+                            difficulty,
+                            deviceId: deviceId(),
+                          })) as unknown as { code: string } | null;
+                          if (r?.code) window.location.href = `/m/${r.code}`;
+                        } catch {}
+                        setRoomBusy(false);
+                      }}
+                    >
+                      {roomBusy ? "…" : "Create a room"}
+                    </OutlineButton>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
 
+      {/* --------------------------------------------------- spin, then pick */}
       {draft && draft.status === "drafting" && currentSpin && (
-        <div className="mt-5 grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)] items-start">
-          {/* left: XI panel */}
-          <div className="order-2 lg:order-1 lg:sticky lg:top-16">
+        <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-4 lg:pt-6 pb-12">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-baseline gap-3">
+              <h1 className="font-semibold text-[22px] leading-7 lg:text-[28px] lg:leading-9">
+                Pick {picked + 1} of 11
+              </h1>
+              <span className="flex-1" />
+              <span className="text-[14px] leading-5 text-muted">
+                {slotsLeft} slot{slotsLeft === 1 ? "" : "s"} still open
+              </span>
+            </div>
+            <SlotStrip filled={picked} current={picked} />
+          </div>
+
+          <div className="mt-5 lg:mt-7 flex flex-col lg:grid lg:grid-cols-[420px_minmax(0,1fr)] lg:gap-10 lg:items-start">
+            <div className="order-2 lg:order-1 mt-7 lg:mt-0">
+              <XIPanel
+                config={draft.config}
+                picks={draft.picks}
+                overseas={overseas}
+                power={strength?.power}
+                bat={strength?.bat}
+                bowl={strength?.bowl}
+                hideRatings={hideRatings}
+                teamMeta={teamMeta}
+              />
+            </div>
+
+            <div className="order-1 lg:order-2 min-w-0">
+              {phase === "slot" ? (
+                <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden">
+                  <SlotSpin
+                    key={slotKey}
+                    targetTeamId={currentSpin.teamId}
+                    targetName={spunTeam?.name ?? ""}
+                    targetColour={spunTeam?.colour ?? "#141414"}
+                    clubPool={ALL_TEAMS.map((t) => t.teamId)}
+                    spinKey={slotKey}
+                    onLanded={() => setPhase("squad")}
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-5 lg:px-6 lg:py-6 flex flex-col gap-3.5">
+                    <div className="flex gap-3 lg:gap-3.5">
+                      <div className="flex-1 min-w-0">
+                        <Flap
+                          label="Squad"
+                          value={spunTeam?.code ?? currentSpin.teamId}
+                          tone="team"
+                          colour={spunTeam?.colour}
+                          className="h-24 lg:h-[116px]"
+                          valueClassName="text-[56px] leading-[52px] lg:text-[72px] lg:leading-[66px]"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Flap
+                          label="Season"
+                          value={spunTeam?.season ?? ""}
+                          className="h-24 lg:h-[116px]"
+                          valueClassName="text-[56px] leading-[52px] lg:text-[72px] lg:leading-[66px]"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                        <span className="font-semibold text-[17px] leading-[22px] lg:text-[22px] lg:leading-7">
+                          {spunTeam?.name ?? currentSpin.teamId}, {spunTeam?.season}
+                        </span>
+                        <span className="text-[13px] leading-[18px] lg:text-[15px] lg:leading-[22px] text-muted-plate">
+                          {hideRatings
+                            ? "Legend mode. Ratings are hidden, trust what you know."
+                            : "Take one player from this squad."}
+                        </span>
+                      </div>
+                      <PlateButton
+                        className="h-11 shrink-0"
+                        onClick={rerollSpin}
+                        disabled={draft.rerollsLeft <= 0}
+                      >
+                        Re-spin · {draft.rerollsLeft} left
+                      </PlateButton>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 flex flex-col gap-2.5">
+                    <div className="flex flex-col gap-1">
+                      <h2 className="font-semibold text-[17px] leading-[22px] lg:text-[20px] lg:leading-[26px]">
+                        {lastResort
+                          ? "Dead spin — anyone goes"
+                          : deadSpin
+                            ? "No one from this squad fits"
+                            : `Pick one from the ${spunTeam?.season} squad`}
+                      </h2>
+                      <p className="text-[13px] leading-[18px] lg:text-[14px] lg:leading-5 text-muted">
+                        {deadSpin && !lastResort
+                          ? "Stand-ins who fit your open slots:"
+                          : `Still open: ${openSlotSummary(draft.config, roleCounts)}`}
+                      </p>
+                    </div>
+                    <SquadList
+                      squad={shownOptions}
+                      hideRatings={hideRatings}
+                      onPick={pick}
+                      unavailable={effectiveUnavailable}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------- XI is locked */}
+      {draft && draft.status === "complete" && !result && (
+        <div className="mx-auto w-full max-w-[900px] px-5 lg:px-8 pt-4 lg:pt-7 pb-12">
+          <h1 className="font-semibold text-[26px] leading-8 lg:text-[32px] lg:leading-10">
+            Your XI is locked
+          </h1>
+          <p className="text-[15px] leading-[22px] text-muted mt-1">
+            {inRoomGame
+              ? "Lock it in for the room. The shared league plays from both XIs."
+              : "Eleven picks done. Check the forecast, then play."}
+          </p>
+
+          {!validity.valid && (
+            <p className="mt-3 text-[14px] leading-5 text-loss">
+              {validity.errors.join(" · ")}. The sim runs anyway, with a penalty.
+            </p>
+          )}
+
+          <div className="mt-5 -mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-5 lg:px-7 lg:py-7 flex flex-col gap-5">
+            <div className="flex gap-6 lg:gap-10">
+              <div className="flex flex-col gap-1">
+                <span className="text-[13px] leading-[18px] text-muted-plate">Team power</span>
+                <span className="font-display font-bold text-[72px] leading-[62px] pt-1.5 tabular">
+                  {hideRatings ? "?" : Math.round(strength?.power ?? 0)}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2 pt-1">
+                {[
+                  ["Batting", hideRatings ? "Hidden" : unitWord(strength?.bat ?? 0)],
+                  ["Bowling", hideRatings ? "Hidden" : unitWord(strength?.bowl ?? 0)],
+                  ["Overseas", `${overseas} of 4`],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex items-baseline gap-2">
+                    <span className="w-[84px] text-[14px] leading-5 text-muted-plate">{k}</span>
+                    <span className="font-semibold text-[16px] leading-5">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {forecast && !inRoomGame && (
+              <div className="pt-5 border-t border-plate-line flex flex-col gap-2.5">
+                <span className="text-[13px] leading-[18px] text-muted-plate">Bookies say</span>
+                <div className="flex gap-2">
+                  {[
+                    [String(forecast.expPts), "points"],
+                    [ordinal(forecast.medRank), "likely finish"],
+                    [`${forecast.playoffPct}%`, "make playoffs"],
+                    [`${forecast.titlePct}%`, "win the title"],
+                  ].map(([v, k]) => (
+                    <div key={k} className="flex flex-col gap-0.5 flex-1 min-w-0">
+                      <span className="font-display font-semibold text-[30px] leading-7 lg:text-[36px] lg:leading-8 pt-1 tabular">
+                        {v}
+                      </span>
+                      <span className="text-[13px] leading-[18px] text-body-plate">{k}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5 flex flex-col gap-2.5">
+            {inRoomGame ? (
+              roomSubmitted ? (
+                <OutlineButton href={`/m/${initialRoom!.toUpperCase()}`} className="h-14 w-full text-[17px]">
+                  XI locked — back to the room
+                </OutlineButton>
+              ) : (
+                <PrimaryButton
+                  className="w-full"
+                  disabled={roomBusy}
+                  onClick={async () => {
+                    if (roomBusy || !roomQ) return;
+                    setRoomBusy(true);
+                    try {
+                      await submitRoomXI({
+                        code: roomQ.code,
+                        deviceId: deviceId(),
+                        config: draft.config,
+                        picks: (pickedXI as PlayerSeason[]).map((p) => p.id),
+                        seed: draft.seed,
+                      });
+                      setRoomSubmitted(true);
+                    } catch {}
+                    setRoomBusy(false);
+                  }}
+                >
+                  {roomBusy ? "Locking…" : "Lock in this XI"}
+                </PrimaryButton>
+              )
+            ) : (
+              <>
+                <PrimaryButton className="w-full" onClick={simulate}>
+                  Play the season
+                </PrimaryButton>
+                <p className="text-[13px] leading-[18px] text-muted text-center">
+                  14 league games, then the playoffs. Top 4 go through.
+                </p>
+              </>
+            )}
+          </div>
+
+          <div className="mt-8">
             <XIPanel
+              title="The XI"
               config={draft.config}
               picks={draft.picks}
               overseas={overseas}
-              power={strength?.power} avg={strength?.avg}
               hideRatings={hideRatings}
+              teamMeta={teamMeta}
             />
           </div>
-
-          {/* right: spin / draft */}
-          <div className="order-1 lg:order-2 min-w-0">
-            <div className="text-[11px] tracking-[0.25em] text-zinc-500">SPIN FOR A SQUAD</div>
-            <h2 className="font-black text-xl mt-0.5">
-              {slotsLeft} position{slotsLeft === 1 ? "" : "s"} left to fill
-            </h2>
-
-            {phase === "slot" ? (
-              <div className="mt-4 rounded-2xl border border-white/10 bg-[#0b0f1c] p-5">
-                <SlotSpin
-                  key={slotKey}
-                  targetTeamId={currentSpin.teamId}
-                  targetName={spunTeam?.name ?? ""}
-                  targetColour={spunTeam?.colour ?? "#fff"}
-                  clubPool={ALL_TEAMS.map((t) => t.teamId)}
-                  spinKey={slotKey}
-                  onLanded={() => setPhase("squad")}
-                />
-              </div>
-            ) : (
-              <div className="mt-4">
-                <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-emerald-400/[0.06] px-3 py-2.5">
-                  <span className="text-[11px] tracking-widest text-zinc-400">SQUAD SPUN</span>
-                  <span className="font-black" style={{ color: spunTeam?.colour }}>
-                    {spunTeam?.name ?? currentSpin.teamId}{" "}
-                    <span className="text-amber-300">{spunTeam?.season}</span>
-                  </span>
-                  <button
-                    onClick={rerollSpin}
-                    disabled={draft.rerollsLeft <= 0}
-                    className="ml-auto text-xs px-2.5 py-1.5 rounded-lg bg-white/5 border border-amber-300/40 text-amber-200 disabled:opacity-40"
-                  >
-                    🎲 Re-roll ({draft.rerollsLeft} left)
-                  </button>
-                </div>
-                <p className="text-xs text-zinc-500 mt-3 mb-2">
-                  {lastResort
-                    ? "🃏 Dead spin — anyone goes"
-                    : deadSpin
-                      ? `🔄 No fitting ${spunTeam?.code ?? "squad"} players left — stand-ins for your open slots:`
-                      : hideRatings ? "Legend mode — ratings hidden, trust your knowledge 👀" : "Pick 1 — that season's real squad 👇"}
-                </p>
-                <SquadList squad={shownOptions} hideRatings={hideRatings} onPick={pick} unavailable={effectiveUnavailable} />
-              </div>
-            )}
-          </div>
         </div>
       )}
 
-      {/* XI complete → sim trigger (left panel context on desktop) */}
-      {draft && draft.status === "complete" && !result && (
-        <div className="mt-5 grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)] items-start">
-          <div className="order-2 lg:order-1">
-            <XIPanel config={draft.config} picks={draft.picks} overseas={overseas} power={strength?.power} avg={strength?.avg} hideRatings={hideRatings} />
-          </div>
-          <div className="order-1 lg:order-2 rounded-2xl border border-emerald-300/30 bg-emerald-400/[0.05] p-5 text-center">
-            {!validity.valid && (
-              <div className="text-xs text-red-300 mb-2">⚠️ {validity.errors.join(" · ")} (sim penalized)</div>
-            )}
-            {lastPick && (
-              <p className="text-sm text-zinc-300 mb-2">
-                Last pick rated <b className="text-emerald-300">{(pickedXI.find((p) => (p as PlayerSeason).id === lastPick) as PlayerSeason | undefined)?.overall ?? ""}</b>
-                {(() => {
-                  const lp = pickedXI.find((p) => (p as PlayerSeason).id === lastPick) as PlayerSeason | undefined;
-                  if (!lp) return null;
-                  return lp.overall >= 92 ? " 🔥 STEAL!" : lp.overall >= 85 ? " ✅ solid" : " 🎲 punt";
-                })()}
-              </p>
-            )}
-            <div className="text-xs text-zinc-400">XI locked · {overseas}/4 overseas · AVG {strength?.avg} · PWR {strength?.power}</div>
-            {inRoomGame ? (
-              roomSubmitted ? (
-                <a
-                  href={`/m/${initialRoom!.toUpperCase()}`}
-                  className="mt-3 block w-full py-3.5 rounded-xl bg-emerald-400 text-black font-black text-lg text-center"
-                >
-                  XI locked ✅ — back to room →
-                </a>
-              ) : (
-                <>
-                  <p className="text-xs text-zinc-400 mt-3">
-                    Room league plays from both locked XIs — no sim here. Head to the room once locked.
-                  </p>
-                  <button
-                    onClick={async () => {
-                      if (roomBusy || !roomQ) return;
-                      setRoomBusy(true);
-                      try {
-                        await submitRoomXI({
-                          code: roomQ.code,
-                          deviceId: deviceId(),
-                          config: draft.config,
-                          picks: (pickedXI as PlayerSeason[]).map((p) => p.id),
-                          seed: draft.seed,
-                        });
-                        setRoomSubmitted(true);
-                      } catch {}
-                      setRoomBusy(false);
-                    }}
-                    disabled={roomBusy}
-                    className="mt-3 w-full py-3.5 rounded-xl bg-fuchsia-400 text-black font-black text-lg hover:bg-fuchsia-300 disabled:opacity-50"
-                  >
-                    {roomBusy ? "Locking…" : "🔒 Lock in XI for the room"}
-                  </button>
-                </>
-              )
-            ) : (
-            <>
-            {forecast && (
-              <div className="mt-3 rounded-xl border border-amber-300/25 bg-amber-400/[0.06] p-3 text-sm">
-                <div className="text-[10px] tracking-[0.25em] text-amber-200/70 font-bold">🔮 BOOKIES SAY (NOT SET IN STONE)</div>
-                <div className="mt-1.5 flex items-end justify-center gap-4">
-                  <div>
-                    <div className="font-black text-2xl">{forecast.expPts}<span className="text-xs text-zinc-400 font-semibold"> pts</span></div>
-                    <div className="text-[11px] text-zinc-400">expected</div>
-                  </div>
-                  <div>
-                    <div className="font-black text-2xl">~{forecast.medRank}<span className="text-xs text-zinc-400 font-semibold">{forecast.medRank === 1 ? "st" : forecast.medRank === 2 ? "nd" : forecast.medRank === 3 ? "rd" : "th"}</span></div>
-                    <div className="text-[11px] text-zinc-400">likely finish</div>
-                  </div>
-                  <div>
-                    <div className="font-black text-2xl">{forecast.playoffPct}<span className="text-xs text-zinc-400 font-semibold">%</span></div>
-                    <div className="text-[11px] text-zinc-400">playoffs</div>
-                  </div>
-                  <div>
-                    <div className="font-black text-2xl text-amber-300">{forecast.titlePct}<span className="text-xs text-zinc-400 font-semibold">%</span></div>
-                    <div className="text-[11px] text-zinc-400">title</div>
-                  </div>
-                </div>
-                <div className="text-[11px] text-zinc-500 mt-1.5">Top 4 make the playoffs — anything can happen.</div>
-              </div>
-            )}
-            <button
-              onClick={simulate}
-              className="mt-3 w-full py-3.5 rounded-xl bg-emerald-400 text-black font-black text-lg hover:bg-emerald-300 shadow-[0_0_40px_-8px_rgba(52,211,153,.7)]"
-            >
-              ▶ Simulate Season
-            </button>
-            </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* sim — staged: league auto-ticker → season report → playoffs → final */}
+      {/* ------------------------------------------------------------ the sim */}
       {result && draft && (
         <>
-      {(simPhase === "league" || simPhase === "leagueDone") && (
-        <div className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-4">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] tracking-[0.25em] text-zinc-500">
-              {simPhase === "league" ? `MATCH ${Math.min(simIdx + 1, 14)} / 14` : "SEASON COMPLETE"}
-            </span>
-            <span className="ml-auto flex items-center gap-1.5">
-              <button
-                onClick={() => setSimSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}
-                className="text-xs px-2.5 py-1.5 rounded bg-white/10 border border-white/10"
-                title="Playback speed"
-              >
-                {simSpeed}x ⏩
-              </button>
-              {simPhase === "league" && (
-                <button
-                  onClick={simSkip}
-                  className="text-xs px-2.5 py-1.5 rounded bg-white/10 border border-white/10"
-                >
-                  Skip ⏭
-                </button>
-              )}
-            </span>
-          </div>
+          {(simPhase === "league" || simPhase === "leagueDone") && (
+            <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-4 lg:pt-6 pb-12">
+              <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-5 lg:px-7 lg:py-7 flex flex-col lg:flex-row lg:items-end gap-5 lg:gap-11">
+                <div className="flex gap-3 lg:shrink-0">
+                  <Flap
+                    label="Won"
+                    value={simShown.wins}
+                    tone={simShown.losses === 0 && simShown.wins > 0 ? "turf" : "plate"}
+                    wrapClassName="flex-1 lg:flex-none lg:w-[148px]"
+                    className="h-[88px] lg:h-[132px]"
+                    valueClassName="text-[72px] leading-[64px] lg:text-[108px] lg:leading-[96px]"
+                  />
+                  <Flap
+                    label="Lost"
+                    value={simShown.losses}
+                    wrapClassName="flex-1 lg:flex-none lg:w-[148px]"
+                    className="h-[88px] lg:h-[132px]"
+                    valueClassName="text-[72px] leading-[64px] lg:text-[108px] lg:leading-[96px]"
+                  />
+                </div>
 
-          {/* running season panel */}
-          <div className="mt-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-            <div className="flex items-center justify-center gap-6 text-center">
-              <StatMini value={String(simShown.wins)} label="WON" color="text-emerald-300" />
-              <StatMini value={String(simShown.losses)} label="LOST" color="text-red-300" />
-              <StatMini value={String(simShown.wins * 2)} label="PTS" color="text-amber-300" />
-              <span
-                className={`px-3 py-1 rounded-full font-black text-sm ${
-                  simShown.losses === 0 && simPhase === "league"
-                    ? "bg-emerald-400 text-black animate-pulse"
-                    : "bg-white/10 text-white"
+                <div className="flex flex-col gap-2.5 flex-1 lg:pb-1.5">
+                  <span className="font-semibold text-[20px] leading-[26px] lg:text-[26px] lg:leading-8">
+                    {simPhase === "league"
+                      ? `Match ${Math.min(simIdx + 1, 14)} of 14`
+                      : "League complete"}
+                  </span>
+                  <span
+                    className={`font-semibold text-[15px] leading-[22px] lg:text-[17px] lg:leading-6 ${
+                      simShown.losses === 0 && simShown.wins > 0 ? "text-turf-soft" : "text-body-plate"
+                    }`}
+                  >
+                    {leagueLine(simShown.wins, simShown.losses, simPhase === "leagueDone")}
+                  </span>
+                  <div className="flex gap-6 lg:gap-8 pt-1">
+                    {[
+                      [String(simShown.wins * 2), "points"],
+                      [`${simShown.nrr > 0 ? "+" : ""}${simShown.nrr}`, "net run rate"],
+                      [`${leagueRuns(simShown.games)}`, "runs scored"],
+                    ].map(([v, k]) => (
+                      <div key={k} className="flex flex-col gap-0.5">
+                        <span className="font-display font-semibold text-[26px] leading-6 lg:text-[32px] lg:leading-7 pt-1 tabular">
+                          {v}
+                        </span>
+                        <span className="text-[13px] leading-[18px] text-body-plate">{k}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2.5 lg:shrink-0 lg:pb-2">
+                  <PlateButton
+                    className="h-11 flex-1 lg:flex-none"
+                    onClick={() => setSimSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}
+                  >
+                    Speed {simSpeed}x
+                  </PlateButton>
+                  {simPhase === "league" && (
+                    <PlateButton className="h-11 flex-1 lg:flex-none" onClick={simSkip}>
+                      Skip to end
+                    </PlateButton>
+                  )}
+                </div>
+              </div>
+
+              <div
+                className={`mt-6 flex flex-col ${
+                  simPhase === "leagueDone" ? "lg:flex-row lg:gap-12 lg:items-start" : ""
                 }`}
               >
-                {simShown.losses === 0 && simPhase === "league" && simShown.wins > 0
-                  ? `🔥 ${simShown.wins}-0 ALIVE`
-                  : `${simShown.wins}-${simShown.losses}`}
-              </span>
-            </div>
-            <div className="text-center text-[11px] text-zinc-500 mt-1.5">
-              Scored {leagueRuns(simShown.games)} · Conceded {leagueAgainst(simShown.games)} · NRR{" "}
-              {simShown.nrr > 0 ? "+" : ""}
-              {simShown.nrr}
-            </div>
-          </div>
-
-          <div
-            ref={feedRef}
-            className="mt-3 space-y-1.5 max-h-[380px] overflow-y-auto pr-1"
-            onClick={simPhase === "league" ? simAdvance : undefined}
-          >
-            {simShown.games.map((g, i) => (
-              <GameRow
-                key={i}
-                label={`M${i + 1}`}
-                opp={g.opp}
-                gf={g.gf}
-                ga={g.ga}
-                win={g.result === "W"}
-                margin={g.margin}
-                fav={winPct(simPower, g.oppPower)}
-                hero={leagueHero(g, i, result.matchStars[i])}
-                fresh={simPhase === "league" && i === simShown.games.length - 1}
-              />
-            ))}
-          </div>
-
-          {simPhase === "league" && (
-            <p className="text-[11px] text-zinc-500 mt-2">tap a result to fast-forward one game · {simSpeed}x speed</p>
-          )}
-
-          {simPhase === "leagueDone" && (
-            <div className="mt-4">
-              {result.madePlayoffs ? (
-                <>
-                  <SeasonReport
-                    result={result}
-                    forecast={forecast}
-                    bat={strength?.bat ?? 0}
-                    bowl={strength?.bowl ?? 0}
-                    leagueOnly
-                    slim
+                <div className="flex-1 min-w-0">
+                  <SectionHead
+                    title="Results so far"
+                    note={simPhase === "league" ? "Tap a result to jump ahead" : undefined}
                   />
-                  <button
-                    onClick={() => {
-                      setPoIdx(0);
-                      setSimPhase("playoffs");
-                    }}
-                    className="mt-4 w-full py-4 rounded-2xl bg-amber-400 text-black font-black text-xl hover:bg-amber-300 shadow-[0_0_50px_-10px_rgba(251,191,36,.8)]"
-                  >
-                    ⚔️ Finished #{result.rank} — Start Playoffs →
-                  </button>
-                </>
-              ) : (
-                <>
-                  <SeasonReport
-                    result={result}
-                    forecast={forecast}
-                    bat={strength?.bat ?? 0}
-                    bowl={strength?.bowl ?? 0}
-                    leagueOnly
-                  />
-                  <TableView rows={result.table} />
-                  <ShareBlock
-                    shareText={shareText}
-                    seed={draft.seed}
-                    spins={draft.spins.map((s) => s.teamId)}
-                    mode={mode}
-                    draftConfig={draft.config}
-                    startDraft={startDraft}
-                    copied={copied}
-                    setCopied={setCopied}
-                    challengeCopied={challengeCopied}
-                    setChallengeCopied={setChallengeCopied}
-                  />
-                </>
+                  <div ref={feedRef} className="mt-2.5" onClick={simPhase === "league" ? simAdvance : undefined}>
+                    {[...simShown.games].map((g, i) => (
+                      <MatchRow
+                        key={i}
+                        n={i + 1}
+                        g={g}
+                        hero={leagueHero(g, i, result.matchStars[i])}
+                        last={i === simShown.games.length - 1}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {simPhase === "leagueDone" && (
+                  <div className="mt-8 lg:mt-0 lg:w-[440px] lg:shrink-0">
+                    <PointsTable rows={result.table} />
+                  </div>
+                )}
+              </div>
+
+              {simPhase === "leagueDone" && (
+                <div className="mt-8">
+                  {result.madePlayoffs ? (
+                    <>
+                      <p className="font-semibold text-[17px] leading-6 lg:text-[20px] lg:leading-7">
+                        Finished #{result.rank} on {result.points} points. Three wins from the title.
+                      </p>
+                      <PrimaryButton
+                        className="w-full lg:w-auto mt-3.5"
+                        onClick={() => {
+                          setPoIdx(0);
+                          setSimPhase("playoffs");
+                        }}
+                      >
+                        Start the playoffs
+                      </PrimaryButton>
+                    </>
+                  ) : (
+                    <>
+                      <SeasonReport
+                        result={result}
+                        forecast={forecast}
+                        bat={strength?.bat ?? 0}
+                        bowl={strength?.bowl ?? 0}
+                        leagueOnly
+                      />
+                      <ShareBlock
+                        shareText={shareText}
+                        seed={draft.seed}
+                        spins={draft.spins.map((s) => s.teamId)}
+                        mode={mode}
+                        draftConfig={draft.config}
+                        startDraft={startDraft}
+                        copied={copied}
+                        setCopied={setCopied}
+                        challengeCopied={challengeCopied}
+                        setChallengeCopied={setChallengeCopied}
+                      />
+                    </>
+                  )}
+                </div>
               )}
             </div>
           )}
-        </div>
-      )}
 
-          {/* ---- playoffs: ball-by-ball knockouts, one match at a time ---- */}
           {simPhase === "playoffs" && (
-            <div className="mt-6 rounded-2xl border border-amber-300/25 bg-black/40 p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] tracking-[0.25em] text-amber-200 font-bold">⚔️ PLAYOFFS</span>
-                <span className="text-[11px] text-zinc-400">
-                  via {result.wins}-{result.losses} · #{result.rank}
+            <div className="mx-auto w-full max-w-[900px] px-5 lg:px-8 pt-5 pb-12 flex flex-col gap-3.5">
+              <div className="flex items-baseline gap-3">
+                <h1 className="font-semibold text-[22px] leading-7 lg:text-[26px] lg:leading-8">Playoffs</h1>
+                <span className="text-[14px] leading-5 text-muted">
+                  in as #{result.rank} on {result.wins}-{result.losses}
                 </span>
-                <span className="ml-auto flex items-center gap-1.5">
-                  <button
-                    onClick={() => setSimSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}
-                    className="text-xs px-2.5 py-1.5 rounded bg-white/10 border border-white/10"
-                  >
-                    {simSpeed}x ⏩
-                  </button>
-                </span>
+                <span className="flex-1" />
+                <button
+                  onClick={() => setSimSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}
+                  className="h-9 px-3 rounded-control border border-ink text-[13px] font-medium"
+                >
+                  Speed {simSpeed}x
+                </button>
               </div>
               {nonFinals.slice(0, poIdx).map((p, i) => (
                 <PlayoffSummary key={i} stage={p.stage} gf={p.gf} ga={p.ga} win={p.result === "W"} margin={p.margin} />
@@ -1026,10 +1173,8 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     nonFinals[poIdx].result === "W"
                       ? poIdx + 1 < nonFinals.length
                         ? `Next: ${nonFinals[poIdx + 1].stage}`
-                        : "To the Final"
-                      : nonFinals[poIdx].stage === "Qualifier 1"
-                        ? "Down to Qualifier 2 →"
-                        : "Season over — results"
+                        : "To the final"
+                      : "Season over — see the results"
                   }
                   onDone={onPlayoffDone}
                 />
@@ -1037,56 +1182,104 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
             </div>
           )}
 
-          {/* ---- final gate ---- */}
           {simPhase === "preFinal" && finalGame && (
-            <div className="mt-6 rounded-2xl border border-amber-300/50 bg-gradient-to-b from-amber-400/15 to-black p-6 text-center">
-              <div className="text-[11px] tracking-[0.3em] text-amber-200 font-bold">THE FINAL</div>
-              <div className="font-black text-3xl mt-2">YOU <span className="text-zinc-500 text-xl">vs</span> {finalGame.detail?.opp ?? "???"}</div>
-              <div className="text-sm text-zinc-400 mt-1">One game. Immortality adjacent. Full ball-by-ball.</div>
-              <button
-                onClick={() => setSimPhase("final")}
-                className="mt-4 px-10 py-4 rounded-2xl bg-amber-400 text-black font-black text-xl hover:bg-amber-300 shadow-[0_0_50px_-10px_rgba(251,191,36,.9)]"
-              >
-                🏆 Play the Final
-              </button>
+            <div className="mx-auto w-full max-w-[900px] px-5 lg:px-8 pt-5 pb-12">
+              <div className="-mx-5 lg:mx-0 lg:rounded-control bg-ink text-white px-5 py-8 lg:px-10 lg:py-12 text-center flex flex-col items-center gap-3">
+                <span className="text-[13px] leading-[18px] text-muted-plate">The final</span>
+                <span className="font-semibold text-[28px] leading-9 lg:text-[40px] lg:leading-[48px]">
+                  You versus {finalGame.detail?.opp ?? "the best of the rest"}
+                </span>
+                <span className="text-[15px] leading-[22px] text-body-plate">
+                  One game, played ball by ball.
+                </span>
+                <PrimaryButton className="mt-3 w-full sm:w-auto px-10" onClick={() => setSimPhase("final")}>
+                  Play the final
+                </PrimaryButton>
+              </div>
             </div>
           )}
 
           {simPhase === "final" && finalGame && finalGame.detail && (
-            <div className="mt-6 rounded-2xl border border-amber-300/25 bg-black/40 p-4">
+            <div className="mx-auto w-full max-w-[900px] px-5 lg:px-8 pt-5 pb-12">
               <PlayoffMatch
                 stage="Final"
                 detail={finalGame.detail}
                 userTag="YOU"
                 speed={simSpeed}
                 fullMatch
-                nextLabel={finalGame.result === "W" ? "🏆 Lift the trophy" : "Full-time — results"}
+                nextLabel={finalGame.result === "W" ? "Lift the trophy" : "Full time — see the results"}
                 onDone={() => setSimPhase("done")}
               />
             </div>
           )}
 
           {simPhase === "done" && (
-            <>
-              <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                <div className="font-black text-2xl text-center">
-                  {result.perfect14
-                    ? "🏆 14-0. PERFECT. IMMORTAL."
-                    : result.champion
-                      ? `🏆 CHAMPIONS · ${result.wins}-${result.losses}`
-                      : result.madePlayoffs
-                        ? `💔 Knocked out — ${knockoutStage(result)}`
-                        : `📉 ${result.wins}-${result.losses} — missed the playoffs`}
+            <div className="pb-12">
+              <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-4 lg:pt-6">
+                <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-6 lg:px-9 lg:py-9 flex flex-col xl:flex-row xl:items-end gap-6 xl:gap-10 2xl:gap-14">
+                  <div className="flex gap-3 xl:gap-3.5 xl:shrink-0">
+                    <Flap
+                      label="Won"
+                      value={result.wins}
+                      tone={result.perfect14 ? "turf" : "plate"}
+                      wrapClassName="flex-1 xl:flex-none xl:w-[150px] 2xl:w-[196px]"
+                      className="h-[120px] xl:h-[180px] 2xl:h-[224px]"
+                      valueClassName="text-[112px] leading-[98px] xl:text-[132px] xl:leading-[114px] 2xl:text-[176px] 2xl:leading-[152px]"
+                    />
+                    <Flap
+                      label="Lost"
+                      value={result.losses}
+                      wrapClassName="flex-1 xl:flex-none xl:w-[150px] 2xl:w-[196px]"
+                      className="h-[120px] xl:h-[180px] 2xl:h-[224px]"
+                      valueClassName="text-[112px] leading-[98px] xl:text-[132px] xl:leading-[114px] 2xl:text-[176px] 2xl:leading-[152px]"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-4 flex-1 min-w-0">
+                    <h1
+                      className={`font-semibold text-[28px] leading-[34px] lg:text-[36px] lg:leading-[44px] 2xl:text-[40px] 2xl:leading-[48px] ${
+                        result.champion ? "text-trophy" : ""
+                      }`}
+                    >
+                      {headline(result)}
+                    </h1>
+                    <p className="text-[15px] leading-[22px] lg:text-[17px] lg:leading-[26px] text-body-plate">
+                      {resultBlurb(result)}
+                    </p>
+                    <SeasonStrip result={result} />
+                    <div className="flex flex-wrap gap-x-8 gap-y-3 pt-1">
+                      {[
+                        [String(result.points), "points"],
+                        [`${result.nrr > 0 ? "+" : ""}${result.nrr}`, "net run rate"],
+                        [ordinal(result.rank), "on the table"],
+                        [draft.difficulty, "difficulty"],
+                      ].map(([v, k]) => (
+                        <div key={k} className="flex flex-col gap-0.5">
+                          <span className="font-display font-semibold text-[30px] leading-7 lg:text-[34px] lg:leading-[30px] pt-1 tabular">
+                            {v}
+                          </span>
+                          <span className="text-[13px] leading-[18px] text-body-plate">{k}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2.5 xl:w-[268px] xl:shrink-0">
+                    <ShareButtons
+                      shareText={shareText}
+                      seed={draft.seed}
+                      spins={draft.spins.map((s) => s.teamId)}
+                      copied={copied}
+                      setCopied={setCopied}
+                      challengeCopied={challengeCopied}
+                      setChallengeCopied={setChallengeCopied}
+                      onPlate
+                    />
+                  </div>
                 </div>
-                <div className="text-xs text-zinc-400 mt-1 text-center">
-                  #{result.rank} · {result.points} pts · NRR {result.nrr > 0 ? "+" : ""}
-                  {result.nrr} · {draft.difficulty}
-                </div>
-                {!result.perfect14 && result.wins >= 11 && (
-                  <p className="text-sm text-amber-200 mt-1 text-center">
-                    😱 So close — {14 - result.wins} loss{14 - result.wins > 1 ? "es" : ""} from immortality. One more spin?
-                  </p>
-                )}
+              </div>
+
+              <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 mt-8">
                 <SeasonReport
                   result={result}
                   forecast={forecast}
@@ -1094,21 +1287,25 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                   bowl={strength?.bowl ?? 0}
                   compact
                 />
-                <TableView rows={result.table} />
+                <div className="mt-8 flex flex-col lg:flex-row lg:gap-12 lg:items-start">
+                  <div className="lg:w-[440px] lg:shrink-0">
+                    <PointsTable rows={result.table} />
+                  </div>
+                  <div className="mt-8 lg:mt-0 flex-1 flex flex-col gap-3">
+                    <PrimaryButton
+                      className="w-full"
+                      onClick={() => startDraft(mode, draft.config)}
+                    >
+                      Play another run
+                    </PrimaryButton>
+                    <p className="text-[13px] leading-5 text-muted text-center">
+                      Your next run gets a fresh board. Today&apos;s challenge stays the same for
+                      everyone until midnight.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <ShareBlock
-                shareText={shareText}
-                seed={draft.seed}
-                spins={draft.spins.map((s) => s.teamId)}
-                mode={mode}
-                draftConfig={draft.config}
-                startDraft={startDraft}
-                copied={copied}
-                setCopied={setCopied}
-                challengeCopied={challengeCopied}
-                setChallengeCopied={setChallengeCopied}
-              />
-            </>
+            </div>
           )}
         </>
       )}
@@ -1116,88 +1313,327 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
   );
 }
 
-function roleWord(r: "Opener" | "Middle" | "WK" | "AR" | "Pace" | "Spin", n: number): string {
-  const words = {
-    Opener: n === 1 ? "opener" : "openers",
-    Middle: n === 1 ? "middle-order" : "middle-order",
-    WK: "keeper",
-    AR: n === 1 ? "all-rounder" : "all-rounders",
-    Pace: n === 1 ? "pacer" : "pacers",
-    Spin: n === 1 ? "spinner" : "spinners",
-  } as const;
-  return words[r];
+/* ------------------------------------------------------------------ bits */
+
+const CODE_COLOUR: Record<string, string> = {
+  MI: "#004BA0",
+  CSK: "#FDB913",
+  RCB: "#EC1C24",
+  KKR: "#3A225D",
+  DC: "#17479E",
+  DD: "#17479E",
+  SRH: "#FF822A",
+  RR: "#EA1A85",
+  PBKS: "#E81828",
+  KXIP: "#E81828",
+  GT: "#1B2133",
+  LSG: "#00A3E0",
+  DCH: "#143975",
+  KTK: "#E25B13",
+  PWI: "#3D6BB3",
+  GL: "#E04F16",
+  RPS: "#D6218B",
+};
+
+function oppColour(code: string): string {
+  return CODE_COLOUR[code] ?? "#2E2E2E";
 }
 
-function winPct(myPower: number, oppPower: number): number {
-  const p = 1 / (1 + Math.pow(10, -(myPower - oppPower) / 15));
-  return Math.round(p * 100);
+function ordinal(n: number): string {
+  if (n === 1) return "1st";
+  if (n === 2) return "2nd";
+  if (n === 3) return "3rd";
+  return `${n}th`;
 }
 
-const OPP_HEROES = ["Warner", "Buttler", "Bumrah", "Rashid", "Gayle", "Dhoni", "ABD", "Malinga", "Narine", "Pant", "SKY", "Head"];
-
-function shortName(full: string): string {
-  const parts = full.split(" ");
-  if (parts.length === 1) return full;
-  return `${parts[0][0]} ${parts[parts.length - 1]}`;
+function openSlotSummary(config: XIConfig, counts: Record<string, number>): string {
+  const words: string[] = [];
+  (["Opener", "Middle", "WK", "AR", "Pace", "Spin"] as Role[]).forEach((r) => {
+    const left = (config[r] ?? 0) - (counts[r] ?? 0);
+    if (left > 0) words.push(`${left} ${roleWord(r, left)}`);
+  });
+  return words.join(", ");
 }
 
-// hero line from the ACTUAL match stars (no more random names for your team)
-function leagueHero(
-  g: GameResult,
-  i: number,
-  star?: { bat: { player: string; runs: number; balls: number }; bowl: { player: string; wickets: number; runsConceded: number } }
-): string {
-  if (g.result === "W" && star) {
-    return g.margin.includes("runs")
-      ? `${shortName(star.bowl.player)} ${star.bowl.wickets}/${star.bowl.runsConceded} defended ${g.gf}`
-      : `${shortName(star.bat.player)} ${star.bat.runs}(${star.bat.balls}) finished it`;
-  }
-  const h = OPP_HEROES[(g.opp.length + i) % OPP_HEROES.length];
-  return `${h} stunned you`;
+function leagueLine(wins: number, losses: number, done: boolean): string {
+  if (done) return losses === 0 ? "Fourteen from fourteen. The league is done." : `Finished on ${wins * 2} points.`;
+  if (losses === 0 && wins >= 1) return `Still unbeaten. ${14 - wins} more to go.`;
+  if (losses === 1) return "One defeat. The perfect season is gone.";
+  return `${wins} won, ${losses} lost.`;
 }
 
-function leagueRuns(games: GameResult[]): number {
-  return games.reduce((a, g) => a + (parseInt(g.gf.split("/")[0], 10) || 0), 0);
-}
-function leagueAgainst(games: GameResult[]): number {
-  return games.reduce((a, g) => a + (parseInt(g.ga.split("/")[0], 10) || 0), 0);
-}
-
-function knockoutStage(r: SeasonResult): string {
-  const last = r.playoffs[r.playoffs.length - 1];
-  if (!last) return "the league";
-  if (last.stage === "Final") return "the Final";
-  return last.stage;
+function headline(r: SeasonResult): string {
+  if (r.perfect14 && r.champion) return "Champions. Perfect season.";
+  if (r.champion) return "Champions.";
+  if (r.madePlayoffs) return `Knocked out in ${knockoutStage(r)}.`;
+  return "Missed the playoffs.";
 }
 
-function StatMini({ value, label, color }: { value: string; label: string; color?: string }) {
+function resultBlurb(r: SeasonResult): string {
+  const bits: string[] = [];
+  bits.push(
+    `${r.wins} won, ${r.losses} lost, ${r.points} points, finished ${ordinal(r.rank)}.`
+  );
+  bits.push(
+    `${r.orangeCap.player} led the runs with ${r.orangeCap.runs} and ${r.purpleCap.player} took ${r.purpleCap.wickets} wickets.`
+  );
+  if (r.perfect14) bits.push("Nobody had done this before.");
+  else if (!r.madePlayoffs) bits.push("Top four was the promised land.");
+  return bits.join(" ");
+}
+
+/** Fourteen league bars, then the playoff bars in gold. */
+function SeasonStrip({ result }: { result: SeasonResult }) {
   return (
-    <span className="text-center">
-      <span className={`block font-black text-xl ${color ?? ""}`}>{value}</span>
-      <span className="block text-[10px] text-zinc-500 tracking-widest">{label}</span>
+    <div className="flex gap-1 items-center" aria-hidden>
+      {result.games.map((g, i) => (
+        <span
+          key={i}
+          className="flex-1 h-2.5 rounded-[2px]"
+          style={{ backgroundColor: g.result === "W" ? "#1A8A3C" : "#D8321F" }}
+        />
+      ))}
+      {result.playoffs.length > 0 && <span className="w-2.5" />}
+      {result.playoffs.map((p, i) => (
+        <span
+          key={`p${i}`}
+          className="flex-1 h-2.5 rounded-[2px]"
+          style={{ backgroundColor: p.result === "W" ? "#E0A81C" : "#D8321F" }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function StyleStrip({ config }: { config: XIConfig }) {
+  const cells: { letter: string; bg: string }[] = [];
+  const push = (n: number, letter: string, bg: string) => {
+    for (let i = 0; i < n; i++) cells.push({ letter, bg });
+  };
+  push(config.Opener ?? 0, "O", "#000000");
+  push(config.Middle ?? 0, "M", "#4A4A4A");
+  push(config.WK ?? 0, "WK", "#000000");
+  push(config.AR ?? 0, "AR", "#4A4A4A");
+  push(config.Pace ?? 0, "P", "#1A8A3C");
+  push(config.Spin ?? 0, "S", "#1A8A3C");
+  return (
+    <span className="flex gap-[3px]" aria-hidden>
+      {cells.map((c, i) => (
+        <span
+          key={i}
+          className="w-6 h-[22px] flex items-center justify-center rounded-[3px] font-display font-semibold text-[15px] leading-none text-white pt-[2px]"
+          style={{ backgroundColor: c.bg }}
+        >
+          {c.letter}
+        </span>
+      ))}
     </span>
   );
 }
 
-function PlayoffSummary({ stage, gf, ga, win, margin }: { stage: string; gf: string; ga: string; win: boolean; margin: string }) {
+function MatchRow({ n, g, hero, last }: { n: number; g: GameResult; hero: string; last?: boolean }) {
+  const win = g.result === "W";
+  const colour = oppColour(g.opp);
+  const superOver = g.margin === "Super Over";
+  const wide = superOver ? `${win ? "Won" : "Lost"} in a super over` : `${win ? "Won" : "Lost"} by ${g.margin}`;
+  const narrow = superOver
+    ? `${win ? "Beat" : "Lost to"} ${g.opp} in a super over`
+    : `${win ? "Beat" : "Lost to"} ${g.opp} by ${g.margin}`;
   return (
     <div
-      className={`rounded-lg px-3 py-2 border text-sm ${
-        win ? "border-amber-300/40 bg-amber-400/[0.07]" : "border-red-400/30 bg-red-500/10"
+      className={`flex items-center gap-2.5 lg:gap-3.5 py-2.5 border-t border-hairline ${
+        last ? "border-b" : ""
       }`}
     >
-      <div className="text-[10px] tracking-[0.2em] text-zinc-400">{stage.toUpperCase()}</div>
-      <div className="flex items-center gap-2 mt-0.5">
-        <span>{win ? "🟩" : "🟥"}</span>
-        <span className="font-mono font-bold">YOU {gf}</span>
-        <span className="text-zinc-500">vs</span>
-        <span className="font-mono">{ga}</span>
-        <span className="ml-auto text-xs text-zinc-300">
-          {win ? "won by " : "lost by"}
-          {margin}
+      <span className="w-7 lg:w-8 shrink-0 text-[13px] leading-[18px] text-muted">M{n}</span>
+      <span
+        className="w-6 h-6 lg:w-[26px] lg:h-[26px] shrink-0 flex items-center justify-center rounded font-display font-bold text-[18px] lg:text-[19px] leading-none text-white pt-[2px]"
+        style={{ backgroundColor: win ? "#1A8A3C" : "#D8321F" }}
+      >
+        {g.result}
+      </span>
+      <span
+        className="hidden sm:flex w-14 h-[22px] shrink-0 items-center justify-center rounded-chip font-display font-semibold text-[15px] leading-none pt-[2px]"
+        style={{ backgroundColor: colour, color: readableOn(colour) }}
+      >
+        {g.opp}
+      </span>
+      <span className="flex flex-col flex-1 min-w-0 xl:flex-row xl:items-baseline xl:gap-3.5">
+        <span className="font-medium text-[15px] leading-5 xl:w-[150px] xl:shrink-0 truncate">
+          <span className="sm:hidden">{narrow}</span>
+          <span className="hidden sm:inline">{wide}</span>
         </span>
-      </div>
+        <span className="text-[13px] leading-[18px] xl:text-[14px] xl:leading-5 text-muted truncate">
+          {hero}
+        </span>
+      </span>
+      <span className="shrink-0 text-right font-display font-semibold text-[19px] leading-5 lg:text-[22px] tabular pt-[3px] whitespace-nowrap">
+        {g.gf} · {g.ga}
+      </span>
     </div>
+  );
+}
+
+function PointsTable({ rows }: { rows: SeasonResult["table"] }) {
+  return (
+    <section className="flex flex-col">
+      <SectionHead title="The table" note="Top 4 go through" />
+      <div className="flex items-center gap-2 h-7 mt-1 text-[12px] leading-4 text-muted">
+        <span className="w-[22px] shrink-0" />
+        <span className="flex-1">Team</span>
+        <span className="w-[26px] shrink-0 text-right">P</span>
+        <span className="w-[26px] shrink-0 text-right">W</span>
+        <span className="w-[26px] shrink-0 text-right">L</span>
+        <span className="w-[34px] shrink-0 text-right">Pts</span>
+        <span className="w-[54px] shrink-0 text-right">NRR</span>
+      </div>
+      {rows.map((r, i) => (
+        <div key={r.team}>
+          <div
+            className={`flex items-center gap-2 h-[42px] px-2 ${
+              r.you ? "bg-ink text-white rounded-control" : "border-t border-hairline"
+            } ${i === rows.length - 1 && !r.you ? "border-b" : ""}`}
+          >
+            <span className="w-[22px] shrink-0 font-display font-semibold text-[20px] leading-[18px] pt-[3px] tabular">
+              {i + 1}
+            </span>
+            <span
+              className={`flex-1 min-w-0 truncate ${
+                r.you ? "font-semibold text-[16px] leading-[22px]" : "text-[15px] leading-5"
+              } ${!r.you && i > 3 ? "text-muted" : ""}`}
+            >
+              {r.you ? "Your XI" : r.team}
+            </span>
+            {(["p", "w", "l"] as const).map((k) => (
+              <span
+                key={k}
+                className={`w-[26px] shrink-0 text-right font-display font-medium text-[19px] leading-[18px] pt-[3px] tabular ${
+                  !r.you && i > 3 ? "text-muted" : ""
+                }`}
+              >
+                {r[k]}
+              </span>
+            ))}
+            <span
+              className={`w-[34px] shrink-0 text-right font-display font-semibold text-[19px] leading-[18px] pt-[3px] tabular ${
+                !r.you && i > 3 ? "text-muted" : ""
+              }`}
+            >
+              {r.pts}
+            </span>
+            <span
+              className={`w-[54px] shrink-0 text-right font-display font-medium text-[19px] leading-[18px] pt-[3px] tabular ${
+                !r.you && i > 3 ? "text-muted" : ""
+              }`}
+            >
+              {r.nrr > 0 ? "+" : ""}
+              {r.nrr}
+            </span>
+          </div>
+          {i === 3 && (
+            <div className="flex items-center h-7 pt-1.5 border-t-2 border-ink">
+              <span className="text-[12px] leading-4 text-muted">Playoff cut</span>
+            </div>
+          )}
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function PlayoffSummary({
+  stage,
+  gf,
+  ga,
+  win,
+  margin,
+}: {
+  stage: string;
+  gf: string;
+  ga: string;
+  win: boolean;
+  margin: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 py-3 border-t border-hairline">
+      <span className="w-[110px] shrink-0 text-[13px] leading-[18px] text-muted">{stage}</span>
+      <span
+        className="w-6 h-6 shrink-0 flex items-center justify-center rounded font-display font-bold text-[18px] leading-none text-white pt-[2px]"
+        style={{ backgroundColor: win ? "#E0A81C" : "#D8321F", color: win ? "#000" : "#fff" }}
+      >
+        {win ? "W" : "L"}
+      </span>
+      <span className="flex-1 min-w-0 text-[15px] leading-5 truncate">
+        {win ? "Won" : "Lost"} by {margin}
+      </span>
+      <span className="shrink-0 font-display font-semibold text-[20px] leading-5 pt-[3px] tabular">
+        {gf} · {ga}
+      </span>
+    </div>
+  );
+}
+
+function ShareButtons({
+  shareText,
+  seed,
+  spins,
+  copied,
+  setCopied,
+  challengeCopied,
+  setChallengeCopied,
+  onPlate,
+}: {
+  shareText: string;
+  seed: string;
+  spins: string[];
+  copied: boolean;
+  setCopied: (v: boolean) => void;
+  challengeCopied: boolean;
+  setChallengeCopied: (v: boolean) => void;
+  onPlate?: boolean;
+}) {
+  return (
+    <>
+      <a
+        href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2.5 h-14 rounded-control bg-turf text-white font-semibold text-[16px] hover:bg-[#15702f] transition-colors"
+      >
+        <WhatsAppIcon />
+        Share on WhatsApp
+      </a>
+      <OutlineButton
+        onPlate={onPlate}
+        onClick={async () => {
+          if (await copyText(shareText)) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }
+        }}
+      >
+        {copied ? "Copied" : "Copy result card"}
+      </OutlineButton>
+      <OutlineButton
+        onPlate={onPlate}
+        onClick={async () => {
+          const url = `${window.location.origin}/?challenge=${spins.join(",")}`;
+          if (await copyText(`Beat my board: ${url}`)) {
+            setChallengeCopied(true);
+            setTimeout(() => setChallengeCopied(false), 2000);
+          }
+        }}
+      >
+        {challengeCopied ? "Link copied" : "Challenge a friend"}
+      </OutlineButton>
+      <p
+        className={`text-[13px] leading-[18px] pt-0.5 ${
+          onPlate ? "text-muted-plate" : "text-muted"
+        }`}
+      >
+        Anyone can replay this exact run at /r/{seed}
+      </p>
+    </>
   );
 }
 
@@ -1225,133 +1661,65 @@ function ShareBlock({
   setChallengeCopied: (v: boolean) => void;
 }) {
   return (
-    <div className="mt-4 rounded-xl border border-emerald-300/30 bg-emerald-400/[0.07] p-3">
-      <div className="text-xs text-emerald-100/80 font-mono break-all">{shareText}</div>
-      <div className="flex gap-2 mt-2">
-        <button
-          onClick={async () => {
-            if (await copyText(shareText)) {
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            }
-          }}
-          className="px-4 py-2 rounded-lg bg-emerald-400 text-black font-bold text-sm"
-        >
-          {copied ? "✅ Copied!" : "📋 Copy result card"}
-        </button>
-        <a href={`/r/${seed}`} className="px-4 py-2 rounded-lg bg-white/10 border border-white/15 text-sm">
-          🔗 Verify: /r/{seed}
-        </a>
-        <button onClick={() => startDraft(mode, draftConfig)} className="px-4 py-2 rounded-lg bg-white text-black font-bold text-sm ml-auto">
-          Run it back ↻
-        </button>
-      </div>
-      <button
-        onClick={async () => {
-          const url = `${window.location.origin}/?challenge=${spins.join(",")}`;
-          if (await copyText(`⚔️ Beat my wheel: ${url}`)) {
-            setChallengeCopied(true);
-            setTimeout(() => setChallengeCopied(false), 2000);
-          }
-        }}
-        className="mt-2 w-full px-4 py-2 rounded-lg bg-fuchsia-500/20 border border-fuchsia-400/40 text-fuchsia-100 font-bold text-sm"
-      >
-        {challengeCopied ? "✅ Challenge link copied!" : "⚔️ 1v1: send a friend this exact wheel"}
-      </button>
+    <div className="mt-6 flex flex-col gap-2.5 max-w-[420px]">
+      <ShareButtons
+        shareText={shareText}
+        seed={seed}
+        spins={spins}
+        copied={copied}
+        setCopied={setCopied}
+        challengeCopied={challengeCopied}
+        setChallengeCopied={setChallengeCopied}
+      />
+      <PrimaryButton className="w-full mt-1" onClick={() => startDraft(mode, draftConfig)}>
+        Play another run
+      </PrimaryButton>
     </div>
   );
 }
 
-function GameRow({
-  label,
-  opp,
-  gf,
-  ga,
-  win,
-  margin,
-  fav,
-  hero,
-  fresh,
-}: {
-  label: string;
-  opp: string;
-  gf: string;
-  ga: string;
-  win: boolean;
-  margin: string;
-  fav: number;
-  hero: string;
-  fresh?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-lg px-3 py-2 border text-sm ${
-        win ? "border-emerald-400/30 bg-emerald-500/10" : "border-red-400/40 bg-red-500/10"
-      } ${fresh ? "animate-[pulse_0.6s_ease-in-out_1]" : ""}`}
-    >
-      <div className="flex items-center gap-2">
-        <span className="text-zinc-500 w-7 text-xs">{label}</span>
-        <span>{win ? "🟩" : "🟥"}</span>
-        <span className="font-mono font-bold">YOU {gf}</span>
-        <span className="text-zinc-500">vs</span>
-        <span className="font-mono">
-          {ga} {opp}
-        </span>
-        <span className="ml-auto text-[11px] text-zinc-400">
-          {fav}% {fav >= 50 ? "fav" : "dog"}
-        </span>
-      </div>
-      <div className="text-[11px] text-zinc-400 mt-0.5 ml-9">
-        {margin === "Super Over" ? (
-          <>decided in a <b className="text-amber-300">Super Over</b> · <span className="italic">{hero}</span></>
-        ) : (
-          <>{win ? "won by " : "lost by"}{margin} · <span className="italic">{hero}</span></>
-        )}
-      </div>
-    </div>
-  );
+function roleWord(r: Role, n: number): string {
+  const words: Record<Role, string> = {
+    Opener: n === 1 ? "opener" : "openers",
+    Middle: "middle order",
+    WK: "keeper",
+    AR: n === 1 ? "all-rounder" : "all-rounders",
+    Pace: n === 1 ? "pacer" : "pacers",
+    Spin: n === 1 ? "spinner" : "spinners",
+  };
+  return words[r];
 }
 
-function TableView({ rows }: { rows: SeasonResult["table"] }) {
-  return (
-    <div className="mt-4 overflow-hidden rounded-xl border border-white/10">
-      <div className="text-[10px] tracking-[0.25em] text-zinc-500 px-3 pt-2.5">POINTS TABLE · TOP 4 PLAYOFFS</div>
-      <table className="w-full text-sm mt-1">
-        <thead>
-          <tr className="text-[10px] text-zinc-500 border-b border-white/10">
-            <th className="text-left font-semibold px-3 py-1.5">#</th>
-            <th className="text-left font-semibold px-1 py-1.5">TEAM</th>
-            <th className="font-semibold px-1 py-1.5">P</th>
-            <th className="font-semibold px-1 py-1.5">W</th>
-            <th className="font-semibold px-1 py-1.5">L</th>
-            <th className="font-semibold px-1 py-1.5">PTS</th>
-            <th className="text-right font-semibold px-3 py-1.5">NRR</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <>
-              <tr key={r.team} className={r.you ? "bg-emerald-400/15 font-bold" : i % 2 ? "bg-white/[0.02]" : ""}>
-                <td className="px-3 py-1.5 text-zinc-400">{i + 1}</td>
-                <td className="px-1 py-1.5">{r.you ? "⭐ YOU" : r.team}</td>
-                <td className="px-1 py-1.5 text-center text-zinc-400">{r.p}</td>
-                <td className="px-1 py-1.5 text-center">{r.w}</td>
-                <td className="px-1 py-1.5 text-center text-zinc-400">{r.l}</td>
-                <td className="px-1 py-1.5 text-center font-bold">{r.pts}</td>
-                <td className="px-3 py-1.5 text-right font-mono text-xs">
-                  {r.nrr > 0 ? "+" : ""}
-                  {r.nrr}
-                </td>
-              </tr>
-              {i === 3 && (
-                <tr key="cut">
-                  <td colSpan={7} className="border-b-2 border-dashed border-emerald-400/50 h-0 p-0" />
-                </tr>
-              )}
-            </>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+const OPP_HEROES = ["Warner", "Buttler", "Bumrah", "Rashid", "Gayle", "Dhoni", "ABD", "Malinga", "Narine", "Pant", "SKY", "Head"];
+
+function shortName(full: string): string {
+  const parts = full.split(" ");
+  if (parts.length === 1) return full;
+  return `${parts[0][0]} ${parts[parts.length - 1]}`;
+}
+
+// hero line from the actual match stars
+function leagueHero(
+  g: GameResult,
+  i: number,
+  star?: { bat: { player: string; runs: number; balls: number }; bowl: { player: string; wickets: number; runsConceded: number } }
+): string {
+  if (g.result === "W" && star) {
+    return g.margin.includes("runs")
+      ? `${shortName(star.bowl.player)} ${star.bowl.wickets} for ${star.bowl.runsConceded} defended it`
+      : `${shortName(star.bat.player)} ${star.bat.runs} off ${star.bat.balls} finished it`;
+  }
+  const h = OPP_HEROES[(g.opp.length + i) % OPP_HEROES.length];
+  return `${h} stunned you`;
+}
+
+function leagueRuns(games: GameResult[]): number {
+  return games.reduce((a, g) => a + (parseInt(g.gf.split("/")[0], 10) || 0), 0);
+}
+
+function knockoutStage(r: SeasonResult): string {
+  const last = r.playoffs[r.playoffs.length - 1];
+  if (!last) return "the league";
+  if (last.stage === "Final") return "the final";
+  return last.stage;
 }

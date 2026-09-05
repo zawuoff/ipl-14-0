@@ -1,24 +1,63 @@
 "use client";
-import type { PlayerSeason, Role } from "@/lib/game/types";
+import type { PlayerSeason } from "@/lib/game/types";
 
-// 38-0-style squad rows: rating square (role colour) + name/country + role tag.
-export const ROLE_SQUARE: Record<Role, string> = {
-  Opener: "bg-orange-500",
-  Middle: "bg-sky-500",
-  WK: "bg-fuchsia-500",
-  AR: "bg-emerald-500",
-  Pace: "bg-red-500",
-  Spin: "bg-violet-500",
+const ROLE_LABEL: Record<PlayerSeason["role"], string> = {
+  Opener: "Opener",
+  Middle: "Middle",
+  WK: "Keeper",
+  AR: "All-rounder",
+  Pace: "Pace",
+  Spin: "Spin",
 };
 
-export const ROLE_TAG: Record<Role, string> = {
-  Opener: "bg-orange-500/15 text-orange-200",
-  Middle: "bg-sky-500/15 text-sky-200",
-  WK: "bg-fuchsia-500/15 text-fuchsia-200",
-  AR: "bg-emerald-500/15 text-emerald-200",
-  Pace: "bg-red-500/15 text-red-200",
-  Spin: "bg-violet-500/15 text-violet-200",
-};
+function PlayerRow({
+  p,
+  hideRatings,
+  onPick,
+  reason,
+}: {
+  p: PlayerSeason;
+  hideRatings?: boolean;
+  onPick?: (p: PlayerSeason) => void;
+  reason?: string;
+}) {
+  const off = !!reason;
+  return (
+    <button
+      onClick={onPick && !off ? () => onPick(p) : undefined}
+      disabled={!onPick || off}
+      title={reason}
+      className={`w-full flex items-center gap-3 py-2.5 text-left border-t border-hairline transition-colors ${
+        off ? "cursor-not-allowed" : "hover:bg-panel cursor-pointer"
+      }`}
+    >
+      <span
+        className={`flex items-center justify-center w-11 h-11 shrink-0 rounded-control font-display font-bold text-[26px] leading-[26px] pt-[3px] tabular ${
+          off ? "bg-hairline text-[#8A8A8A]" : "bg-ink text-white"
+        }`}
+      >
+        {hideRatings ? "?" : p.overall}
+      </span>
+      <span className="flex flex-col flex-1 min-w-0">
+        <span
+          className={`font-medium text-[16px] leading-[22px] truncate ${off ? "text-[#8A8A8A]" : ""}`}
+        >
+          {p.player}
+        </span>
+        <span className={`text-[13px] leading-[18px] truncate ${off ? "text-[#8A8A8A]" : "text-muted"}`}>
+          {off ? reason : p.overseas ? `${p.country} · Overseas` : p.country}
+        </span>
+      </span>
+      <span
+        className={`w-[84px] shrink-0 text-right font-medium text-[14px] leading-[18px] ${
+          off ? "text-[#8A8A8A]" : ""
+        }`}
+      >
+        {ROLE_LABEL[p.role]}
+      </span>
+    </button>
+  );
+}
 
 export function SquadList({
   squad,
@@ -35,45 +74,29 @@ export function SquadList({
   const rows = [...squad].sort((a, b) => {
     const au = unavailable?.has(a.id) ? 1 : 0;
     const bu = unavailable?.has(b.id) ? 1 : 0;
-    if (au !== bu) return au - bu; // available first, greyed at bottom
+    if (au !== bu) return au - bu; // available first, greyed at the bottom
     return b.overall - a.overall;
   });
+
+  // Desktop shows the whole squad at once, in two columns.
+  const half = Math.ceil(rows.length / 2);
+  const cols = [rows.slice(0, half), rows.slice(half)];
+
   return (
-    <div className="space-y-1.5">
-      {rows.map((p) => {
-        const reason = unavailable?.get(p.id);
-        const off = !!reason;
-        return (
-          <button
-            key={p.id}
-            onClick={onPick && !off ? () => onPick(p) : undefined}
-            disabled={!onPick || off}
-            title={reason}
-            className={`w-full flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
-              off
-                ? "border-white/[0.04] bg-white/[0.01] opacity-40 grayscale cursor-not-allowed"
-                : "border-white/[0.07] bg-white/[0.03] hover:border-emerald-300/50 hover:bg-emerald-400/[0.07] cursor-pointer"
-            }`}
-          >
-            <span
-              className={`w-10 h-10 shrink-0 rounded-lg ${ROLE_SQUARE[p.role]} flex items-center justify-center font-black text-white text-[15px]`}
-            >
-              {hideRatings ? "?" : p.overall}
-            </span>
-            <span className="min-w-0">
-              <span className="block font-semibold text-[15px] leading-tight truncate">
-                {p.player} {p.overseas && <span className="text-xs">✈️</span>}
-              </span>
-              <span className="block text-xs text-zinc-400">
-                {off ? reason : `${p.country} · ${p.teamId}`}
-              </span>
-            </span>
-            <span className={`ml-auto text-[10px] font-bold px-2 py-1 rounded-md shrink-0 ${ROLE_TAG[p.role]}`}>
-              {p.role === "WK" ? "WK" : p.role.toUpperCase().slice(0, 5)}
-            </span>
-          </button>
-        );
-      })}
+    <div className="flex flex-col xl:flex-row xl:gap-5 border-b border-hairline xl:border-b-0">
+      {cols.map((col, i) => (
+        <div key={i} className="flex flex-col flex-1 min-w-0 xl:border-b xl:border-hairline">
+          {col.map((p) => (
+            <PlayerRow
+              key={p.id}
+              p={p}
+              hideRatings={hideRatings}
+              onPick={onPick}
+              reason={unavailable?.get(p.id)}
+            />
+          ))}
+        </div>
+      ))}
     </div>
   );
 }
