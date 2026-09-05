@@ -242,7 +242,7 @@ export function RoomSeason({ room }: { room: any }) {
     const capRows = [...combined.entries()].map(([player, e]) => ({ player, runs: e.runs, wickets: e.wkts }));
     const orange = capRows.reduce((a, b) => (b.runs > a.runs ? b : a), capRows[0]);
     const purple = [...capRows].sort((a, b) => b.wickets - a.wickets || b.runs - a.runs)[0];
-    const mvp = [...capRows].sort((a, b) => b.runs + b.wickets * 20 - (a.runs + a.wickets * 20))[0];
+    const mvp = [...capRows].sort((a, b) => b.runs + b.wickets * 25 - (a.runs + a.wickets * 20))[0];
     const myPO = league.playoffs
       .filter((p) => p.t1 === myIdx || p.t2 === myIdx)
       .map((p) => {
@@ -277,7 +277,7 @@ export function RoomSeason({ room }: { room: any }) {
       matchStars: stars,
       orangeCap: { player: orange.player, runs: orange.runs },
       purpleCap: { player: purple.player, wickets: purple.wickets },
-      mvp: { player: mvp.player, points: mvp.runs + mvp.wickets * 20 },
+      mvp: { player: mvp.player, points: mvp.runs + mvp.wickets * 25 },
       playerRuns,
       biggestWin,
       _st: st,

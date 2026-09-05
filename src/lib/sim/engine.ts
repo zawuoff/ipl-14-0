@@ -413,15 +413,14 @@ function bump(
 export function distributeMatch(
   xi: PlayerSeason[],
   userRuns: number,
-  _userWkts: number,
+  userWkts: number,
   oppWktsFallen: number,
   rng: () => number
 ): MatchStar {
-  void _userWkts;
   const batters = xi
     .filter((p) => ["Opener", "Middle", "WK", "AR"].includes(p.role))
     .sort((a, b) => b.bat - a.bat)
-    .slice(0, 7);
+    .slice(0, 8); // all 8 bat-role players — nobody scores a season duck
   const bw = batters.map((p) => Math.pow(p.bat, 6));
   const btot = bw.reduce((a, b) => a + b, 0) || 1;
   const bruns = batters.map((_, i) => Math.floor((userRuns * bw[i]) / btot));
@@ -440,10 +439,46 @@ export function distributeMatch(
     bruns[0] -= move;
     bruns[i] += move;
   }
-  const batAll = batters.map((p, i) => {
-    const sr = clamp(115 + (p.bat - 65) * 1.3, 100, 200);
-    return { player: p.player, runs: bruns[i], balls: Math.max(1, Math.round((bruns[i] * 100) / sr)) };
+  // tail bats when wickets fall: collapses → #8-11 chip in; cruises → DNB
+  const tail = xi.filter((p) => p.role === "Pace" || p.role === "Spin");
+  const tailFrac = tail.length === 0 ? 0 : userWkts <= 3 ? 0.01 : clamp(0.04 + 0.011 * userWkts, 0.04, 0.15);
+  let tailRuns = Math.round(userRuns * tailFrac);
+  if (tailRuns > 0 && userRuns > 0) {
+    const tot = bruns.reduce((a, b) => a + b, 0) || 1;
+    for (let i = 0; i < bruns.length; i++) bruns[i] -= Math.round((bruns[i] / tot) * tailRuns);
+    bruns[0] += userRuns - tailRuns - bruns.reduce((a, b) => a + b, 0); // rounding drift
+  }
+  // floor: top-7 all get off the mark in decent totals
+  if (userRuns >= 120) {
+    for (let i = 1; i < bruns.length; i++) {
+      if (bruns[i] < 3 && bruns[0] > 12) {
+        const mv = Math.min(3 - bruns[i], bruns[0] - 12);
+        bruns[i] += mv;
+        bruns[0] -= mv;
+      }
+    }
+  }
+  const tw = tail.map((p) => Math.max(10, p.bat));
+  const ttot = tw.reduce((a, b) => a + b, 0) || 1;
+  const truns = tail.map((_, i) => Math.floor((tailRuns * tw[i]) / ttot));
+  let trem = tailRuns - truns.reduce((a, b) => a + b, 0);
+  let ti = 0;
+  while (trem > 0 && truns.length) {
+    truns[ti % truns.length]++;
+    trem--;
+    ti++;
+  }
+  const tailCards = tail.map((p, i) => {
+    const sr = clamp(85 + (p.bat - 20) * 1.2, 80, 140);
+    return { player: p.player, runs: truns[i], balls: truns[i] > 0 ? Math.max(1, Math.round((truns[i] * 100) / sr)) : 0 };
   });
+  const batAll = [
+    ...batters.map((p, i) => {
+      const sr = clamp(115 + (p.bat - 65) * 1.3, 100, 200);
+      return { player: p.player, runs: bruns[i], balls: bruns[i] > 0 ? Math.max(1, Math.round((bruns[i] * 100) / sr)) : 0 };
+    }),
+    ...tailCards,
+  ];
   let topBat = { player: batters[0]?.player ?? "—", runs: 0, balls: 0 };
   for (const b of batAll) {
     if (b.runs > topBat.runs) topBat = b;
@@ -453,7 +488,7 @@ export function distributeMatch(
     .filter((p) => ["AR", "Pace", "Spin"].includes(p.role))
     .sort((a, b) => b.bowl - a.bowl)
     .slice(0, 5);
-  const ww = bowlers.map((p) => Math.pow(Math.max(20, p.bowl), 3));
+  const ww = bowlers.map((p) => Math.pow(Math.max(20, p.bowl), 2));
   const wtot = ww.reduce((a, b) => a + b, 0) || 1;
   const wk = bowlers.map((_, i) => Math.floor((oppWktsFallen * ww[i]) / wtot));
   let wrem = oppWktsFallen - wk.reduce((a, b) => a + b, 0);
@@ -496,11 +531,11 @@ function seasonAwards(
   playerRuns.sort((a, b) => b.runs - a.runs || b.wickets - a.wickets);
   const orange = playerRuns.reduce((a, b) => (b.runs > a.runs ? b : a), playerRuns[0]);
   const purple = [...playerRuns].sort((a, b) => b.wickets - a.wickets || b.runs - a.runs)[0];
-  const mvp = [...playerRuns].sort((a, b) => b.runs + b.wickets * 20 - (a.runs + a.wickets * 20))[0];
+  const mvp = [...playerRuns].sort((a, b) => b.runs + b.wickets * 25 - (a.runs + a.wickets * 25))[0];
   return {
     orangeCap: { player: orange.player, runs: orange.runs },
     purpleCap: { player: purple.player, wickets: purple.wickets },
-    mvp: { player: mvp.player, points: mvp.runs + mvp.wickets * 20 },
+    mvp: { player: mvp.player, points: mvp.runs + mvp.wickets * 25 },
     playerRuns,
   };
 }
