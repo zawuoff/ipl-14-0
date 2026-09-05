@@ -532,11 +532,16 @@ export function RoomSeason({ room }: { room: any }) {
                   </div>
                 </>
               ) : (
-                <>
-                  <SeasonReport result={report} forecast={null} bat={report._st.bat} bowl={report._st.bowl} leagueOnly />
-                  <RoomTable rows={report.table} me={myName} mate={mate?.name} />
-                  <RoomShare share={share} copied={copied} setCopied={setCopied} code={room.code} />
-                </>
+                // Missing the top four still ends your season, so the room
+                // result waits behind the same button and the same gate.
+                <div className="flex flex-col items-center gap-3">
+                  <p className="font-semibold text-[17px] leading-6 lg:text-[20px] lg:leading-7 text-center">
+                    Outside the top four. Your season ends here.
+                  </p>
+                  <PrimaryButton className="w-full sm:w-auto sm:px-12" onClick={() => setPhase("done")}>
+                    See how the room finished
+                  </PrimaryButton>
+                </div>
               )}
             </div>
           )}

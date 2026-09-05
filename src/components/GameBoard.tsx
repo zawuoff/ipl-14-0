@@ -391,8 +391,14 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
           madePlayoffs: r.madePlayoffs,
           champion: r.champion,
           perfect14: r.perfect14,
-          // the simResults validator has no superOver field — sending it rejects the whole save
-          games: r.games.map((g) => ({ opp: g.opp, gf: g.gf, ga: g.ga, result: g.result, margin: g.margin })),
+          games: r.games.map((g) => ({
+            opp: g.opp,
+            gf: g.gf,
+            ga: g.ga,
+            result: g.result,
+            margin: g.margin,
+            superOver: g.superOver,
+          })),
           playoffs: r.playoffs.map((p) => ({ stage: p.stage, gf: p.gf, ga: p.ga, result: p.result, margin: p.margin })),
           teamBat: st0.bat,
           teamBowl: st0.bowl,

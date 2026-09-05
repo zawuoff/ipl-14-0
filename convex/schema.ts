@@ -85,6 +85,7 @@ export default defineSchema({
         ga: v.string(), // "172/8"
         result: v.union(v.literal("W"), v.literal("L")),
         margin: v.string(), // "15 runs" / "6 wkts (8 balls left)"
+        superOver: v.optional(v.string()), // "SO 6/0-2/0" when it went the distance
       })
     ),
     playoffs: v.optional(
