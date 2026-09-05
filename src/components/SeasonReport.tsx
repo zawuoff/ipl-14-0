@@ -20,6 +20,7 @@ export function SeasonReport({
   compact,
   leagueOnly,
   slim,
+  owners,
 }: {
   result: SeasonResult;
   forecast: Forecast | null;
@@ -28,6 +29,9 @@ export function SeasonReport({
   compact?: boolean;
   leagueOnly?: boolean;
   slim?: boolean;
+  // In a room both managers can hold the same player, so an award needs to say
+  // whose XI it came from.
+  owners?: (player: string) => string[];
 }) {
   // Checkpoint before the playoffs: where you finished, and how that compares.
   if (slim) {
@@ -95,19 +99,21 @@ export function SeasonReport({
             name={result.orangeCap.player}
             note="Orange Cap, most runs"
             value={result.orangeCap.runs}
-            first
+            owners={owners?.(result.orangeCap.player)}
           />
           <Award
             colour="#6B3FA0"
             name={result.purpleCap.player}
             note="Purple Cap, most wickets"
             value={result.purpleCap.wickets}
+            owners={owners?.(result.purpleCap.player)}
           />
           <Award
             colour="#E0A81C"
             name={result.mvp.player}
             note="Player of the season"
             value={result.mvp.points}
+            owners={owners?.(result.mvp.player)}
             last
           />
 
@@ -150,25 +156,37 @@ function Award({
   name,
   note,
   value,
-  first,
+  owners,
   last,
 }: {
   colour: string;
   name: string;
   note: string;
   value: number;
-  first?: boolean;
+  owners?: string[];
   last?: boolean;
 }) {
   return (
     <div
-      className={`flex items-center gap-3.5 h-[60px] border-t border-hairline ${
+      className={`flex items-center gap-3.5 min-h-[60px] py-2 border-t border-hairline ${
         last ? "border-b" : ""
-      } ${first ? "" : ""}`}
+      }`}
     >
       <span className="w-2.5 h-[38px] shrink-0 rounded-[2px]" style={{ backgroundColor: colour }} />
-      <span className="flex flex-col flex-1 min-w-0">
-        <span className="font-medium text-[16px] leading-[22px] truncate">{name}</span>
+      <span className="flex flex-col flex-1 min-w-0 gap-0.5">
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="font-medium text-[16px] leading-[22px] truncate">{name}</span>
+          {owners?.map((o) => (
+            <span
+              key={o}
+              className={`shrink-0 inline-flex items-center h-[19px] px-1.5 rounded-chip text-[12px] leading-none font-medium ${
+                o === "You" ? "bg-ink text-white" : "border border-ink text-ink"
+              }`}
+            >
+              {o}
+            </span>
+          ))}
+        </span>
         <span className="text-[13px] leading-[18px] text-muted truncate">{note}</span>
       </span>
       <span className="shrink-0 font-display font-semibold text-[28px] leading-[26px] pt-[3px] tabular">

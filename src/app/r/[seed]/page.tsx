@@ -2,7 +2,7 @@
 import { use } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { Flap, SectionHead, PrimaryButton, Wordmark } from "@/components/ui";
+import { Flap, SectionHead, PrimaryButton, Wordmark, tidyMargin } from "@/components/ui";
 
 const CODE_COLOUR: Record<string, string> = {
   MI: "#004BA0",
@@ -119,10 +119,10 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
                   const superOver = g.margin === "Super Over";
                   const wide = superOver
                     ? `${win ? "Won" : "Lost"} in a super over`
-                    : `${win ? "Won" : "Lost"} by ${g.margin}`;
+                    : `${win ? "Won" : "Lost"} by ${tidyMargin(g.margin)}`;
                   const narrow = superOver
                     ? `${win ? "Beat" : "Lost to"} ${g.opp} in a super over`
-                    : `${win ? "Beat" : "Lost to"} ${g.opp} by ${g.margin}`;
+                    : `${win ? "Beat" : "Lost to"} ${g.opp} by ${tidyMargin(g.margin)}`;
                   return (
                     <div
                       key={i}
@@ -171,7 +171,7 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
                         {p.stage}
                       </span>
                       <span className="flex-1 min-w-0 text-[15px] leading-5 truncate">
-                        {p.result === "W" ? "Won" : "Lost"} by {p.margin}
+                        {p.result === "W" ? "Won" : "Lost"} by {tidyMargin(p.margin)}
                       </span>
                       <span className="shrink-0 font-display font-semibold text-[20px] leading-5 pt-[3px] tabular">
                         {p.gf} · {p.ga}

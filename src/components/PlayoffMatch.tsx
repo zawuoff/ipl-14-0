@@ -353,7 +353,7 @@ function MatchResult({
         {userTag} {detail.userFirst ? detail.inn1.score : detail.inn2.score} versus{" "}
         {detail.userFirst ? detail.inn2.score : detail.inn1.score} {detail.opp}
       </p>
-      <PrimaryButton className="w-full sm:w-auto sm:px-10 mt-1" onClick={onDone}>
+      <PrimaryButton className="w-full sm:w-auto sm:px-12 sm:self-center mt-1" onClick={onDone}>
         {nextLabel}
       </PrimaryButton>
     </div>

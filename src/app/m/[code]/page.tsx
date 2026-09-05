@@ -10,6 +10,11 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const { code } = use(params);
   const upper = code.toUpperCase();
   const room = useQuery((api as any).rooms?.get, { code: upper });
+  // Both XIs locked: the league is on, so the lobby chrome gets out of the way.
+  const started =
+    !!room &&
+    (room.members?.length ?? 0) === 2 &&
+    room.members.every((m: any) => m.picks?.length === 11);
   const joinRoom = useMutation((api as any).rooms?.join);
   const [name, setName] = useState("");
   const [joining, setJoining] = useState(false);
@@ -31,11 +36,17 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       </header>
 
       <div className="mx-auto w-full max-w-[1000px] px-5 lg:px-8 pt-5 pb-12">
-        <h1 className="font-semibold text-[26px] leading-8 lg:text-[32px] lg:leading-10">Play a friend</h1>
-        <p className="text-[15px] leading-[22px] text-muted mt-1 max-w-[70ch]">
-          You both draft your own XI. Then one shared league of 18 games decides it, and your
-          head-to-head games count for real.
-        </p>
+        {!started && (
+          <>
+            <h1 className="font-semibold text-[26px] leading-8 lg:text-[32px] lg:leading-10">
+              Play a friend
+            </h1>
+            <p className="text-[15px] leading-[22px] text-muted mt-1 max-w-[70ch]">
+              You both draft your own XI. Then one shared league of 18 games decides it, and your
+              head-to-head games count for real.
+            </p>
+          </>
+        )}
 
         {room === undefined && <p className="text-[15px] text-muted py-6">Finding the room…</p>}
         {room === null && (
@@ -109,14 +120,33 @@ function RoomLobby({
 
   const invite = `Play me at 14-0, the IPL draft game. Room ${code}: ${roomUrl}`;
 
+  if (bothReady) {
+    return (
+      <>
+        <div className="flex items-baseline gap-3 flex-wrap">
+          <h1 className="font-semibold text-[22px] leading-7 lg:text-[26px] lg:leading-8">
+            {members.map((m) => m.name).join(" against ")}
+          </h1>
+          <span className="text-[14px] leading-5 text-muted">
+            Room {code} · <span className="capitalize">{room.difficulty}</span> · one 18-game table
+          </span>
+        </div>
+        <div className="mt-4">
+          <RoomSeason room={room} />
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <div className="mt-5 -mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-5 lg:px-7 lg:py-6 flex flex-col gap-3.5">
         <div className="flex items-baseline gap-3">
           <span className="text-[13px] leading-[18px] text-muted-plate">Room code</span>
           <span className="flex-1" />
-          <span className="text-[13px] leading-[18px] text-muted-plate capitalize">
-            {room.difficulty} · {bothIn ? "both seats taken" : "one seat open"}
+          <span className="text-[13px] leading-[18px] text-muted-plate">
+            <span className="capitalize">{room.difficulty}</span> ·{" "}
+            {bothIn ? "both seats taken" : "one seat open"}
           </span>
         </div>
 
@@ -229,12 +259,6 @@ function RoomLobby({
           Your XI is locked. Waiting for <b>{mate ? mate.name : "your opponent"}</b> to finish
           drafting. This page updates on its own.
         </p>
-      )}
-
-      {bothReady && (
-        <div className="mt-8">
-          <RoomSeason room={room} />
-        </div>
       )}
 
       {!bothReady && (

@@ -125,3 +125,23 @@ export const submitXI = mutation({
     return { ready };
   },
 });
+
+// A manager has watched their season to the end. Until everyone has, the room
+// result stays hidden so an early exit can't spoil a final still being watched.
+export const finish = mutation({
+  args: { code: v.string(), deviceId: v.string() },
+  handler: async (ctx, args) => {
+    const room = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) => q.eq("code", args.code.toUpperCase()))
+      .first();
+    if (!room) throw new Error("Room not found");
+    const members = [...room.members];
+    const i = members.findIndex((m) => m.deviceId === args.deviceId);
+    if (i < 0) return { ok: false };
+    if (members[i].finishedAt) return { ok: true };
+    members[i] = { ...members[i], finishedAt: Date.now() };
+    await ctx.db.patch(room._id, { members });
+    return { ok: true };
+  },
+});

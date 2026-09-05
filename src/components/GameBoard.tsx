@@ -33,10 +33,21 @@ import {
   SectionHead,
   WhatsAppIcon,
   readableOn,
+  Crown,
+  tidyMargin,
 } from "./ui";
 import { PlayoffMatch } from "./PlayoffMatch";
 import { SeasonReport } from "./SeasonReport";
 import { copyText } from "@/lib/clipboard";
+
+const ROLE_WORD: Record<string, string> = {
+  Opener: "Opener",
+  Middle: "Middle order",
+  WK: "Keeper",
+  AR: "All-rounder",
+  Pace: "Pace",
+  Spin: "Spin",
+};
 
 const ALL_TEAMS: TeamSeason[] = buildTeamSeasons();
 const ALL_PLAYERS: PlayerSeason[] = buildPlayerSeasons();
@@ -257,9 +268,9 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
     const capHit = overseas >= MAX_OVERSEAS;
     for (const p of getSquad(currentSpin.teamId)) {
       if (pickedNames.has(p.player)) continue; // already filtered out
-      if (capHit && p.overseas) m.set(p.id, "✈️ overseas cap hit (4/4)");
+      if (capHit && p.overseas) m.set(p.id, "Overseas cap full, 4 of 4");
       else if ((roleCounts[p.role] ?? 0) >= (draft.config[p.role] ?? 0))
-        m.set(p.id, `${p.role} slot filled`);
+        m.set(p.id, `${ROLE_WORD[p.role] ?? p.role} slot filled`);
     }
     return m;
   }, [draft, currentSpin, pickedNames, overseas, roleCounts]);
@@ -408,14 +419,14 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
     let dwell: number;
     let clampMin = 0;
     if (i === firstLossIdx) {
-      dwell = 2800;
-      clampMin = 1200;
+      dwell = 3600;
+      clampMin = 1600;
     } else if (i < 3) {
-      dwell = 1300;
+      dwell = 2400;
     } else if (i < 10) {
-      dwell = 850;
+      dwell = 1900;
     } else {
-      dwell = 1400;
+      dwell = 2400;
     }
     const wait = Math.max(dwell / simSpeed, clampMin);
     const t = setTimeout(() => {
@@ -495,6 +506,10 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
     return t ? { code: t.code, season: t.season, colour: t.colour } : undefined;
   };
   const picked = pickedXI.length;
+  const roomBothReady =
+    !!roomQ &&
+    (roomQ.members?.length ?? 0) === 2 &&
+    roomQ.members.every((m: any) => m.picks?.length === 11);
   const modeLabel = initialRoom
     ? `Room ${initialRoom.toUpperCase()}`
     : draft?.mode === "daily"
@@ -876,6 +891,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                       hideRatings={hideRatings}
                       onPick={pick}
                       unavailable={effectiveUnavailable}
+                      teamColour={spunTeam?.colour}
                     />
                   </div>
                 </>
@@ -950,9 +966,16 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
           <div className="mt-5 flex flex-col gap-2.5">
             {inRoomGame ? (
               roomSubmitted ? (
-                <OutlineButton href={`/m/${initialRoom!.toUpperCase()}`} className="h-14 w-full text-[17px]">
-                  XI locked — back to the room
-                </OutlineButton>
+                <a
+                  href={`/m/${initialRoom!.toUpperCase()}`}
+                  className={`flex items-center justify-center h-14 w-full rounded-control font-semibold text-[17px] transition-colors ${
+                    roomBothReady
+                      ? "bg-turf text-white hover:bg-[#15702f]"
+                      : "border-[1.5px] border-ink text-ink hover:bg-panel"
+                  }`}
+                >
+                  {roomBothReady ? "Start the league" : "XI locked — waiting for your opponent"}
+                </a>
               ) : (
                 <PrimaryButton
                   className="w-full"
@@ -1011,7 +1034,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                   <Flap
                     label="Won"
                     value={simShown.wins}
-                    tone={simShown.losses === 0 && simShown.wins > 0 ? "turf" : "plate"}
+                    valueColour="#4FCB74"
                     wrapClassName="flex-1 lg:flex-none lg:w-[148px]"
                     className="h-[88px] lg:h-[132px]"
                     valueClassName="text-[72px] leading-[64px] lg:text-[108px] lg:leading-[96px]"
@@ -1019,6 +1042,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                   <Flap
                     label="Lost"
                     value={simShown.losses}
+                    valueColour="#FF6152"
                     wrapClassName="flex-1 lg:flex-none lg:w-[148px]"
                     className="h-[88px] lg:h-[132px]"
                     valueClassName="text-[72px] leading-[64px] lg:text-[108px] lg:leading-[96px]"
@@ -1036,7 +1060,11 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                       simShown.losses === 0 && simShown.wins > 0 ? "text-turf-soft" : "text-body-plate"
                     }`}
                   >
-                    {leagueLine(simShown.wins, simShown.losses, simPhase === "leagueDone")}
+                    {simPhase === "leagueDone"
+                      ? `Finished ${ordinal(result.rank)} on ${result.points} points. ${
+                          result.madePlayoffs ? "Into the top four." : "Outside the top four."
+                        }`
+                      : leagueLine(simShown.wins, simShown.losses, false)}
                   </span>
                   <div className="flex gap-6 lg:gap-8 pt-1">
                     {[
@@ -1079,7 +1107,15 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     title="Results so far"
                     note={simPhase === "league" ? "Tap a result to jump ahead" : undefined}
                   />
-                  <div ref={feedRef} className="mt-2.5" onClick={simPhase === "league" ? simAdvance : undefined}>
+                  <div
+                    ref={feedRef}
+                    className={`mt-2.5 ${
+                      simPhase === "league"
+                        ? "h-[360px] lg:h-[440px] overflow-y-auto pr-1"
+                        : ""
+                    }`}
+                    onClick={simPhase === "league" ? simAdvance : undefined}
+                  >
                     {[...simShown.games].map((g, i) => (
                       <MatchRow
                         key={i}
@@ -1094,7 +1130,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
 
                 {simPhase === "leagueDone" && (
                   <div className="mt-8 lg:mt-0 lg:w-[440px] lg:shrink-0">
-                    <PointsTable rows={result.table} />
+                    <PointsTable rows={result.table} championIsYou={result.champion} />
                   </div>
                 )}
               </div>
@@ -1103,18 +1139,20 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                 <div className="mt-8">
                   {result.madePlayoffs ? (
                     <>
-                      <p className="font-semibold text-[17px] leading-6 lg:text-[20px] lg:leading-7">
-                        Finished #{result.rank} on {result.points} points. Three wins from the title.
-                      </p>
-                      <PrimaryButton
-                        className="w-full lg:w-auto mt-3.5"
-                        onClick={() => {
-                          setPoIdx(0);
-                          setSimPhase("playoffs");
-                        }}
-                      >
-                        Start the playoffs
-                      </PrimaryButton>
+                      <div className="flex flex-col items-center gap-3">
+                        <p className="font-semibold text-[17px] leading-6 lg:text-[20px] lg:leading-7 text-center">
+                          Three wins from the title.
+                        </p>
+                        <PrimaryButton
+                          className="w-full sm:w-auto sm:px-12"
+                          onClick={() => {
+                            setPoIdx(0);
+                            setSimPhase("playoffs");
+                          }}
+                        >
+                          Into the playoffs
+                        </PrimaryButton>
+                      </div>
                     </>
                   ) : (
                     <>
@@ -1221,7 +1259,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     <Flap
                       label="Won"
                       value={result.wins}
-                      tone={result.perfect14 ? "turf" : "plate"}
+                      valueColour="#4FCB74"
                       wrapClassName="flex-1 xl:flex-none xl:w-[150px] 2xl:w-[196px]"
                       className="h-[120px] xl:h-[180px] 2xl:h-[224px]"
                       valueClassName="text-[112px] leading-[98px] xl:text-[132px] xl:leading-[114px] 2xl:text-[176px] 2xl:leading-[152px]"
@@ -1229,6 +1267,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     <Flap
                       label="Lost"
                       value={result.losses}
+                      valueColour="#FF6152"
                       wrapClassName="flex-1 xl:flex-none xl:w-[150px] 2xl:w-[196px]"
                       className="h-[120px] xl:h-[180px] 2xl:h-[224px]"
                       valueClassName="text-[112px] leading-[98px] xl:text-[132px] xl:leading-[114px] 2xl:text-[176px] 2xl:leading-[152px]"
@@ -1289,7 +1328,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                 />
                 <div className="mt-8 flex flex-col lg:flex-row lg:gap-12 lg:items-start">
                   <div className="lg:w-[440px] lg:shrink-0">
-                    <PointsTable rows={result.table} />
+                    <PointsTable rows={result.table} championIsYou={result.champion} />
                   </div>
                   <div className="mt-8 lg:mt-0 flex-1 flex flex-col gap-3">
                     <PrimaryButton
@@ -1435,10 +1474,11 @@ function MatchRow({ n, g, hero, last }: { n: number; g: GameResult; hero: string
   const win = g.result === "W";
   const colour = oppColour(g.opp);
   const superOver = g.margin === "Super Over";
-  const wide = superOver ? `${win ? "Won" : "Lost"} in a super over` : `${win ? "Won" : "Lost"} by ${g.margin}`;
+  const m = tidyMargin(g.margin);
+  const wide = superOver ? `${win ? "Won" : "Lost"} in a super over` : `${win ? "Won" : "Lost"} by ${m}`;
   const narrow = superOver
     ? `${win ? "Beat" : "Lost to"} ${g.opp} in a super over`
-    : `${win ? "Beat" : "Lost to"} ${g.opp} by ${g.margin}`;
+    : `${win ? "Beat" : "Lost to"} ${g.opp} by ${m}`;
   return (
     <div
       className={`flex items-center gap-2.5 lg:gap-3.5 py-2.5 border-t border-hairline ${
@@ -1459,7 +1499,7 @@ function MatchRow({ n, g, hero, last }: { n: number; g: GameResult; hero: string
         {g.opp}
       </span>
       <span className="flex flex-col flex-1 min-w-0 xl:flex-row xl:items-baseline xl:gap-3.5">
-        <span className="font-medium text-[15px] leading-5 xl:w-[150px] xl:shrink-0 truncate">
+        <span className="font-medium text-[15px] leading-5 xl:w-[210px] xl:shrink-0 truncate">
           <span className="sm:hidden">{narrow}</span>
           <span className="hidden sm:inline">{wide}</span>
         </span>
@@ -1474,7 +1514,7 @@ function MatchRow({ n, g, hero, last }: { n: number; g: GameResult; hero: string
   );
 }
 
-function PointsTable({ rows }: { rows: SeasonResult["table"] }) {
+function PointsTable({ rows, championIsYou }: { rows: SeasonResult["table"]; championIsYou?: boolean }) {
   return (
     <section className="flex flex-col">
       <SectionHead title="The table" note="Top 4 go through" />
@@ -1498,11 +1538,12 @@ function PointsTable({ rows }: { rows: SeasonResult["table"] }) {
               {i + 1}
             </span>
             <span
-              className={`flex-1 min-w-0 truncate ${
+              className={`flex-1 min-w-0 flex items-center gap-1.5 truncate ${
                 r.you ? "font-semibold text-[16px] leading-[22px]" : "text-[15px] leading-5"
               } ${!r.you && i > 3 ? "text-muted" : ""}`}
             >
               {r.you ? "Your XI" : r.team}
+              {r.you && championIsYou && <Crown size={18} />}
             </span>
             {(["p", "w", "l"] as const).map((k) => (
               <span
@@ -1564,7 +1605,7 @@ function PlayoffSummary({
         {win ? "W" : "L"}
       </span>
       <span className="flex-1 min-w-0 text-[15px] leading-5 truncate">
-        {win ? "Won" : "Lost"} by {margin}
+        {win ? "Won" : "Lost"} by {tidyMargin(margin)}
       </span>
       <span className="shrink-0 font-display font-semibold text-[20px] leading-5 pt-[3px] tabular">
         {gf} · {ga}

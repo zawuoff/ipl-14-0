@@ -25,7 +25,9 @@ export function Flap({
   className = "",
   wrapClassName = "",
   valueClassName = "text-[64px] leading-[58px]",
+  valueColour,
   labelOnPlate = true,
+  labelCentred,
 }: {
   label?: string;
   value: ReactNode;
@@ -34,7 +36,9 @@ export function Flap({
   className?: string;
   wrapClassName?: string;
   valueClassName?: string;
+  valueColour?: string;
   labelOnPlate?: boolean;
+  labelCentred?: boolean;
 }) {
   const bg = tone === "turf" ? "#1A8A3C" : tone === "team" ? colour ?? "#141414" : "#141414";
   const bordered = tone === "plate";
@@ -44,7 +48,7 @@ export function Flap({
         <div
           className={`text-[13px] leading-[18px] font-medium ${
             labelOnPlate ? "text-muted-plate" : "text-muted"
-          }`}
+          } ${labelCentred ? "text-center" : ""}`}
         >
           {label}
         </div>
@@ -56,7 +60,10 @@ export function Flap({
           border: bordered ? "1px solid var(--color-plate-line)" : "none",
         }}
       >
-        <div className={`font-display font-bold text-white tabular pt-[0.08em] ${valueClassName}`}>
+        <div
+          className={`font-display font-bold tabular pt-[0.08em] ${valueClassName}`}
+          style={{ color: valueColour ?? "#FFFFFF" }}
+        >
           {value}
         </div>
         <div
@@ -243,4 +250,31 @@ export function Wordmark({ className = "" }: { className?: string }) {
       14–0
     </span>
   );
+}
+
+/** Rating heat, read straight off the tile. Gold is the top shelf, then green,
+    then ink, then the greys. Text colour is picked for contrast. */
+export function ratingTone(rating: number): { bg: string; fg: string } {
+  if (rating >= 90) return { bg: "#E0A81C", fg: "#000000" };
+  if (rating >= 84) return { bg: "#1A8A3C", fg: "#FFFFFF" };
+  if (rating >= 78) return { bg: "#000000", fg: "#FFFFFF" };
+  if (rating >= 72) return { bg: "#4A4A4A", fg: "#FFFFFF" };
+  return { bg: "#8A8A8A", fg: "#FFFFFF" };
+}
+
+export function Crown({ size = 16, colour = "#E0A81C" }: { size?: number; colour?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={colour} aria-label="Champions" role="img">
+      <path d="M3 8.5 6.6 12 12 4.5 17.4 12 21 8.5V18a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
+    </svg>
+  );
+}
+
+/** The sim writes "1 runs" and "1 wkts"; say it the way a commentator would. */
+export function tidyMargin(m: string): string {
+  return m
+    .replace(/^1 runs\b/, "1 run")
+    .replace(/^1 wkts\b/, "1 wicket")
+    .replace(/\bwkts\b/, "wickets")
+    .replace(/\bwkt\b/, "wicket");
 }

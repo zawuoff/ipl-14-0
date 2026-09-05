@@ -1,5 +1,6 @@
 "use client";
 import type { PlayerSeason } from "@/lib/game/types";
+import { ratingTone, readableOn } from "./ui";
 
 const ROLE_LABEL: Record<PlayerSeason["role"], string> = {
   Opener: "Opener",
@@ -15,13 +16,22 @@ function PlayerRow({
   hideRatings,
   onPick,
   reason,
+  teamColour,
 }: {
   p: PlayerSeason;
   hideRatings?: boolean;
   onPick?: (p: PlayerSeason) => void;
   reason?: string;
+  teamColour?: string;
 }) {
   const off = !!reason;
+  // Ratings visible: the tile carries the rating heat. Legend mode: no number
+  // to colour, so the tile wears the squad's own colour instead.
+  const tile = off
+    ? { bg: "#E4E4E4", fg: "#8A8A8A" }
+    : hideRatings
+      ? { bg: teamColour ?? "#000000", fg: readableOn(teamColour ?? "#000000") }
+      : ratingTone(p.overall);
   return (
     <button
       onClick={onPick && !off ? () => onPick(p) : undefined}
@@ -32,9 +42,8 @@ function PlayerRow({
       }`}
     >
       <span
-        className={`flex items-center justify-center w-11 h-11 shrink-0 rounded-control font-display font-bold text-[26px] leading-[26px] pt-[3px] tabular ${
-          off ? "bg-hairline text-[#8A8A8A]" : "bg-ink text-white"
-        }`}
+        className="flex items-center justify-center w-11 h-11 shrink-0 rounded-control font-display font-bold text-[26px] leading-[26px] pt-[3px] tabular"
+        style={{ backgroundColor: tile.bg, color: tile.fg }}
       >
         {hideRatings ? "?" : p.overall}
       </span>
@@ -64,12 +73,14 @@ export function SquadList({
   hideRatings,
   onPick,
   unavailable,
+  teamColour,
 }: {
   squad: PlayerSeason[];
   hideRatings?: boolean;
   onPick?: (p: PlayerSeason) => void;
   // playerId -> reason the pick is blocked (role slot filled / overseas cap)
   unavailable?: Map<string, string>;
+  teamColour?: string;
 }) {
   const rows = [...squad].sort((a, b) => {
     const au = unavailable?.has(a.id) ? 1 : 0;
@@ -93,6 +104,7 @@ export function SquadList({
               hideRatings={hideRatings}
               onPick={onPick}
               reason={unavailable?.get(p.id)}
+              teamColour={teamColour}
             />
           ))}
         </div>

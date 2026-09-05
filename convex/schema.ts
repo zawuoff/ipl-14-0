@@ -162,6 +162,9 @@ export default defineSchema({
         picks: v.array(v.string()), // playerSeason ids
         seed: v.string(),
         submittedAt: v.number(),
+        // set when this manager has watched their season out — used to hold
+        // back the room result so nobody gets spoiled early
+        finishedAt: v.optional(v.number()),
       })
     ),
     createdAt: v.number(),
