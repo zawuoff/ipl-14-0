@@ -6,5 +6,9 @@
       "mcp__paper__create_artboard",
       "mcp__paper__write_html"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "convex"
+  ],
+  "enableAllProjectMcpServers": true
 }

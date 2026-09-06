@@ -2,19 +2,20 @@ import type { Metadata, Viewport } from "next";
 import { Teko, Hind } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "@/components/ConvexProvider";
+import { LangProvider } from "@/lib/i18n";
 
 // Teko carries every number on the scoreboard; Hind carries everything you read.
 // Both ship Devanagari, so a Hindi toggle later costs nothing.
 const teko = Teko({
   variable: "--font-teko",
-  subsets: ["latin"],
+  subsets: ["latin", "devanagari"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
 const hind = Hind({
   variable: "--font-hind",
-  subsets: ["latin"],
+  subsets: ["latin", "devanagari"],
   weight: ["300", "400", "500", "600", "700"],
   display: "swap",
 });
@@ -35,7 +36,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${teko.variable} ${hind.variable} h-full`}>
       <body className="min-h-full flex flex-col bg-ground text-ink font-body">
-        <ConvexClientProvider>{children}</ConvexClientProvider>
+        <LangProvider>
+          <ConvexClientProvider>{children}</ConvexClientProvider>
+        </LangProvider>
       </body>
     </html>
   );

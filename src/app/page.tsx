@@ -5,6 +5,7 @@ import { api } from "../../convex/_generated/api";
 import { GameBoard } from "@/components/GameBoard";
 import { istDateKey } from "@/lib/game/types";
 import { Flap, PrimaryButton, OutlineButton, SectionHead, Wordmark } from "@/components/ui";
+import { useT, useLang, LangToggle } from "@/lib/i18n";
 
 type Screen = "home" | "game" | "board";
 
@@ -74,6 +75,7 @@ export default function Home() {
 /* ---------------------------------------------------------------- chrome */
 
 function TopBar({ screen, go, inGame }: { screen: Screen; go: (s: Screen) => void; inGame: boolean }) {
+  const t = useT();
   const link = "text-[15px] leading-5 font-medium hover:text-turf transition-colors";
   return (
     <header className="border-b border-hairline">
@@ -81,44 +83,39 @@ function TopBar({ screen, go, inGame }: { screen: Screen; go: (s: Screen) => voi
         <button onClick={() => !inGame && go("home")} className="flex items-baseline gap-3 min-w-0">
           <Wordmark className="text-[30px] lg:text-[34px]" />
           <span className="hidden sm:block text-[13px] lg:text-[14px] leading-[18px] text-muted truncate">
-            Fan-made IPL draft game
+            {t("app.tagline")}
           </span>
         </button>
         <span className="flex-1" />
         <nav className="hidden lg:flex items-center gap-7">
-          <button className={link} onClick={() => go("home")}>How it works</button>
+          <button className={link} onClick={() => go("home")}>{t("nav.howItWorks")}</button>
           <button className={`${link} ${screen === "board" ? "text-turf" : ""}`} onClick={() => go("board")}>
-            Leaderboard
+            {t("nav.leaderboard")}
           </button>
-          <button className={link} onClick={() => go("game")}>Play a friend</button>
+          <button className={link} onClick={() => go("game")}>{t("nav.playAFriend")}</button>
         </nav>
         <button
           onClick={() => go("board")}
           className="lg:hidden text-[15px] font-medium px-3 h-9 flex items-center rounded-control border border-ink"
         >
-          Board
+          {t("nav.board")}
         </button>
-        <span
-          className="flex items-center justify-center w-11 h-8 lg:w-[46px] lg:h-[34px] shrink-0 rounded-control border border-ink text-[14px] font-semibold"
-          title="Hindi coming soon"
-        >
-          हिं
-        </span>
+        <LangToggle className="w-11 h-8 lg:w-[46px] lg:h-[34px] text-[14px]" />
       </div>
     </header>
   );
 }
 
 function SiteFooter() {
+  const t = useT();
   return (
     <footer className="mt-auto border-t border-hairline">
       <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 py-8 lg:py-10 flex flex-col lg:flex-row lg:items-start gap-3 lg:gap-10">
         <p className="flex-1 max-w-[720px] text-[13px] leading-5 text-muted">
-          14–0 is a fan-made game and is not affiliated with the IPL or BCCI. Player names and season
-          ratings are used for description only, and ratings are derived from public season statistics.
+          {t("footer.legal")}
         </p>
         <p className="text-[13px] lg:text-[14px] leading-5 font-medium">
-          Leaderboard · How ratings work · Contact
+          {t("footer.links")}
         </p>
       </div>
     </footer>
@@ -136,9 +133,11 @@ function HomeScreen({
   play: (m: "classic" | "daily") => void;
   rows: Row[] | undefined;
 }) {
+  const t = useT();
+  const { lang } = useLang();
   const day = today.slice(8);
   const month = new Date(`${today}T00:00:00Z`)
-    .toLocaleString("en-GB", { month: "short", timeZone: "UTC" })
+    .toLocaleString(lang === "hi" ? "hi-IN" : "en-GB", { month: "short", timeZone: "UTC" })
     .toUpperCase();
 
   return (
@@ -149,14 +148,14 @@ function HomeScreen({
           <div className="flex flex-col lg:flex-row lg:items-end gap-6 lg:gap-16">
             <div className="flex gap-3 lg:gap-3.5 lg:shrink-0">
               <Flap
-                label="Won"
+                label={t("word.won")}
                 value="14"
                 wrapClassName="flex-1 lg:flex-none lg:w-[236px]"
                 className="h-[132px] lg:h-[280px]"
                 valueClassName="text-[128px] leading-[110px] lg:text-[216px] lg:leading-[186px]"
               />
               <Flap
-                label="Lost"
+                label={t("word.lost")}
                 value="0"
                 wrapClassName="flex-1 lg:flex-none lg:w-[236px]"
                 className="h-[132px] lg:h-[280px]"
@@ -166,19 +165,18 @@ function HomeScreen({
 
             <div className="flex flex-col gap-5 lg:gap-5 lg:flex-1 lg:pb-2">
               <h1 className="font-semibold text-[24px] leading-[30px] lg:text-[50px] lg:leading-[58px]">
-                <span className="lg:hidden">Draft an all-time IPL XI. Then try to win every single game.</span>
-                <span className="hidden lg:inline">The scoreboard nobody has filled in yet.</span>
+                <span className="lg:hidden">{t("home.headline.mobile")}</span>
+                <span className="hidden lg:inline">{t("home.headline.desktop")}</span>
               </h1>
               <p className="text-[15px] leading-[22px] lg:text-[18px] lg:leading-7 text-body-plate lg:max-w-[540px]">
-                Spin real IPL squads from 2008 to 2025, take one player from each, and play a full
-                season. Win all fourteen and the board reads 14–0.
+                {t("home.sub")}
               </p>
               <div className="hidden lg:flex items-center gap-5 pt-2">
                 <PrimaryButton className="h-15 px-9 text-[18px]" onClick={() => play("classic")}>
-                  Spin your first squad
+                  {t("home.cta")}
                 </PrimaryButton>
                 <span className="text-[15px] leading-[22px] text-muted-plate whitespace-nowrap">
-                  About 3 minutes. No sign-up.
+                  {t("home.ctaNote")}
                 </span>
               </div>
             </div>
@@ -190,20 +188,20 @@ function HomeScreen({
       {/* Mobile keeps the action on white, directly under the board. */}
       <section className="lg:hidden px-5 pt-4 pb-2 flex flex-col gap-2.5">
         <PrimaryButton className="w-full" onClick={() => play("classic")}>
-          Spin your first squad
+          {t("home.cta")}
         </PrimaryButton>
-        <p className="text-[13px] leading-[18px] text-muted text-center">About 3 minutes. No sign-up.</p>
+        <p className="text-[13px] leading-[18px] text-muted text-center">{t("home.ctaNote")}</p>
       </section>
 
       {/* Mobile: two straight choices. Desktop: real runs beside the choices. */}
       <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-2 lg:pt-16 pb-2 lg:pb-[72px] flex flex-col lg:flex-row gap-0 lg:gap-[72px]">
         <div className="hidden lg:flex flex-col flex-1">
-          <SectionHead title="Today's best runs" note="See the full board" />
+          <SectionHead title={t("home.bestRuns")} note={t("home.seeFullBoard")} />
           <div className="mt-3.5">
-            <BoardRows rows={rows} empty="No runs logged yet today. Be the first." />
+            <BoardRows rows={rows} empty={t("board.empty.daily")} />
           </div>
           <p className="text-[13px] leading-5 text-muted pt-3.5">
-            The board resets at midnight IST.
+            {t("home.resetNote")}
           </p>
         </div>
 
@@ -217,10 +215,10 @@ function HomeScreen({
                 </span>
               </span>
             }
-            title="Today's challenge"
-            blurb="Everyone gets the same eleven squads. Compare your XI with the rest of the country."
-            action="Play"
-            deskAction="Play today's challenge"
+            title={t("home.daily.title")}
+            blurb={t("home.daily.blurb")}
+            action={t("home.daily.action")}
+            deskAction={t("home.daily.actionLong")}
             onClick={() => play("daily")}
             first
           />
@@ -230,10 +228,10 @@ function HomeScreen({
                 <span className="font-display font-bold text-[26px] lg:text-[28px] leading-6 text-white">1v1</span>
               </span>
             }
-            title="Play a friend"
-            blurb="You both draft, then one shared league decides it. Send the invite on WhatsApp."
-            action="Invite"
-            deskAction="Create a room"
+            title={t("home.friend.title")}
+            blurb={t("home.friend.blurb")}
+            action={t("home.friend.action")}
+            deskAction={t("home.friend.actionLong")}
             onClick={() => play("classic")}
           />
         </div>
@@ -243,23 +241,23 @@ function HomeScreen({
       <section className="bg-ground lg:bg-panel">
         <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-7 lg:pt-16 pb-2 lg:pb-[72px] flex flex-col gap-4 lg:gap-7">
           <h2 className="font-semibold text-[20px] leading-[26px] lg:text-[24px] lg:leading-[30px]">
-            How a run works
+            {t("home.steps.title")}
           </h2>
           <div className="flex flex-col lg:flex-row gap-4 lg:gap-12">
             <Step
               n={1}
-              title="Spin a squad"
-              body="The board lands on a real team-season, like Mumbai Indians 2019 or Deccan Chargers 2009. There are 156 of them, every season from 2008 to 2025."
+              title={t("home.step1.title")}
+              body={t("home.step1.body")}
             />
             <Step
               n={2}
-              title="Pick one player"
-              body="From that exact season's squad, and only that one. Eleven spins, two re-spins, four overseas players at most. Legend mode hides the ratings."
+              title={t("home.step2.title")}
+              body={t("home.step2.body")}
             />
             <Step
               n={3}
-              title="Play the season"
-              body="Fourteen league games, then the playoffs, with the final played ball by ball. Top four go through. Every result reproduces from its seed."
+              title={t("home.step3.title")}
+              body={t("home.step3.body")}
             />
           </div>
         </div>
@@ -358,25 +356,26 @@ function Leaderboard({
   daily: Row[] | undefined;
   allTime: Row[] | undefined;
 }) {
+  const t = useT();
   const [tab, setTab] = useState<"daily" | "all">("daily");
   const rows = tab === "daily" ? daily : allTime;
   return (
     <div className="mx-auto w-full max-w-[900px] px-5 lg:px-16 pt-4 lg:pt-8 pb-10">
-      <h1 className="font-semibold text-[26px] leading-8 lg:text-[32px] lg:leading-10">Leaderboard</h1>
+      <h1 className="font-semibold text-[26px] leading-8 lg:text-[32px] lg:leading-10">{t("board.title")}</h1>
       <p className="text-[15px] leading-[22px] text-muted mt-1">
-        Best seasons by anyone, anywhere. Tap a row to replay the exact run.
+        {t("board.sub")}
       </p>
 
       <div className="flex gap-2 mt-4">
-        {(["daily", "all"] as const).map((t) => (
+        {(["daily", "all"] as const).map((tabKey) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={tabKey}
+            onClick={() => setTab(tabKey)}
             className={`flex-1 h-10 rounded-control font-semibold text-[15px] transition-colors ${
-              tab === t ? "bg-ink text-white" : "border border-[#D4D4D4] text-ink hover:bg-panel"
+              tab === tabKey ? "bg-ink text-white" : "border border-[#D4D4D4] text-ink hover:bg-panel"
             }`}
           >
-            {t === "daily" ? "Today's challenge" : "All time"}
+            {tabKey === "daily" ? t("board.tab.daily") : t("board.tab.allTime")}
           </button>
         ))}
       </div>
@@ -384,28 +383,25 @@ function Leaderboard({
       <div className="mt-4">
         <BoardRows
           rows={rows}
-          empty={tab === "daily" ? "No runs logged yet today. Be the first." : "No seasons logged yet."}
+          empty={tab === "daily" ? t("board.empty.daily") : t("board.empty.allTime")}
         />
       </div>
       <p className="text-[13px] leading-5 text-muted pt-3">
-        {tab === "daily" ? `Today is ${today}. The board resets at midnight IST.` : "Every run is verifiable from its seed."}
+        {tab === "daily" ? t("board.todayNote", { date: today }) : t("board.seedNote")}
       </p>
     </div>
   );
 }
 
-function managerName(deviceId: string): string {
-  return `Manager ${deviceId.slice(0, 4).toUpperCase()}`;
-}
-
-function outcome(r: Row): string {
-  if (r.champion) return "champions";
-  if (r.madePlayoffs) return "made the playoffs";
-  return "missed the playoffs";
+function outcomeKey(r: Row): string {
+  if (r.champion) return "outcome.champions";
+  if (r.madePlayoffs) return "outcome.madePlayoffs";
+  return "outcome.missedPlayoffs";
 }
 
 function BoardRows({ rows, empty }: { rows: Row[] | undefined; empty: string }) {
-  if (rows === undefined) return <p className="text-[15px] text-muted py-4">Loading the board…</p>;
+  const t = useT();
+  if (rows === undefined) return <p className="text-[15px] text-muted py-4">{t("board.loading")}</p>;
   if (!rows.length) return <p className="text-[15px] text-muted py-4">{empty}</p>;
   return (
     <div className="flex flex-col">
@@ -421,15 +417,20 @@ function BoardRows({ rows, empty }: { rows: Row[] | undefined; empty: string }) 
             {i + 1}
           </span>
           <span className="flex flex-col flex-1 min-w-0">
-            <span className="font-medium text-[16px] leading-[22px] truncate">{managerName(r.deviceId)}</span>
+            <span className="font-medium text-[16px] leading-[22px] truncate">
+              {t("board.manager", { id: r.deviceId.slice(0, 4).toUpperCase() })}
+            </span>
             <span className="text-[13px] leading-[18px] text-muted truncate">
-              {r.difficulty} · {outcome(r)} · net run rate {r.nrr > 0 ? "+" : ""}
-              {r.nrr}
+              {t("board.rowMeta", {
+                difficulty: t(`difficulty.${r.difficulty}`),
+                outcome: t(outcomeKey(r)),
+                nrr: `${r.nrr > 0 ? "+" : ""}${r.nrr}`,
+              })}
             </span>
           </span>
           {r.perfect14 && (
             <span className="hidden sm:inline-flex items-center h-6 px-2 pt-[2px] shrink-0 rounded bg-trophy font-display font-semibold text-[16px] leading-4 text-ink">
-              PERFECT
+              {t("board.perfect")}
             </span>
           )}
           <span className="w-[62px] shrink-0 text-right font-display font-bold text-[30px] leading-7 pt-[3px] tabular">

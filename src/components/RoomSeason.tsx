@@ -19,18 +19,11 @@ import { mulberry32, type Difficulty, type PlayerSeason } from "@/lib/game/types
 import { PlayoffMatch, type PlayoffDetail } from "./PlayoffMatch";
 import { SeasonReport } from "./SeasonReport";
 import { copyText } from "@/lib/clipboard";
-import { Flap, PrimaryButton, OutlineButton, PlateButton, SectionHead, WhatsAppIcon, Crown, tidyMargin } from "./ui";
+import { Flap, PrimaryButton, OutlineButton, PlateButton, SectionHead, WhatsAppIcon, Crown } from "./ui";
+import { useT, localiseMargin, ordinal } from "@/lib/i18n";
 
-function stageWords(stage?: string): string {
-  if (!stage) return "the playoffs";
-  return stage === "Final" ? "the final" : stage;
-}
-
-function ordinal(n: number): string {
-  if (n === 1) return "1st";
-  if (n === 2) return "2nd";
-  if (n === 3) return "3rd";
-  return `${n}th`;
+function stageWords(stage: string | undefined, t: (k: string) => string): string {
+  return t(stage ? `stage.${stage}` : "stage.playoffs");
 }
 
 const ALL_PLAYERS = buildPlayerSeasons();
@@ -115,6 +108,7 @@ export function RoomSeason({ room }: { room: any }) {
     }
   }, [room]);
 
+  const t = useT();
   const [phase, setPhase] = useState<"league" | "leagueDone" | "playoffs" | "preFinal" | "final" | "done">("league");
   const [simIdx, setSimIdx] = useState(0);
   const [poIdx, setPoIdx] = useState(0);
@@ -334,7 +328,7 @@ export function RoomSeason({ room }: { room: any }) {
   }, [members, me, meId]);
 
   if (!league || myIdx < 0 || !report) {
-    return <p className="text-[15px] text-muted py-4">Working out the shared season…</p>;
+    return <p className="text-[15px] text-muted py-4">{t("room.computing")}</p>;
   }
 
   const nonFinals = league.playoffs.filter((p) => p.stage !== "Final");
@@ -353,7 +347,13 @@ export function RoomSeason({ room }: { room: any }) {
   // still playing has watched theirs. Only possible once the backend tracks it.
   const holdForMate = gateSupported === true && !myFinal && !!mate && !mate.finishedAt;
 
-  const share = `${myName} went ${report.wins}-${report.losses} in a shared 18-game room season${report.champion ? " and WON IT" : ""} — ${typeof window !== "undefined" ? window.location.origin : "14-0.app"}/m/${room.code}`;
+  const share = t("room.shareText", {
+    name: myName,
+    w: report.wins,
+    l: report.losses,
+    won: report.champion ? t("room.andWonIt") : "",
+    url: `${typeof window !== "undefined" ? window.location.origin : "https://14-0.app"}/m/${room.code}`,
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -362,11 +362,11 @@ export function RoomSeason({ room }: { room: any }) {
           <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-6 lg:px-8 lg:py-8 flex flex-col items-center gap-5">
             <div className="w-full flex items-center gap-3">
               <span className="text-[13px] leading-[18px] text-muted-plate truncate">
-                You are {myName}
+                {t("room.youAre", { name: myName })}
               </span>
               <span className="flex-1" />
               <PlateButton onClick={() => setSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}>
-                Speed {speed}x
+                {t("league.speed", { n: speed })}
               </PlateButton>
               {phase === "league" && (
                 <PlateButton
@@ -375,14 +375,14 @@ export function RoomSeason({ room }: { room: any }) {
                     setPhase("leagueDone");
                   }}
                 >
-                  Skip to end
+                  {t("league.skip")}
                 </PlateButton>
               )}
             </div>
 
             <div className="flex gap-3 w-full max-w-[400px]">
               <Flap
-                label="Won"
+                label={t("word.won")}
                 labelCentred
                 value={wins}
                 valueColour="#4FCB74"
@@ -391,7 +391,7 @@ export function RoomSeason({ room }: { room: any }) {
                 valueClassName="text-[96px] leading-[84px] sm:text-[108px] sm:leading-[96px]"
               />
               <Flap
-                label="Lost"
+                label={t("word.lost")}
                 labelCentred
                 value={losses}
                 valueColour="#FF6152"
@@ -404,26 +404,28 @@ export function RoomSeason({ room }: { room: any }) {
             <div className="flex flex-col items-center gap-1 text-center">
               <span className="font-semibold text-[20px] leading-[26px] sm:text-[24px] sm:leading-8">
                 {phase === "league"
-                  ? `Round ${myFixtures[Math.min(simIdx, myFixtures.length - 1)]?.round ?? 18} of 18`
-                  : "League complete"}
+                  ? t("room.roundOf", { n: myFixtures[Math.min(simIdx, myFixtures.length - 1)]?.round ?? 18 })
+                  : t("league.complete")}
               </span>
               <span className="text-[15px] leading-[22px] text-body-plate">
                 {phase === "league"
                   ? losses === 0 && wins > 0
-                    ? `Still unbeaten after ${wins}.`
-                    : `${wins} won, ${losses} lost.`
-                  : `Finished ${ordinal(report.rank)} on ${report.points} points. ${
-                      report.madePlayoffs ? "Into the top four." : "Outside the top four."
-                    }`}
+                    ? t("room.unbeatenAfter", { n: wins })
+                    : t("league.record", { w: wins, l: losses })
+                  : t("league.finishedLine", {
+                      rank: ordinal(report.rank, t),
+                      points: report.points,
+                      note: report.madePlayoffs ? t("league.inTopFour") : t("league.outsideTopFour"),
+                    })}
               </span>
             </div>
 
             {phase === "leagueDone" && (
               <div className="flex gap-8 sm:gap-12 pt-1">
                 {[
-                  [String(report.points), "points"],
-                  [`${report.nrr > 0 ? "+" : ""}${report.nrr}`, "net run rate"],
-                  [ordinal(report.rank), "on the table"],
+                  [String(report.points), t("word.points")],
+                  [`${report.nrr > 0 ? "+" : ""}${report.nrr}`, t("word.nrr")],
+                  [ordinal(report.rank, t), t("word.onTheTable")],
                 ].map(([v, k]) => (
                   <div key={k} className="flex flex-col items-center gap-0.5">
                     <span className="font-display font-semibold text-[30px] leading-7 pt-1 tabular">
@@ -438,11 +440,11 @@ export function RoomSeason({ room }: { room: any }) {
 
           <div>
             <SectionHead
-              title="Your results"
+              title={t("room.yourResults")}
               note={
                 <>
-                  <span className="text-ink font-medium">your score</span> ·{" "}
-                  <span className="text-muted">theirs</span>
+                  <span className="text-ink font-medium">{t("room.scoreKeyYours")}</span> ·{" "}
+                  <span className="text-muted">{t("room.scoreKeyTheirs")}</span>
                 </>
               }
             />
@@ -459,12 +461,20 @@ export function RoomSeason({ room }: { room: any }) {
                 const won = f.winner === myIdx;
                 const st = report.matchStars[i];
                 const hero = f.superOverNote
-                  ? `${won ? "Won" : "Lost"} a super over, ${f.superOverNote.replace(/^SO /, "")}`
+                  ? t(won ? "room.wonSO" : "room.lostSO", { note: f.superOverNote.replace(/^SO /, "") })
                   : won
                     ? f.margin.includes("runs")
-                      ? `${shortName(st.bowl.player)} ${st.bowl.wickets} for ${st.bowl.runsConceded}`
-                      : `${shortName(st.bat.player)} ${st.bat.runs} off ${st.bat.balls}`
-                    : "their night";
+                      ? t("room.heroBowl", {
+                          name: shortName(st.bowl.player),
+                          w: st.bowl.wickets,
+                          r: st.bowl.runsConceded,
+                        })
+                      : t("room.heroBat", {
+                          name: shortName(st.bat.player),
+                          runs: st.bat.runs,
+                          balls: st.bat.balls,
+                        })
+                    : t("room.theirNight");
                 return (
                   <div key={i}>
                     <button
@@ -482,13 +492,17 @@ export function RoomSeason({ room }: { room: any }) {
                       </span>
                       <span className="flex flex-col flex-1 min-w-0 lg:flex-row lg:items-baseline lg:gap-3.5">
                         <span className="font-medium text-[15px] leading-5 lg:w-[220px] lg:shrink-0 truncate">
-                          {isH2H ? "Head to head with " : ""}
-                          {opp}
+                          {isH2H ? t("room.headToHead", { name: opp }) : opp}
                         </span>
                         <span className="text-[13px] leading-[18px] lg:text-[14px] text-muted truncate">
                           {f.margin === "Super Over"
                             ? hero
-                            : `${won ? "Won" : "Lost"} by ${tidyMargin(f.margin)} · ${hero}`}
+                            : t("room.feedLine", {
+                                result: t(won ? "match.won" : "match.lost", {
+                                  margin: localiseMargin(f.margin, t),
+                                }),
+                                hero,
+                              })}
                         </span>
                       </span>
                       <span className="shrink-0 text-right font-display font-semibold text-[19px] leading-5 lg:text-[22px] tabular pt-[3px] whitespace-nowrap">
@@ -500,11 +514,11 @@ export function RoomSeason({ room }: { room: any }) {
                     {expanded === i && isH2H && f.detail && (
                       <div className="py-4">
                         <PlayoffMatch
-                          stage={`Head to head, round ${f.round}`}
+                          stage={t("room.h2hRound", { n: f.round })}
                           detail={toDetail(f.detail, f.home, f.away, myIdx, myName, opp, f.winner === myIdx)}
                           userTag={myName}
                           speed={speed}
-                          nextLabel="Close"
+                          nextLabel={t("pm.close")}
                           onDone={() => setExpanded(null)}
                         />
                       </div>
@@ -527,7 +541,7 @@ export function RoomSeason({ room }: { room: any }) {
                         setPhase("playoffs");
                       }}
                     >
-                      Into the playoffs
+                      {t("league.intoPlayoffs")}
                     </PrimaryButton>
                   </div>
                 </>
@@ -536,10 +550,10 @@ export function RoomSeason({ room }: { room: any }) {
                 // result waits behind the same button and the same gate.
                 <div className="flex flex-col items-center gap-3">
                   <p className="font-semibold text-[17px] leading-6 lg:text-[20px] lg:leading-7 text-center">
-                    Outside the top four. Your season ends here.
+                    {t("room.seasonEnds")}
                   </p>
                   <PrimaryButton className="w-full sm:w-auto sm:px-12" onClick={() => setPhase("done")}>
-                    See how the room finished
+                    {t("room.seeFinish")}
                   </PrimaryButton>
                 </div>
               )}
@@ -551,9 +565,9 @@ export function RoomSeason({ room }: { room: any }) {
       {phase === "playoffs" && (
         <div className="flex flex-col gap-3.5">
           <div className="flex items-baseline gap-3">
-            <h2 className="font-semibold text-[20px] leading-[26px]">Playoffs</h2>
+            <h2 className="font-semibold text-[20px] leading-[26px]">{t("po.title")}</h2>
             <span className="text-[14px] leading-5 text-muted">
-              in as #{report.rank} on {report.wins}-{report.losses}
+              {t("po.via", { rank: report.rank, w: report.wins, l: report.losses })}
             </span>
           </div>
           {myNonFinals.slice(0, poIdx).map((p, i) => (
@@ -577,31 +591,31 @@ export function RoomSeason({ room }: { room: any }) {
             />
           )}
           {myNonFinals[poIdx] && !myNonFinals[poIdx].detail && (
-            <p className="text-[15px] text-muted">Result pending…</p>
+            <p className="text-[15px] text-muted">{t("room.resultPending")}</p>
           )}
         </div>
       )}
 
       {phase === "preFinal" && myFinal && (
         <div className="-mx-5 lg:mx-0 lg:rounded-control bg-ink text-white px-5 py-8 lg:px-10 lg:py-12 text-center flex flex-col items-center gap-3">
-          <span className="text-[13px] leading-[18px] text-muted-plate">The final</span>
+          <span className="text-[13px] leading-[18px] text-muted-plate">{t("po.theFinal")}</span>
           <span className="font-semibold text-[26px] leading-8 lg:text-[36px] lg:leading-[44px]">
-            {myName} versus {oppOf(myFinal, myIdx, league)}
+            {t("room.finalVersus", { me: myName, opp: oppOf(myFinal, myIdx, league) })}
           </span>
           <PrimaryButton className="mt-3 w-full sm:w-auto sm:px-10" onClick={() => setPhase("final")}>
-            Play the final
+            {t("po.playFinal")}
           </PrimaryButton>
         </div>
       )}
 
       {phase === "final" && myFinal?.detail && (
         <PlayoffMatch
-          stage="Final"
+          stage={t("stage.Final")}
           detail={toDetail(myFinal.detail, myFinal.t1, myFinal.t2, myIdx, myName, oppOf(myFinal, myIdx, league), myFinal.winner === myIdx)!}
           userTag={myName}
           speed={speed}
           fullMatch
-          nextLabel={myFinal.winner === myIdx ? "Lift the trophy" : "Full time — see the results"}
+          nextLabel={myFinal.winner === myIdx ? t("po.liftTrophy") : t("po.fullTime")}
           onDone={() => setPhase("done")}
         />
       )}
@@ -610,23 +624,26 @@ export function RoomSeason({ room }: { room: any }) {
         <div className="flex flex-col gap-4">
           <div className="-mx-5 lg:mx-0 lg:rounded-control bg-ink text-white px-5 py-7 lg:px-9 lg:py-9 flex flex-col items-center gap-3 text-center">
             <span className="font-semibold text-[24px] leading-8 lg:text-[30px] lg:leading-10">
-              No spoilers.
+              {t("room.noSpoilers")}
             </span>
             <span className="text-[15px] leading-[22px] lg:text-[17px] lg:leading-[26px] text-body-plate max-w-[52ch]">
-              {mate!.name} is still watching their season. Your result is ready and appears here the
-              moment they finish. This page updates on its own.
+              {t("room.stillWatching", { name: mate!.name })}
             </span>
           </div>
           <div className="flex flex-col gap-1">
             <p className="font-semibold text-[18px] leading-6">
-              Your season: {report.wins}-{report.losses},{" "}
-              {report.madePlayoffs
-                ? `knocked out in ${stageWords(report.playoffs[report.playoffs.length - 1]?.stage)}`
-                : "no playoffs"}
-              .
+              {t("room.yourSeason", {
+                w: report.wins,
+                l: report.losses,
+                status: report.madePlayoffs
+                  ? t("room.knockedOutIn", {
+                      stage: stageWords(report.playoffs[report.playoffs.length - 1]?.stage, t),
+                    })
+                  : t("room.noPlayoffsShort"),
+              })}
             </p>
             <p className="text-[15px] leading-[22px] text-muted">
-              Finished {ordinal(report.rank)} on {report.points} points.
+              {t("room.finishedOn", { rank: ordinal(report.rank, t), points: report.points })}
             </p>
           </div>
         </div>
@@ -642,20 +659,23 @@ export function RoomSeason({ room }: { room: any }) {
             >
               {report.champion && <Crown size={26} />}
               {report.champion
-                ? `${myName} wins the room.`
+                ? t("room.winsRoom", { name: myName })
                 : championName
-                  ? `${championName} wins the room.`
-                  : `${report.wins}-${report.losses}, no playoffs.`}
+                  ? t("room.winsRoom", { name: championName })
+                  : t("room.noPlayoffsLine", { w: report.wins, l: report.losses })}
             </h2>
             <p className="text-[15px] leading-[22px] text-muted">
-              You finished {ordinal(report.rank)} on {report.points} points, net run rate{" "}
-              {report.nrr > 0 ? "+" : ""}
-              {report.nrr}
-              {report.champion
-                ? "."
-                : report.madePlayoffs
-                  ? `, out in ${stageWords(report.playoffs[report.playoffs.length - 1]?.stage)}.`
-                  : "."}
+              {t("room.youFinished", {
+                rank: ordinal(report.rank, t),
+                points: report.points,
+                nrr: `${report.nrr > 0 ? "+" : ""}${report.nrr}`,
+                tail:
+                  !report.champion && report.madePlayoffs
+                    ? t("room.outIn", {
+                        stage: stageWords(report.playoffs[report.playoffs.length - 1]?.stage, t),
+                      })
+                    : ".",
+              })}
             </p>
           </div>
           <SeasonReport
@@ -675,9 +695,9 @@ export function RoomSeason({ room }: { room: any }) {
 
   function nextPO(list: typeof myNonFinals, i: number, hasFinal: boolean): string {
     const won = list[i].winner === myIdx;
-    if (!won) return list[i].stage === "Qualifier 1" ? "Down to Qualifier 2" : "Season over — see the results";
-    if (i + 1 < list.length) return `Next: ${list[i + 1].stage}`;
-    return hasFinal ? "To the final" : "Season over — see the results";
+    if (!won) return list[i].stage === "Qualifier 1" ? t("room.downToQ2") : t("po.seasonOver");
+    if (i + 1 < list.length) return t("po.next", { stage: t(`stage.${list[i + 1].stage}`) });
+    return hasFinal ? t("po.toFinal") : t("po.seasonOver");
   }
 
   function oppOf(p: { t1: number; t2: number }, me: number, lg: SharedLeague): string {
@@ -728,11 +748,12 @@ function bump(agg: Map<string, { runs: number; balls: number; wkts: number }>, p
 }
 
 function PlayoffSummary({ p, myIdx, teams }: { p: SharedPlayoff; myIdx: number; teams: SharedLeague["teams"] }) {
+  const t = useT();
   const iAmHome = p.t1 === myIdx;
   const win = p.winner === myIdx;
   return (
     <div className="flex items-center gap-3 py-3 border-t border-hairline">
-      <span className="w-[110px] shrink-0 text-[13px] leading-[18px] text-muted">{p.stage}</span>
+      <span className="w-[110px] shrink-0 text-[13px] leading-[18px] text-muted">{t(`stage.${p.stage}`)}</span>
       <span
         className="w-6 h-6 shrink-0 flex items-center justify-center rounded font-display font-bold text-[18px] leading-none pt-[2px]"
         style={{ backgroundColor: win ? "#E0A81C" : "#D8321F", color: win ? "#000" : "#fff" }}
@@ -740,7 +761,7 @@ function PlayoffSummary({ p, myIdx, teams }: { p: SharedPlayoff; myIdx: number; 
         {win ? "W" : "L"}
       </span>
       <span className="flex-1 min-w-0 text-[15px] leading-5 truncate">
-        {win ? "Won" : "Lost"} by {tidyMargin(p.margin)} against {teams[iAmHome ? p.t2 : p.t1].name}
+        {t(win ? "match.won" : "match.lost", { margin: localiseMargin(p.margin, t) })} · {teams[iAmHome ? p.t2 : p.t1].name}
       </span>
       <span className="shrink-0 font-display font-semibold text-[20px] leading-5 pt-[3px] tabular">
         {iAmHome ? p.s1 : p.s2} · {iAmHome ? p.s2 : p.s1}
@@ -750,12 +771,13 @@ function PlayoffSummary({ p, myIdx, teams }: { p: SharedPlayoff; myIdx: number; 
 }
 
 function RoomTable({ rows, me, mate, champion }: { rows: TableRow[]; me: string; mate?: string; champion?: string }) {
+  const t = useT();
   return (
     <section className="flex flex-col mt-6">
-      <SectionHead title="The shared table" note="Top 4 go through" />
+      <SectionHead title={t("room.sharedTable")} note={t("table.topFour")} />
       <div className="flex items-center gap-2 h-7 mt-1 text-[12px] leading-4 text-muted">
         <span className="w-[22px] shrink-0" />
-        <span className="flex-1">Team</span>
+        <span className="flex-1">{t("table.team")}</span>
         <span className="w-[26px] shrink-0 text-right">P</span>
         <span className="w-[26px] shrink-0 text-right">W</span>
         <span className="w-[26px] shrink-0 text-right">L</span>
@@ -783,7 +805,7 @@ function RoomTable({ rows, me, mate, champion }: { rows: TableRow[]; me: string;
               >
                 <span className="truncate">
                   {r.team}
-                  {isMe ? " (you)" : ""}
+                  {isMe ? ` ${t("room.you")}` : ""}
                 </span>
                 {champion === r.team && <Crown size={18} />}
               </span>
@@ -815,7 +837,7 @@ function RoomTable({ rows, me, mate, champion }: { rows: TableRow[]; me: string;
             </div>
             {i === 3 && (
               <div className="flex items-center h-7 pt-1.5 border-t-2 border-ink">
-                <span className="text-[12px] leading-4 text-muted">Playoff cut</span>
+                <span className="text-[12px] leading-4 text-muted">{t("table.cut")}</span>
               </div>
             )}
           </div>
@@ -826,6 +848,7 @@ function RoomTable({ rows, me, mate, champion }: { rows: TableRow[]; me: string;
 }
 
 function RoomShare({ share, copied, setCopied, code }: { share: string; copied: boolean; setCopied: (v: boolean) => void; code: string }) {
+  const t = useT();
   return (
     <div className="mt-6 flex flex-col gap-2.5 max-w-[420px]">
       <a
@@ -835,7 +858,7 @@ function RoomShare({ share, copied, setCopied, code }: { share: string; copied: 
         className="flex items-center justify-center gap-2.5 h-14 rounded-control bg-turf text-white font-semibold text-[16px] hover:bg-[#15702f] transition-colors"
       >
         <WhatsAppIcon />
-        Share on WhatsApp
+        {t("share.whatsapp")}
       </a>
       <OutlineButton
         onClick={async () => {
@@ -845,9 +868,9 @@ function RoomShare({ share, copied, setCopied, code }: { share: string; copied: 
           }
         }}
       >
-        {copied ? "Copied" : "Copy the result"}
+        {copied ? t("share.copied") : t("room.copyResult")}
       </OutlineButton>
-      <p className="text-[13px] leading-[18px] text-muted">This room lives at /m/{code}</p>
+      <p className="text-[13px] leading-[18px] text-muted">{t("room.livesAt", { code })}</p>
     </div>
   );
 }

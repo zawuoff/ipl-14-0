@@ -2,7 +2,8 @@
 import { use } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { Flap, SectionHead, PrimaryButton, Wordmark, tidyMargin } from "@/components/ui";
+import { Flap, SectionHead, PrimaryButton, Wordmark } from "@/components/ui";
+import { useT, LangToggle, localiseMargin } from "@/lib/i18n";
 
 const CODE_COLOUR: Record<string, string> = {
   MI: "#004BA0",
@@ -28,6 +29,7 @@ function readableOn(hex: string): string {
 
 export default function SharePage({ params }: { params: Promise<{ seed: string }> }) {
   const { seed } = use(params);
+  const t = useT();
   const data = useQuery((api as any).results?.getBySeed, { seed });
   const r = data?.result;
 
@@ -37,23 +39,24 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
         <div className="mx-auto w-full max-w-[1000px] px-5 lg:px-8 py-3.5 flex items-center gap-3">
           <a href="/" className="flex items-baseline gap-3">
             <Wordmark className="text-[30px]" />
-            <span className="text-[13px] leading-[18px] text-muted">Back to the game</span>
+            <span className="text-[13px] leading-[18px] text-muted">{t("nav.backToGame")}</span>
           </a>
+          <span className="flex-1" />
+          <LangToggle className="w-11 h-8 text-[14px]" />
         </div>
       </header>
 
       <div className="mx-auto w-full max-w-[1000px] px-5 lg:px-8 pt-5 pb-12">
-        {data === undefined && <p className="text-[15px] text-muted py-6">Checking the seed…</p>}
+        {data === undefined && <p className="text-[15px] text-muted py-6">{t("seed.checking")}</p>}
 
         {data === null && (
           <div className="border border-hairline rounded-control p-5 mt-2">
-            <h1 className="font-semibold text-[22px] leading-7">No season saved for this seed</h1>
+            <h1 className="font-semibold text-[22px] leading-7">{t("seed.notFound")}</h1>
             <p className="text-[15px] leading-[22px] text-muted mt-1.5">
-              This link may be a fresh board rather than a finished run. Play it yourself and the
-              result saves under the same seed.
+              {t("seed.notFoundBody")}
             </p>
             <PrimaryButton className="mt-4 w-full sm:w-auto sm:px-10" onClick={() => (window.location.href = "/")}>
-              Play a run
+              {t("seed.playRun")}
             </PrimaryButton>
           </div>
         )}
@@ -63,7 +66,7 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
             <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-6 lg:px-9 lg:py-9 flex flex-col lg:flex-row lg:items-end gap-6 lg:gap-12">
               <div className="flex gap-3 lg:shrink-0">
                 <Flap
-                  label="Won"
+                  label={t("word.won")}
                   value={r.wins}
                   tone={r.perfect14 ? "turf" : "plate"}
                   wrapClassName="flex-1 lg:flex-none lg:w-[160px]"
@@ -71,7 +74,7 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
                   valueClassName="text-[112px] leading-[98px] lg:text-[140px] lg:leading-[122px]"
                 />
                 <Flap
-                  label="Lost"
+                  label={t("word.lost")}
                   value={r.losses}
                   wrapClassName="flex-1 lg:flex-none lg:w-[160px]"
                   className="h-[120px] lg:h-[180px]"
@@ -85,18 +88,18 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
                   }`}
                 >
                   {r.perfect14 && r.champion
-                    ? "Champions. Perfect season."
+                    ? t("end.perfect")
                     : r.champion
-                      ? "Champions."
+                      ? t("end.champions")
                       : r.madePlayoffs
-                        ? "Made the playoffs."
-                        : "Missed the playoffs."}
+                        ? t("seed.madePlayoffs")
+                        : t("end.missed")}
                 </h1>
                 <div className="flex flex-wrap gap-x-8 gap-y-3">
                   {[
-                    [String(r.points), "points"],
-                    [`${r.nrr > 0 ? "+" : ""}${r.nrr}`, "net run rate"],
-                    [r.difficulty, "difficulty"],
+                    [String(r.points), t("word.points")],
+                    [`${r.nrr > 0 ? "+" : ""}${r.nrr}`, t("word.nrr")],
+                    [t(`difficulty.${r.difficulty}`), t("word.difficulty")],
                   ].map(([v, k]) => (
                     <div key={k} className="flex flex-col gap-0.5">
                       <span className="font-display font-semibold text-[30px] leading-7 pt-1 tabular">{v}</span>
@@ -105,24 +108,24 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
                   ))}
                 </div>
                 <p className="text-[13px] leading-[18px] text-muted-plate">
-                  Seed {r.seed}. The same seed and the same board reproduce this season exactly.
+                  {t("seed.note", { seed: r.seed })}
                 </p>
               </div>
             </div>
 
             <div className="mt-8">
-              <SectionHead title="The league" note={`${r.games.length} matches`} />
+              <SectionHead title={t("seed.theLeague")} note={t("report.matches", { n: r.games.length })} />
               <div className="mt-2.5">
                 {r.games.map((g: any, i: number) => {
                   const colour = CODE_COLOUR[g.opp] ?? "#2E2E2E";
                   const win = g.result === "W";
                   const superOver = g.margin === "Super Over";
                   const wide = superOver
-                    ? `${win ? "Won" : "Lost"} in a super over`
-                    : `${win ? "Won" : "Lost"} by ${tidyMargin(g.margin)}`;
+                    ? t(win ? "match.wonSO" : "match.lostSO")
+                    : t(win ? "match.won" : "match.lost", { margin: localiseMargin(g.margin, t) });
                   const narrow = superOver
-                    ? `${win ? "Beat" : "Lost to"} ${g.opp} in a super over`
-                    : `${win ? "Beat" : "Lost to"} ${g.opp} by ${tidyMargin(g.margin)}`;
+                    ? t(win ? "match.beatSO" : "match.lostToSO", { opp: g.opp })
+                    : t(win ? "match.beat" : "match.lostTo", { opp: g.opp, margin: localiseMargin(g.margin, t) });
                   return (
                     <div
                       key={i}
@@ -158,7 +161,7 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
 
             {r.playoffs?.length > 0 && (
               <div className="mt-8">
-                <SectionHead title="Playoffs" />
+                <SectionHead title={t("po.title")} />
                 <div className="mt-2.5">
                   {r.playoffs.map((p: any, i: number) => (
                     <div
@@ -168,10 +171,10 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
                       }`}
                     >
                       <span className="w-[110px] shrink-0 text-[13px] leading-[18px] text-muted">
-                        {p.stage}
+                        {t(`stage.${p.stage}`)}
                       </span>
                       <span className="flex-1 min-w-0 text-[15px] leading-5 truncate">
-                        {p.result === "W" ? "Won" : "Lost"} by {tidyMargin(p.margin)}
+                        {t(p.result === "W" ? "match.won" : "match.lost", { margin: localiseMargin(p.margin, t) })}
                       </span>
                       <span className="shrink-0 font-display font-semibold text-[20px] leading-5 pt-[3px] tabular">
                         {p.gf} · {p.ga}
@@ -184,10 +187,10 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
 
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <PrimaryButton className="sm:px-10" onClick={() => (window.location.href = "/")}>
-                Play your own run
+                {t("seed.playYourOwn")}
               </PrimaryButton>
               <p className="text-[13px] leading-5 text-muted self-center">
-                Saved {new Date(r.createdAt).toLocaleString("en-IN")}
+                {t("seed.savedAt", { when: new Date(r.createdAt).toLocaleString("en-IN") })}
               </p>
             </div>
           </>

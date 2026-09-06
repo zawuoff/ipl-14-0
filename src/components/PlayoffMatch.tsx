@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { DetailedInnings, SuperOverInnings } from "@/lib/sim/engine";
 import { PrimaryButton, OutlineButton, PlateButton, SectionHead } from "./ui";
+import { useT } from "@/lib/i18n";
 
 export interface PlayoffDetail {
   inn1: DetailedInnings;
@@ -35,6 +36,7 @@ export function PlayoffMatch({
   nextLabel: string;
   onDone: () => void;
 }) {
+  const t = useT();
   const [phase, setPhase] = useState<"inn1" | "inn2" | "so1" | "so2" | "over">(
     fullMatch ? "inn1" : "inn2"
   );
@@ -124,19 +126,19 @@ export function PlayoffMatch({
           <span className="font-semibold text-[17px] leading-[22px]">{stage}</span>
           <span className="text-[13px] leading-[18px] text-muted-plate">
             {done
-              ? "Complete"
+              ? t("pm.complete")
               : inSO
-                ? "Super over"
-                : `${battingYou ? userTag : detail.opp} batting · ${
-                    phase === "inn1" ? "1st innings" : "2nd innings"
-                  }`}
+                ? t("pm.superOver")
+                : t(phase === "inn1" ? "pm.batting1st" : "pm.batting2nd", {
+                    side: battingYou ? userTag : detail.opp,
+                  })}
           </span>
         </div>
 
         <InningsLine
           side={detail.userFirst ? userTag : detail.opp}
           you={detail.userFirst}
-          note={`${inn1Overs} overs, batted first`}
+          note={t("pm.battedFirst", { overs: inn1Overs })}
           score={inn1Score}
         />
         <InningsLine
@@ -144,8 +146,8 @@ export function PlayoffMatch({
           you={!detail.userFirst}
           note={
             phase === "inn2" || done
-              ? `${oversStr} overs, chasing ${detail.inn1.runs + 1}`
-              : `chasing ${detail.inn1.runs + 1}`
+              ? t("pm.chasingOvers", { overs: oversStr, target: detail.inn1.runs + 1 })
+              : t("pm.chasing", { target: detail.inn1.runs + 1 })
           }
           score={phase === "inn2" || done ? score : "—"}
         />
@@ -159,26 +161,26 @@ export function PlayoffMatch({
                     {need}
                   </span>
                   <span className="font-medium text-[17px] leading-[22px]">
-                    needed off {ballsLeft} ball{ballsLeft === 1 ? "" : "s"}
+                    {t(ballsLeft === 1 ? "pm.neededOffOne" : "pm.neededOff", { n: ballsLeft })}
                   </span>
                 </>
               ) : (
-                <span className="font-semibold text-[24px] leading-8 text-turf-soft">Chased down.</span>
+                <span className="font-semibold text-[24px] leading-8 text-turf-soft">{t("pm.chasedDown")}</span>
               )}
               <span className="flex-1" />
               {cur && (
                 <span className="text-[13px] leading-[18px] text-muted-plate">
-                  {cur.bowler} to {cur.striker}
+                  {t("pm.bowlerTo", { bowler: cur.bowler, striker: cur.striker })}
                 </span>
               )}
             </div>
-            <BallStrip recent={recent} slots={overSlots} over={Math.floor(balls / 6) + 1} />
+            <BallStrip recent={recent} slots={overSlots} over={t("pm.over", { n: Math.floor(balls / 6) + 1 })} />
             <p className="text-[15px] leading-[22px] text-body-plate">
               {tense && ballsLeft <= 6
-                ? "Final over, and it is still alive."
+                ? t("pm.finalOver")
                 : tense
-                  ? "Working through the overs."
-                  : "Cruising. Fast-forwarding."}
+                  ? t("pm.working")
+                  : t("pm.cruising")}
             </p>
           </div>
         )}
@@ -189,15 +191,15 @@ export function PlayoffMatch({
               <span className="font-display font-bold text-[44px] leading-[38px] pt-1 tabular">
                 {score}
               </span>
-              <span className="font-medium text-[16px] leading-[22px]">after {oversStr} overs</span>
+              <span className="font-medium text-[16px] leading-[22px]">{t("pm.afterOvers", { overs: oversStr })}</span>
               <span className="flex-1" />
               {cur && (
                 <span className="text-[13px] leading-[18px] text-muted-plate">
-                  {cur.bowler} to {cur.striker}
+                  {t("pm.bowlerTo", { bowler: cur.bowler, striker: cur.striker })}
                 </span>
               )}
             </div>
-            <BallStrip recent={recent} slots={overSlots} over={Math.floor(balls / 6) + 1} />
+            <BallStrip recent={recent} slots={overSlots} over={t("pm.over", { n: Math.floor(balls / 6) + 1 })} />
           </div>
         )}
 
@@ -225,7 +227,7 @@ export function PlayoffMatch({
         <div className="mt-6 flex flex-col lg:flex-row lg:gap-12 lg:items-start">
           <div className="flex-1 min-w-0">
             <InningsCard
-              title={`${detail.userFirst ? userTag : detail.opp}, 1st innings`}
+              title={t("pm.innings1", { side: detail.userFirst ? userTag : detail.opp })}
               inn={detail.inn1}
               defaultOpen
             />
@@ -233,7 +235,7 @@ export function PlayoffMatch({
           {done && (
             <div className="flex-1 min-w-0 mt-6 lg:mt-0">
               <InningsCard
-                title={`${!detail.userFirst ? userTag : detail.opp}, 2nd innings`}
+                title={t("pm.innings2", { side: !detail.userFirst ? userTag : detail.opp })}
                 inn={detail.inn2}
                 defaultOpen
               />
@@ -279,12 +281,12 @@ function BallStrip({
 }: {
   recent: { n: number; runs: number; wicket?: boolean }[];
   slots: number;
-  over: number;
+  over: string;
 }) {
   const empties = Math.max(0, 6 - slots);
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <span className="w-[60px] shrink-0 text-[13px] leading-[18px] text-muted-plate">Over {over}</span>
+      <span className="w-[60px] shrink-0 text-[13px] leading-[18px] text-muted-plate">{over}</span>
       {recent.slice(-6).map((e) => (
         <span
           key={e.n}
@@ -321,6 +323,7 @@ function MatchResult({
   nextLabel: string;
   onDone: () => void;
 }) {
+  const t = useT();
   const userRuns = detail.userFirst ? detail.inn1.runs : detail.inn2.runs;
   const oppRuns = detail.userFirst ? detail.inn2.runs : detail.inn1.runs;
   const won = userRuns > oppRuns;
@@ -330,14 +333,14 @@ function MatchResult({
   const soO = so && soU ? (soU === so.inn1 ? so.inn2 : so.inn1) : null;
   const soLine = so && soU && soO ? `${soU.score} to ${soO.score}` : (so as any)?.scoreline ?? "";
   const margin = so
-    ? `in a super over, ${soLine}`
+    ? t("pm.inSuperOver", { line: soLine })
     : won
       ? detail.userFirst
-        ? `by ${userRuns - oppRuns} runs`
-        : `by ${10 - chase.wickets} wickets, ${Math.max(0, 120 - chase.balls)} balls left`
+        ? t("pm.byRuns", { n: userRuns - oppRuns })
+        : t("pm.byWickets", { w: 10 - chase.wickets, b: Math.max(0, 120 - chase.balls) })
       : detail.userFirst
-        ? `by ${10 - chase.wickets} wickets`
-        : `by ${oppRuns - userRuns} runs`;
+        ? t("pm.byWicketsShort", { w: 10 - chase.wickets })
+        : t("pm.byRuns", { n: oppRuns - userRuns });
   return (
     <div className="mt-5 flex flex-col gap-3">
       <div className="flex items-baseline gap-3 flex-wrap">
@@ -345,13 +348,17 @@ function MatchResult({
           className="flex items-center justify-center h-7 px-2.5 pt-[2px] rounded font-display font-bold text-[20px] leading-none"
           style={{ backgroundColor: won ? "#1A8A3C" : "#D8321F", color: "#FFFFFF" }}
         >
-          {won ? "WON" : "LOST"}
+          {won ? t("pm.won") : t("pm.lost")}
         </span>
         <span className="font-semibold text-[20px] leading-7 lg:text-[24px] lg:leading-8">{margin}</span>
       </div>
       <p className="text-[15px] leading-[22px] text-muted">
-        {userTag} {detail.userFirst ? detail.inn1.score : detail.inn2.score} versus{" "}
-        {detail.userFirst ? detail.inn2.score : detail.inn1.score} {detail.opp}
+        {t("pm.versusLine", {
+          you: userTag,
+          a: detail.userFirst ? detail.inn1.score : detail.inn2.score,
+          b: detail.userFirst ? detail.inn2.score : detail.inn1.score,
+          opp: detail.opp,
+        })}
       </p>
       <PrimaryButton className="w-full sm:w-auto sm:px-12 sm:self-center mt-1" onClick={onDone}>
         {nextLabel}
@@ -376,6 +383,7 @@ function SuperOverLive({
   speed: number;
   onDone: () => void;
 }) {
+  const t = useT();
   const sideLabel = inn.side === userTag ? userTag : oppName;
   const [cursor, setCursor] = useState(0);
   const done = cursor >= inn.events.length;
@@ -397,10 +405,10 @@ function SuperOverLive({
   return (
     <div className="pt-4 border-t border-plate-line flex flex-col gap-2.5">
       <div className="flex items-baseline gap-3">
-        <span className="font-semibold text-[17px] leading-[22px]">Super over · {sideLabel}</span>
+        <span className="font-semibold text-[17px] leading-[22px]">{t("pm.soSide", { side: sideLabel })}</span>
         {other && (
           <span className="text-[13px] leading-[18px] text-muted-plate">
-            {other.side} made {other.score}, needs {other.runs + 1}
+            {t("pm.soOther", { side: other.side, score: other.score, n: other.runs + 1 })}
           </span>
         )}
       </div>
@@ -410,7 +418,7 @@ function SuperOverLive({
         </span>
         <span className="flex-1" />
         <span className="text-[13px] leading-[18px] text-muted-plate">
-          {done ? "Super over complete" : inn.events.length - cursor <= 3 ? "Last three balls" : ""}
+          {done ? t("pm.soComplete") : inn.events.length - cursor <= 3 ? t("pm.soLastThree") : ""}
         </span>
       </div>
       <div className="flex gap-2">
@@ -450,6 +458,7 @@ export function InningsCard({
   inn: DetailedInnings;
   defaultOpen?: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(!!defaultOpen);
   return (
     <section className="flex flex-col">
@@ -460,16 +469,16 @@ export function InningsCard({
           {inn.score}
         </span>
         <span className="text-[13px] text-muted w-14 text-right">
-          {open ? "Hide" : "Show"}
+          {open ? t("pm.hide") : t("pm.show")}
         </span>
       </button>
       {open && (
         <div className="flex flex-col gap-6 mt-2">
           <div className="flex flex-col">
             <div className="flex items-center gap-3 h-7 text-[12px] leading-4 text-muted">
-              <span className="flex-1">Batter</span>
-              <span className="w-12 shrink-0 text-right">Runs</span>
-              <span className="w-12 shrink-0 text-right">Balls</span>
+              <span className="flex-1">{t("pm.batter")}</span>
+              <span className="w-12 shrink-0 text-right">{t("report.runs")}</span>
+              <span className="w-12 shrink-0 text-right">{t("pm.balls")}</span>
             </div>
             {inn.batsmen
               .filter((b) => b.balls > 0)
@@ -482,7 +491,7 @@ export function InningsCard({
                 >
                   <span className="flex-1 min-w-0 text-[15px] leading-5 truncate">
                     {b.name}
-                    {!b.out && <span className="text-turf"> not out</span>}
+                    {!b.out && <span className="text-turf"> {t("pm.notOut")}</span>}
                   </span>
                   <span className="w-12 shrink-0 text-right font-display font-semibold text-[20px] leading-5 pt-[3px] tabular">
                     {b.runs}
@@ -495,10 +504,10 @@ export function InningsCard({
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-3 h-7 text-[12px] leading-4 text-muted">
-              <span className="flex-1">Bowler</span>
-              <span className="w-12 shrink-0 text-right">Overs</span>
-              <span className="w-12 shrink-0 text-right">Runs</span>
-              <span className="w-12 shrink-0 text-right">Wkts</span>
+              <span className="flex-1">{t("pm.bowler")}</span>
+              <span className="w-12 shrink-0 text-right">{t("pm.overs")}</span>
+              <span className="w-12 shrink-0 text-right">{t("report.runs")}</span>
+              <span className="w-12 shrink-0 text-right">{t("pm.wkts")}</span>
             </div>
             {inn.bowlers
               .filter((b) => b.balls > 0)

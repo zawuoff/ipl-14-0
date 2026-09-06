@@ -34,20 +34,11 @@ import {
   WhatsAppIcon,
   readableOn,
   Crown,
-  tidyMargin,
 } from "./ui";
 import { PlayoffMatch } from "./PlayoffMatch";
 import { SeasonReport } from "./SeasonReport";
 import { copyText } from "@/lib/clipboard";
-
-const ROLE_WORD: Record<string, string> = {
-  Opener: "Opener",
-  Middle: "Middle order",
-  WK: "Keeper",
-  AR: "All-rounder",
-  Pace: "Pace",
-  Spin: "Spin",
-};
+import { useT, localiseMargin, ordinal } from "@/lib/i18n";
 
 const ALL_TEAMS: TeamSeason[] = buildTeamSeasons();
 const ALL_PLAYERS: PlayerSeason[] = buildPlayerSeasons();
@@ -134,6 +125,7 @@ function deviceId(): string {
 }
 
 export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }: { initialMode?: GameMode; initialSpins?: string[]; initialRoom?: string }) {
+  const t = useT();
   const [mode, setMode] = useState<GameMode>(initialMode);
   const [difficulty, setDifficulty] = useState<Difficulty>("Pro");
   const [styleIdx, setStyleIdx] = useState(0); // chosen XI template on setup screen
@@ -236,9 +228,9 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
     let squad = getSquad(currentSpin.teamId).filter((p) => !pickedNames.has(p.player));
     if (squad.length === 0) {
       // every squad member already drafted — pull franchise mates (rare)
-      const t = TEAM_MAP.get(currentSpin.teamId);
+      const spun = TEAM_MAP.get(currentSpin.teamId);
       squad = ALL_PLAYERS.filter(
-        (p) => p.franchise === t?.franchise && !pickedNames.has(p.player)
+        (p) => p.franchise === spun?.franchise && !pickedNames.has(p.player)
       )
         .sort((a, b) => b.overall - a.overall)
         .slice(0, 12);
@@ -268,9 +260,9 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
     const capHit = overseas >= MAX_OVERSEAS;
     for (const p of getSquad(currentSpin.teamId)) {
       if (pickedNames.has(p.player)) continue; // already filtered out
-      if (capHit && p.overseas) m.set(p.id, "Overseas cap full, 4 of 4");
+      if (capHit && p.overseas) m.set(p.id, t("draft.capFull"));
       else if ((roleCounts[p.role] ?? 0) >= (draft.config[p.role] ?? 0))
-        m.set(p.id, `${ROLE_WORD[p.role] ?? p.role} slot filled`);
+        m.set(p.id, t("draft.slotFilled", { role: t(`role.${p.role}`) }));
     }
     return m;
   }, [draft, currentSpin, pickedNames, overseas, roleCounts]);
@@ -279,12 +271,12 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
   const deadSpin = options.length > 0 && options.every((p) => unavailable.get(p.id));
   const standIns = useMemo(() => {
     if (!draft || !deadSpin) return [];
-    const t = currentSpin ? TEAM_MAP.get(currentSpin.teamId) : undefined;
+    const spun = currentSpin ? TEAM_MAP.get(currentSpin.teamId) : undefined;
     const fits = (p: PlayerSeason) =>
       !pickedNames.has(p.player) &&
       (roleCounts[p.role] ?? 0) < (draft.config[p.role] ?? 0) &&
       (!p.overseas || overseas < MAX_OVERSEAS);
-    const same = ALL_PLAYERS.filter((p) => p.franchise === t?.franchise && fits(p)).sort(
+    const same = ALL_PLAYERS.filter((p) => p.franchise === spun?.franchise && fits(p)).sort(
       (a, b) => b.overall - a.overall
     );
     if (same.length > 0) return same.slice(0, 12);
@@ -508,8 +500,8 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
   const spunTeam = currentSpin ? TEAM_MAP.get(currentSpin.teamId) : undefined;
 
   const teamMeta = (teamId: string) => {
-    const t = TEAM_MAP.get(teamId);
-    return t ? { code: t.code, season: t.season, colour: t.colour } : undefined;
+    const meta = TEAM_MAP.get(teamId);
+    return meta ? { code: meta.code, season: meta.season, colour: meta.colour } : undefined;
   };
   const picked = pickedXI.length;
   const roomBothReady =
@@ -517,10 +509,10 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
     (roomQ.members?.length ?? 0) === 2 &&
     roomQ.members.every((m: any) => m.picks?.length === 11);
   const modeLabel = initialRoom
-    ? `Room ${initialRoom.toUpperCase()}`
+    ? t("run.room", { code: initialRoom.toUpperCase() })
     : draft?.mode === "daily"
-      ? `Today's challenge · ${today}`
-      : "Classic";
+      ? t("run.dailyWithDate", { date: today })
+      : t("run.classic");
 
   return (
     <div className="flex-1 flex flex-col">
@@ -528,12 +520,12 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
         <div className="border-b border-hairline">
           <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 py-2.5 lg:py-3.5 flex items-center gap-3">
             <span className="text-[13px] lg:text-[14px] leading-5 text-muted truncate">
-              {modeLabel} · {draft.difficulty}
+              {modeLabel} · {t(`difficulty.${draft.difficulty}`)}
             </span>
             <span className="flex-1" />
             {draft.status === "drafting" && (
               <span className="hidden sm:block text-[14px] leading-5 font-medium">
-                {draft.rerollsLeft} re-spins left
+                {t("draft.respinsLeft", { n: draft.rerollsLeft })}
               </span>
             )}
             <button
@@ -546,7 +538,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
               }}
               className="h-9 px-3 rounded-control border border-ink text-[13px] lg:text-[14px] font-medium hover:bg-panel transition-colors"
             >
-              {muted ? "Sound off" : "Sound on"}
+              {muted ? t("run.soundOff") : t("run.soundOn")}
             </button>
             <button
               onClick={() => {
@@ -558,7 +550,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
               }}
               className="h-9 px-3 rounded-control border border-ink text-[13px] lg:text-[14px] font-medium hover:bg-panel transition-colors"
             >
-              Restart run
+              {t("run.restart")}
             </button>
           </div>
         </div>
@@ -574,27 +566,27 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
           )}
           {initialRoom && roomQ === null && (
             <div className="border border-loss rounded-control p-4 text-center text-[15px]">
-              No room with that code. It may have expired.{" "}
+              {t("setup.noRoom")}{" "}
               <button className="underline font-medium" onClick={() => (window.location.search = "")}>
-                Start a normal run
+                {t("setup.normalRun")}
               </button>
             </div>
           )}
           {initialRoom && roomQ && !myRoomMember && (
             <div className="bg-ink text-white rounded-control p-5 flex flex-col gap-3">
-              <span className="text-[13px] leading-[18px] text-muted-plate">Shared league invite</span>
+              <span className="text-[13px] leading-[18px] text-muted-plate">{t("setup.inviteTitle")}</span>
               <span className="font-semibold text-[22px] leading-7">
                 {roomQ.members?.map((m: any) => m.name).join("  vs  ") || "1v1"}
                 {roomQ.members?.length < 2 ? " · one seat open" : ""}
               </span>
               <span className="text-[15px] leading-[22px] text-body-plate">
-                {roomQ.difficulty} · your own spins, your own style, one 18-game table
+                {t("setup.inviteRules", { difficulty: t(`difficulty.${roomQ.difficulty}`) })}
               </span>
               <div className="flex gap-2 pt-1">
                 <input
                   value={roomName}
                   onChange={(e) => setRoomName(e.target.value)}
-                  placeholder="Your name"
+                  placeholder={t("setup.yourName")}
                   maxLength={14}
                   className="flex-1 h-13 rounded-control bg-plate border border-plate-line px-3.5 text-[16px] outline-none focus:border-white"
                 />
@@ -609,29 +601,29 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     setRoomBusy(false);
                   }}
                 >
-                  {roomBusy ? "Joining…" : "Join"}
+                  {roomBusy ? t("setup.joining") : t("setup.join")}
                 </PrimaryButton>
               </div>
             </div>
           )}
           {initialRoom && roomQ && myRoomMember && (
             <p className="text-[15px] leading-[22px] text-center border border-hairline rounded-control p-4">
-              Playing as <b>{myRoomMember.name}</b>. Draft your own XI below, then lock it in.
+              {t("setup.playingAs")} <b>{myRoomMember.name}</b>. {t("setup.draftBelow")}
             </p>
           )}
 
           {(!initialRoom || myRoomMember) && (
             <>
               <h1 className="font-semibold text-[26px] leading-8 lg:text-[32px] lg:leading-10 mt-2">
-                Set up your run
+                {t("setup.title")}
               </h1>
               <p className="text-[15px] leading-[22px] text-muted mt-1">
-                Three choices, then the board starts spinning.
+                {t("setup.sub")}
               </p>
 
               {!initialRoom && (
                 <div className="mt-6 flex flex-col gap-2.5">
-                  <h2 className="font-semibold text-[17px] leading-[22px]">Mode</h2>
+                  <h2 className="font-semibold text-[17px] leading-[22px]">{t("setup.mode")}</h2>
                   <div className="grid grid-cols-2 gap-2">
                     {(["classic", "daily"] as GameMode[]).map((m) => (
                       <button
@@ -642,14 +634,14 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                         }`}
                       >
                         <span className="font-semibold text-[16px] leading-[22px]">
-                          {m === "daily" ? "Today's challenge" : "Classic"}
+                          {m === "daily" ? t("home.daily.title") : t("run.classic")}
                         </span>
                         <span
                           className={`text-[13px] leading-[18px] ${
                             mode === m ? "text-body-plate" : "text-muted"
                           }`}
                         >
-                          {m === "daily" ? "Same 11 squads for all" : "Fresh spins every run"}
+                          {m === "daily" ? t("setup.dailySub") : t("setup.classicSub")}
                         </span>
                       </button>
                     ))}
@@ -659,14 +651,14 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
 
               <div className="mt-6 flex flex-col gap-2.5">
                 <div className="flex items-baseline gap-2">
-                  <h2 className="font-semibold text-[17px] leading-[22px]">Shape of your XI</h2>
-                  <span className="text-[13px] leading-[18px] text-muted">Always 11 players</span>
+                  <h2 className="font-semibold text-[17px] leading-[22px]">{t("setup.shape")}</h2>
+                  <span className="text-[13px] leading-[18px] text-muted">{t("setup.always11")}</span>
                 </div>
-                {STYLE_TEMPLATES.map((t, i) => {
+                {STYLE_TEMPLATES.map((tpl, i) => {
                   const on = styleIdx === i;
                   return (
                     <button
-                      key={t.name}
+                      key={tpl.name}
                       onClick={() => setStyleIdx(i)}
                       className={`flex items-center gap-3 p-3.5 rounded-control text-left transition-colors ${
                         on ? "border-2 border-ink" : "border border-[#D4D4D4] hover:bg-panel"
@@ -679,14 +671,18 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                       />
                       <span className="flex flex-col gap-1.5 flex-1 min-w-0">
                         <span className="flex items-baseline gap-2 flex-wrap">
-                          <span className="font-semibold text-[16px] leading-5">{t.name}</span>
-                          <span className="text-[13px] leading-[18px] text-muted">{t.blurb}</span>
+                          <span className="font-semibold text-[16px] leading-5">
+                            {t(`style.${tpl.name}`)}
+                          </span>
+                          <span className="text-[13px] leading-[18px] text-muted">
+                            {t(`style.blurb.${tpl.name}`)}
+                          </span>
                         </span>
-                        {on && <StyleStrip config={t.config} />}
+                        {on && <StyleStrip config={tpl.config} />}
                         <span className="text-[13px] leading-[18px] text-muted">
                           {(["Opener", "Middle", "WK", "AR", "Pace", "Spin"] as Role[])
-                            .filter((r) => (t.config[r] ?? 0) > 0)
-                            .map((r) => `${t.config[r]} ${roleWord(r, t.config[r])}`)
+                            .filter((r) => (tpl.config[r] ?? 0) > 0)
+                            .map((r) => `${tpl.config[r]} ${t(`role.${r}`)}`)
                             .join(", ")}
                         </span>
                       </span>
@@ -697,17 +693,17 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
 
               {initialRoom && roomQ ? (
                 <p className="mt-6 text-[15px] leading-[22px] text-center border border-hairline rounded-control p-3.5">
-                  Room rules are locked: <b className="capitalize">{roomQ.difficulty}</b>
+                  {t("setup.roomLocked")} <b>{t(`difficulty.${roomQ.difficulty}`)}</b>
                 </p>
               ) : (
                 <div className="mt-6 flex flex-col gap-2.5">
-                  <h2 className="font-semibold text-[17px] leading-[22px]">Difficulty</h2>
+                  <h2 className="font-semibold text-[17px] leading-[22px]">{t("setup.difficulty")}</h2>
                   <div className="grid grid-cols-3 gap-2">
                     {(
                       [
-                        { d: "Rookie", sub: "Weaker teams" },
-                        { d: "Pro", sub: "True sim" },
-                        { d: "Legend", sub: "Ratings hidden" },
+                        { d: "Rookie", sub: "setup.rookieSub" },
+                        { d: "Pro", sub: "setup.proSub" },
+                        { d: "Legend", sub: "setup.legendSub" },
                       ] as { d: Difficulty; sub: string }[]
                     ).map(({ d, sub }) => (
                       <button
@@ -717,13 +713,13 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                           difficulty === d ? "bg-ink text-white" : "border border-[#D4D4D4] hover:bg-panel"
                         }`}
                       >
-                        <span className="font-semibold text-[16px] leading-[22px]">{d}</span>
+                        <span className="font-semibold text-[16px] leading-[22px]">{t(`difficulty.${d}`)}</span>
                         <span
                           className={`text-[13px] leading-[18px] ${
                             difficulty === d ? "text-body-plate" : "text-muted"
                           }`}
                         >
-                          {sub}
+                          {t(sub)}
                         </span>
                       </button>
                     ))}
@@ -742,24 +738,24 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     });
                   }}
                 >
-                  Start the draft
+                  {t("setup.start")}
                 </PrimaryButton>
                 <p className="text-[13px] leading-[18px] text-muted text-center">
-                  11 spins · 2 re-spins · max 4 overseas players
+                  {t("setup.rules")}
                 </p>
               </div>
 
               {!initialRoom && (
                 <div className="mt-7 pt-6 border-t border-hairline flex flex-col gap-2.5">
-                  <h2 className="font-semibold text-[17px] leading-[22px]">Play a friend</h2>
+                  <h2 className="font-semibold text-[17px] leading-[22px]">{t("home.friend.title")}</h2>
                   <p className="text-[14px] leading-5 text-muted">
-                    You both draft your own XI, then one 18-game league decides it.
+                    {t("setup.friendBlurb")}
                   </p>
                   <div className="flex gap-2 mt-1">
                     <input
                       value={roomName}
                       onChange={(e) => setRoomName(e.target.value)}
-                      placeholder="Your name"
+                      placeholder={t("setup.yourName")}
                       maxLength={14}
                       className="flex-1 h-13 rounded-control border border-[#8A8A8A] px-3.5 text-[16px] outline-none focus:border-ink"
                     />
@@ -780,7 +776,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                         setRoomBusy(false);
                       }}
                     >
-                      {roomBusy ? "…" : "Create a room"}
+                      {roomBusy ? "…" : t("setup.createRoom")}
                     </OutlineButton>
                   </div>
                 </div>
@@ -796,11 +792,11 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
           <div className="flex flex-col gap-3">
             <div className="flex items-baseline gap-3">
               <h1 className="font-semibold text-[22px] leading-7 lg:text-[28px] lg:leading-9">
-                Pick {picked + 1} of 11
+                {t("draft.pickOf", { n: picked + 1 })}
               </h1>
               <span className="flex-1" />
               <span className="text-[14px] leading-5 text-muted">
-                {slotsLeft} slot{slotsLeft === 1 ? "" : "s"} still open
+                {t("draft.slotsOpen", { n: slotsLeft })}
               </span>
             </div>
             <SlotStrip filled={picked} current={picked} />
@@ -839,7 +835,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     <div className="flex gap-3 lg:gap-3.5">
                       <div className="flex-1 min-w-0">
                         <Flap
-                          label="Squad"
+                          label={t("draft.squad")}
                           value={spunTeam?.code ?? currentSpin.teamId}
                           tone="team"
                           colour={spunTeam?.colour}
@@ -849,7 +845,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                       </div>
                       <div className="flex-1 min-w-0">
                         <Flap
-                          label="Season"
+                          label={t("draft.season")}
                           value={spunTeam?.season ?? ""}
                           className="h-24 lg:h-[116px]"
                           valueClassName="text-[56px] leading-[52px] lg:text-[72px] lg:leading-[66px]"
@@ -859,12 +855,13 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     <div className="flex items-center gap-3">
                       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                         <span className="font-semibold text-[17px] leading-[22px] lg:text-[22px] lg:leading-7">
-                          {spunTeam?.name ?? currentSpin.teamId}, {spunTeam?.season}
+                          {t("draft.teamSeason", {
+                            name: spunTeam?.name ?? currentSpin.teamId,
+                            season: spunTeam?.season ?? "",
+                          })}
                         </span>
                         <span className="text-[13px] leading-[18px] lg:text-[15px] lg:leading-[22px] text-muted-plate">
-                          {hideRatings
-                            ? "Legend mode. Ratings are hidden, trust what you know."
-                            : "Take one player from this squad."}
+                          {hideRatings ? t("draft.legendNote") : t("draft.takeOne")}
                         </span>
                       </div>
                       <PlateButton
@@ -872,7 +869,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                         onClick={rerollSpin}
                         disabled={draft.rerollsLeft <= 0}
                       >
-                        Re-spin · {draft.rerollsLeft} left
+                        {t("draft.respin", { n: draft.rerollsLeft })}
                       </PlateButton>
                     </div>
                   </div>
@@ -881,15 +878,15 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     <div className="flex flex-col gap-1">
                       <h2 className="font-semibold text-[17px] leading-[22px] lg:text-[20px] lg:leading-[26px]">
                         {lastResort
-                          ? "Dead spin — anyone goes"
+                          ? t("draft.deadSpin")
                           : deadSpin
-                            ? "No one from this squad fits"
-                            : `Pick one from the ${spunTeam?.season} squad`}
+                            ? t("draft.noFit")
+                            : t("draft.pickFrom", { season: spunTeam?.season ?? "" })}
                       </h2>
                       <p className="text-[13px] leading-[18px] lg:text-[14px] lg:leading-5 text-muted">
                         {deadSpin && !lastResort
-                          ? "Stand-ins who fit your open slots:"
-                          : `Still open: ${openSlotSummary(draft.config, roleCounts)}`}
+                          ? t("draft.standIns")
+                          : t("draft.stillOpen", { roles: openSlotSummary(draft.config, roleCounts, t) })}
                       </p>
                     </div>
                     <SquadList
@@ -911,33 +908,31 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
       {draft && draft.status === "complete" && !result && (
         <div className="mx-auto w-full max-w-[900px] px-5 lg:px-8 pt-4 lg:pt-7 pb-12">
           <h1 className="font-semibold text-[26px] leading-8 lg:text-[32px] lg:leading-10">
-            Your XI is locked
+            {t("xi.locked")}
           </h1>
           <p className="text-[15px] leading-[22px] text-muted mt-1">
-            {inRoomGame
-              ? "Lock it in for the room. The shared league plays from both XIs."
-              : "Eleven picks done. Check the forecast, then play."}
+            {inRoomGame ? t("xi.lockedRoomSub") : t("xi.lockedSub")}
           </p>
 
           {!validity.valid && (
             <p className="mt-3 text-[14px] leading-5 text-loss">
-              {validity.errors.join(" · ")}. The sim runs anyway, with a penalty.
+              {t("xi.penalty", { errors: validity.errors.join(" · ") })}
             </p>
           )}
 
           <div className="mt-5 -mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-5 lg:px-7 lg:py-7 flex flex-col gap-5">
             <div className="flex gap-6 lg:gap-10">
               <div className="flex flex-col gap-1">
-                <span className="text-[13px] leading-[18px] text-muted-plate">Team power</span>
+                <span className="text-[13px] leading-[18px] text-muted-plate">{t("xi.teamPower")}</span>
                 <span className="font-display font-bold text-[72px] leading-[62px] pt-1.5 tabular">
                   {hideRatings ? "?" : Math.round(strength?.power ?? 0)}
                 </span>
               </div>
               <div className="flex flex-col gap-2 pt-1">
                 {[
-                  ["Batting", hideRatings ? "Hidden" : unitWord(strength?.bat ?? 0)],
-                  ["Bowling", hideRatings ? "Hidden" : unitWord(strength?.bowl ?? 0)],
-                  ["Overseas", `${overseas} of 4`],
+                  [t("xi.batting"), hideRatings ? t("xi.hidden") : t(`unit.${unitWord(strength?.bat ?? 0)}`)],
+                  [t("xi.bowling"), hideRatings ? t("xi.hidden") : t(`unit.${unitWord(strength?.bowl ?? 0)}`)],
+                  [t("xi.overseas"), t("xi.ofFour", { n: overseas })],
                 ].map(([k, v]) => (
                   <div key={k} className="flex items-baseline gap-2">
                     <span className="w-[84px] text-[14px] leading-5 text-muted-plate">{k}</span>
@@ -949,13 +944,13 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
 
             {forecast && !inRoomGame && (
               <div className="pt-5 border-t border-plate-line flex flex-col gap-2.5">
-                <span className="text-[13px] leading-[18px] text-muted-plate">Bookies say</span>
+                <span className="text-[13px] leading-[18px] text-muted-plate">{t("xi.bookies")}</span>
                 <div className="flex gap-2">
                   {[
-                    [String(forecast.expPts), "points"],
-                    [ordinal(forecast.medRank), "likely finish"],
-                    [`${forecast.playoffPct}%`, "make playoffs"],
-                    [`${forecast.titlePct}%`, "win the title"],
+                    [String(forecast.expPts), t("xi.expPoints")],
+                    [ordinal(forecast.medRank, t), t("xi.likelyFinish")],
+                    [`${forecast.playoffPct}%`, t("xi.makePlayoffs")],
+                    [`${forecast.titlePct}%`, t("xi.winTitle")],
                   ].map(([v, k]) => (
                     <div key={k} className="flex flex-col gap-0.5 flex-1 min-w-0">
                       <span className="font-display font-semibold text-[30px] leading-7 lg:text-[36px] lg:leading-8 pt-1 tabular">
@@ -980,7 +975,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                       : "border-[1.5px] border-ink text-ink hover:bg-panel"
                   }`}
                 >
-                  {roomBothReady ? "Start the league" : "XI locked — waiting for your opponent"}
+                  {roomBothReady ? t("xi.startLeague") : t("xi.waitingOpponent")}
                 </a>
               ) : (
                 <PrimaryButton
@@ -1002,16 +997,16 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     setRoomBusy(false);
                   }}
                 >
-                  {roomBusy ? "Locking…" : "Lock in this XI"}
+                  {roomBusy ? t("xi.locking") : t("xi.lockIn")}
                 </PrimaryButton>
               )
             ) : (
               <>
                 <PrimaryButton className="w-full" onClick={simulate}>
-                  Play the season
+                  {t("xi.playSeason")}
                 </PrimaryButton>
                 <p className="text-[13px] leading-[18px] text-muted text-center">
-                  14 league games, then the playoffs. Top 4 go through.
+                  {t("xi.playNote")}
                 </p>
               </>
             )}
@@ -1019,7 +1014,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
 
           <div className="mt-8">
             <XIPanel
-              title="The XI"
+              title={t("xi.theXI")}
               config={draft.config}
               picks={draft.picks}
               overseas={overseas}
@@ -1038,7 +1033,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
               <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-5 lg:px-7 lg:py-7 flex flex-col lg:flex-row lg:items-end gap-5 lg:gap-11">
                 <div className="flex gap-3 lg:shrink-0">
                   <Flap
-                    label="Won"
+                    label={t("word.won")}
                     value={simShown.wins}
                     valueColour="#4FCB74"
                     wrapClassName="flex-1 lg:flex-none lg:w-[148px]"
@@ -1046,7 +1041,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     valueClassName="text-[72px] leading-[64px] lg:text-[108px] lg:leading-[96px]"
                   />
                   <Flap
-                    label="Lost"
+                    label={t("word.lost")}
                     value={simShown.losses}
                     valueColour="#FF6152"
                     wrapClassName="flex-1 lg:flex-none lg:w-[148px]"
@@ -1058,8 +1053,8 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                 <div className="flex flex-col gap-2.5 flex-1 lg:pb-1.5">
                   <span className="font-semibold text-[20px] leading-[26px] lg:text-[26px] lg:leading-8">
                     {simPhase === "league"
-                      ? `Match ${Math.min(simIdx + 1, 14)} of 14`
-                      : "League complete"}
+                      ? t("league.matchOf", { n: Math.min(simIdx + 1, 14) })
+                      : t("league.complete")}
                   </span>
                   <span
                     className={`font-semibold text-[15px] leading-[22px] lg:text-[17px] lg:leading-6 ${
@@ -1067,16 +1062,18 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     }`}
                   >
                     {simPhase === "leagueDone"
-                      ? `Finished ${ordinal(result.rank)} on ${result.points} points. ${
-                          result.madePlayoffs ? "Into the top four." : "Outside the top four."
-                        }`
-                      : leagueLine(simShown.wins, simShown.losses, false)}
+                      ? t("league.finishedLine", {
+                          rank: ordinal(result.rank, t),
+                          points: result.points,
+                          note: result.madePlayoffs ? t("league.inTopFour") : t("league.outsideTopFour"),
+                        })
+                      : leagueLine(simShown.wins, simShown.losses, t)}
                   </span>
                   <div className="flex gap-6 lg:gap-8 pt-1">
                     {[
-                      [String(simShown.wins * 2), "points"],
-                      [`${simShown.nrr > 0 ? "+" : ""}${simShown.nrr}`, "net run rate"],
-                      [`${leagueRuns(simShown.games)}`, "runs scored"],
+                      [String(simShown.wins * 2), t("word.points")],
+                      [`${simShown.nrr > 0 ? "+" : ""}${simShown.nrr}`, t("word.nrr")],
+                      [`${leagueRuns(simShown.games)}`, t("word.runsScored")],
                     ].map(([v, k]) => (
                       <div key={k} className="flex flex-col gap-0.5">
                         <span className="font-display font-semibold text-[26px] leading-6 lg:text-[32px] lg:leading-7 pt-1 tabular">
@@ -1093,11 +1090,11 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     className="h-11 flex-1 lg:flex-none"
                     onClick={() => setSimSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}
                   >
-                    Speed {simSpeed}x
+                    {t("league.speed", { n: simSpeed })}
                   </PlateButton>
                   {simPhase === "league" && (
                     <PlateButton className="h-11 flex-1 lg:flex-none" onClick={simSkip}>
-                      Skip to end
+                      {t("league.skip")}
                     </PlateButton>
                   )}
                 </div>
@@ -1110,8 +1107,8 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
               >
                 <div className="flex-1 min-w-0">
                   <SectionHead
-                    title="Results so far"
-                    note={simPhase === "league" ? "Tap a result to jump ahead" : undefined}
+                    title={t("league.results")}
+                    note={simPhase === "league" ? t("league.tapAhead") : undefined}
                   />
                   <div
                     ref={feedRef}
@@ -1127,7 +1124,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                         key={i}
                         n={i + 1}
                         g={g}
-                        hero={leagueHero(g, i, result.matchStars[i])}
+                        hero={leagueHero(g, i, t, result.matchStars[i])}
                         last={i === simShown.games.length - 1}
                       />
                     ))}
@@ -1147,7 +1144,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     <>
                       <div className="flex flex-col items-center gap-3">
                         <p className="font-semibold text-[17px] leading-6 lg:text-[20px] lg:leading-7 text-center">
-                          Three wins from the title.
+                          {t("league.threeWins")}
                         </p>
                         <PrimaryButton
                           className="w-full sm:w-auto sm:px-12"
@@ -1156,7 +1153,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                             setSimPhase("playoffs");
                           }}
                         >
-                          Into the playoffs
+                          {t("league.intoPlayoffs")}
                         </PrimaryButton>
                       </div>
                     </>
@@ -1191,34 +1188,34 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
           {simPhase === "playoffs" && (
             <div className="mx-auto w-full max-w-[900px] px-5 lg:px-8 pt-5 pb-12 flex flex-col gap-3.5">
               <div className="flex items-baseline gap-3">
-                <h1 className="font-semibold text-[22px] leading-7 lg:text-[26px] lg:leading-8">Playoffs</h1>
+                <h1 className="font-semibold text-[22px] leading-7 lg:text-[26px] lg:leading-8">{t("po.title")}</h1>
                 <span className="text-[14px] leading-5 text-muted">
-                  in as #{result.rank} on {result.wins}-{result.losses}
+                  {t("po.via", { rank: result.rank, w: result.wins, l: result.losses })}
                 </span>
                 <span className="flex-1" />
                 <button
                   onClick={() => setSimSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}
                   className="h-9 px-3 rounded-control border border-ink text-[13px] font-medium"
                 >
-                  Speed {simSpeed}x
+                  {t("league.speed", { n: simSpeed })}
                 </button>
               </div>
               {nonFinals.slice(0, poIdx).map((p, i) => (
-                <PlayoffSummary key={i} stage={p.stage} gf={p.gf} ga={p.ga} win={p.result === "W"} margin={p.margin} />
+                <PlayoffSummary key={i} stage={t(`stage.${p.stage}`)} gf={p.gf} ga={p.ga} win={p.result === "W"} margin={p.margin} />
               ))}
               {nonFinals[poIdx] && nonFinals[poIdx].detail && (
                 <PlayoffMatch
                   key={poIdx}
-                  stage={nonFinals[poIdx].stage}
+                  stage={t(`stage.${nonFinals[poIdx].stage}`)}
                   detail={nonFinals[poIdx].detail!}
                   userTag="YOU"
                   speed={simSpeed}
                   nextLabel={
                     nonFinals[poIdx].result === "W"
                       ? poIdx + 1 < nonFinals.length
-                        ? `Next: ${nonFinals[poIdx + 1].stage}`
-                        : "To the final"
-                      : "Season over — see the results"
+                        ? t("po.next", { stage: t(`stage.${nonFinals[poIdx + 1].stage}`) })
+                        : t("po.toFinal")
+                      : t("po.seasonOver")
                   }
                   onDone={onPlayoffDone}
                 />
@@ -1229,15 +1226,15 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
           {simPhase === "preFinal" && finalGame && (
             <div className="mx-auto w-full max-w-[900px] px-5 lg:px-8 pt-5 pb-12">
               <div className="-mx-5 lg:mx-0 lg:rounded-control bg-ink text-white px-5 py-8 lg:px-10 lg:py-12 text-center flex flex-col items-center gap-3">
-                <span className="text-[13px] leading-[18px] text-muted-plate">The final</span>
+                <span className="text-[13px] leading-[18px] text-muted-plate">{t("po.theFinal")}</span>
                 <span className="font-semibold text-[28px] leading-9 lg:text-[40px] lg:leading-[48px]">
-                  You versus {finalGame.detail?.opp ?? "the best of the rest"}
+                  {t("po.versus", { opp: finalGame.detail?.opp ?? "?" })}
                 </span>
                 <span className="text-[15px] leading-[22px] text-body-plate">
-                  One game, played ball by ball.
+                  {t("po.oneGame")}
                 </span>
                 <PrimaryButton className="mt-3 w-full sm:w-auto px-10" onClick={() => setSimPhase("final")}>
-                  Play the final
+                  {t("po.playFinal")}
                 </PrimaryButton>
               </div>
             </div>
@@ -1246,12 +1243,12 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
           {simPhase === "final" && finalGame && finalGame.detail && (
             <div className="mx-auto w-full max-w-[900px] px-5 lg:px-8 pt-5 pb-12">
               <PlayoffMatch
-                stage="Final"
+                stage={t("stage.Final")}
                 detail={finalGame.detail}
                 userTag="YOU"
                 speed={simSpeed}
                 fullMatch
-                nextLabel={finalGame.result === "W" ? "Lift the trophy" : "Full time — see the results"}
+                nextLabel={finalGame.result === "W" ? t("po.liftTrophy") : t("po.fullTime")}
                 onDone={() => setSimPhase("done")}
               />
             </div>
@@ -1263,7 +1260,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                 <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-6 lg:px-9 lg:py-9 flex flex-col xl:flex-row xl:items-end gap-6 xl:gap-10 2xl:gap-14">
                   <div className="flex gap-3 xl:gap-3.5 xl:shrink-0">
                     <Flap
-                      label="Won"
+                      label={t("word.won")}
                       value={result.wins}
                       valueColour="#4FCB74"
                       wrapClassName="flex-1 xl:flex-none xl:w-[150px] 2xl:w-[196px]"
@@ -1271,7 +1268,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                       valueClassName="text-[112px] leading-[98px] xl:text-[132px] xl:leading-[114px] 2xl:text-[176px] 2xl:leading-[152px]"
                     />
                     <Flap
-                      label="Lost"
+                      label={t("word.lost")}
                       value={result.losses}
                       valueColour="#FF6152"
                       wrapClassName="flex-1 xl:flex-none xl:w-[150px] 2xl:w-[196px]"
@@ -1286,18 +1283,18 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                         result.champion ? "text-trophy" : ""
                       }`}
                     >
-                      {headline(result)}
+                      {headline(result, t)}
                     </h1>
                     <p className="text-[15px] leading-[22px] lg:text-[17px] lg:leading-[26px] text-body-plate">
-                      {resultBlurb(result)}
+                      {resultBlurb(result, t)}
                     </p>
                     <SeasonStrip result={result} />
                     <div className="flex flex-wrap gap-x-8 gap-y-3 pt-1">
                       {[
-                        [String(result.points), "points"],
-                        [`${result.nrr > 0 ? "+" : ""}${result.nrr}`, "net run rate"],
-                        [ordinal(result.rank), "on the table"],
-                        [draft.difficulty, "difficulty"],
+                        [String(result.points), t("word.points")],
+                        [`${result.nrr > 0 ? "+" : ""}${result.nrr}`, t("word.nrr")],
+                        [ordinal(result.rank, t), t("word.onTheTable")],
+                        [t(`difficulty.${draft.difficulty}`), t("word.difficulty")],
                       ].map(([v, k]) => (
                         <div key={k} className="flex flex-col gap-0.5">
                           <span className="font-display font-semibold text-[30px] leading-7 lg:text-[34px] lg:leading-[30px] pt-1 tabular">
@@ -1341,11 +1338,10 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                       className="w-full"
                       onClick={() => startDraft(mode, draft.config)}
                     >
-                      Play another run
+                      {t("end.playAnother")}
                     </PrimaryButton>
                     <p className="text-[13px] leading-5 text-muted text-center">
-                      Your next run gets a fresh board. Today&apos;s challenge stays the same for
-                      everyone until midnight.
+                      {t("end.playAnotherNote")}
                     </p>
                   </div>
                 </div>
@@ -1384,46 +1380,57 @@ function oppColour(code: string): string {
   return CODE_COLOUR[code] ?? "#2E2E2E";
 }
 
-function ordinal(n: number): string {
-  if (n === 1) return "1st";
-  if (n === 2) return "2nd";
-  if (n === 3) return "3rd";
-  return `${n}th`;
-}
-
-function openSlotSummary(config: XIConfig, counts: Record<string, number>): string {
+function openSlotSummary(
+  config: XIConfig,
+  counts: Record<string, number>,
+  t: (k: string, v?: Record<string, string | number>) => string
+): string {
   const words: string[] = [];
   (["Opener", "Middle", "WK", "AR", "Pace", "Spin"] as Role[]).forEach((r) => {
     const left = (config[r] ?? 0) - (counts[r] ?? 0);
-    if (left > 0) words.push(`${left} ${roleWord(r, left)}`);
+    if (left > 0) words.push(`${left} ${t(`role.${r}`)}`);
   });
   return words.join(", ");
 }
 
-function leagueLine(wins: number, losses: number, done: boolean): string {
-  if (done) return losses === 0 ? "Fourteen from fourteen. The league is done." : `Finished on ${wins * 2} points.`;
-  if (losses === 0 && wins >= 1) return `Still unbeaten. ${14 - wins} more to go.`;
-  if (losses === 1) return "One defeat. The perfect season is gone.";
-  return `${wins} won, ${losses} lost.`;
+function leagueLine(
+  wins: number,
+  losses: number,
+  t: (k: string, v?: Record<string, string | number>) => string
+): string {
+  if (losses === 0 && wins >= 1) return t("league.unbeaten", { n: 14 - wins });
+  if (losses === 1) return t("league.oneDefeat");
+  return t("league.record", { w: wins, l: losses });
 }
 
-function headline(r: SeasonResult): string {
-  if (r.perfect14 && r.champion) return "Champions. Perfect season.";
-  if (r.champion) return "Champions.";
-  if (r.madePlayoffs) return `Knocked out in ${knockoutStage(r)}.`;
-  return "Missed the playoffs.";
+function headline(
+  r: SeasonResult,
+  t: (k: string, v?: Record<string, string | number>) => string
+): string {
+  if (r.perfect14 && r.champion) return t("end.perfect");
+  if (r.champion) return t("end.champions");
+  if (r.madePlayoffs) return t("end.knockedOut", { stage: knockoutStage(r, t) });
+  return t("end.missed");
 }
 
-function resultBlurb(r: SeasonResult): string {
+function resultBlurb(
+  r: SeasonResult,
+  t: (k: string, v?: Record<string, string | number>) => string
+): string {
   const bits: string[] = [];
   bits.push(
-    `${r.wins} won, ${r.losses} lost, ${r.points} points, finished ${ordinal(r.rank)}.`
+    t("end.recordLine", { w: r.wins, l: r.losses, points: r.points, rank: ordinal(r.rank, t) })
   );
   bits.push(
-    `${r.orangeCap.player} led the runs with ${r.orangeCap.runs} and ${r.purpleCap.player} took ${r.purpleCap.wickets} wickets.`
+    t("end.capsLine", {
+      orange: r.orangeCap.player,
+      runs: r.orangeCap.runs,
+      purple: r.purpleCap.player,
+      wickets: r.purpleCap.wickets,
+    })
   );
-  if (r.perfect14) bits.push("Nobody had done this before.");
-  else if (!r.madePlayoffs) bits.push("Top four was the promised land.");
+  if (r.perfect14) bits.push(t("end.neverDone"));
+  else if (!r.madePlayoffs) bits.push(t("end.promisedLand"));
   return bits.join(" ");
 }
 
@@ -1477,14 +1484,17 @@ function StyleStrip({ config }: { config: XIConfig }) {
 }
 
 function MatchRow({ n, g, hero, last }: { n: number; g: GameResult; hero: string; last?: boolean }) {
+  const t = useT();
   const win = g.result === "W";
   const colour = oppColour(g.opp);
   const superOver = g.margin === "Super Over";
-  const m = tidyMargin(g.margin);
-  const wide = superOver ? `${win ? "Won" : "Lost"} in a super over` : `${win ? "Won" : "Lost"} by ${m}`;
+  const m = localiseMargin(g.margin, t);
+  const wide = superOver
+    ? t(win ? "match.wonSO" : "match.lostSO")
+    : t(win ? "match.won" : "match.lost", { margin: m });
   const narrow = superOver
-    ? `${win ? "Beat" : "Lost to"} ${g.opp} in a super over`
-    : `${win ? "Beat" : "Lost to"} ${g.opp} by ${m}`;
+    ? t(win ? "match.beatSO" : "match.lostToSO", { opp: g.opp })
+    : t(win ? "match.beat" : "match.lostTo", { opp: g.opp, margin: m });
   return (
     <div
       className={`flex items-center gap-2.5 lg:gap-3.5 py-2.5 border-t border-hairline ${
@@ -1521,12 +1531,13 @@ function MatchRow({ n, g, hero, last }: { n: number; g: GameResult; hero: string
 }
 
 function PointsTable({ rows, championIsYou }: { rows: SeasonResult["table"]; championIsYou?: boolean }) {
+  const t = useT();
   return (
     <section className="flex flex-col">
-      <SectionHead title="The table" note="Top 4 go through" />
+      <SectionHead title={t("table.title")} note={t("table.topFour")} />
       <div className="flex items-center gap-2 h-7 mt-1 text-[12px] leading-4 text-muted">
         <span className="w-[22px] shrink-0" />
-        <span className="flex-1">Team</span>
+        <span className="flex-1">{t("table.team")}</span>
         <span className="w-[26px] shrink-0 text-right">P</span>
         <span className="w-[26px] shrink-0 text-right">W</span>
         <span className="w-[26px] shrink-0 text-right">L</span>
@@ -1548,7 +1559,7 @@ function PointsTable({ rows, championIsYou }: { rows: SeasonResult["table"]; cha
                 r.you ? "font-semibold text-[16px] leading-[22px]" : "text-[15px] leading-5"
               } ${!r.you && i > 3 ? "text-muted" : ""}`}
             >
-              {r.you ? "Your XI" : r.team}
+              {r.you ? t("table.yourXI") : r.team}
               {r.you && championIsYou && <Crown size={18} />}
             </span>
             {(["p", "w", "l"] as const).map((k) => (
@@ -1579,7 +1590,7 @@ function PointsTable({ rows, championIsYou }: { rows: SeasonResult["table"]; cha
           </div>
           {i === 3 && (
             <div className="flex items-center h-7 pt-1.5 border-t-2 border-ink">
-              <span className="text-[12px] leading-4 text-muted">Playoff cut</span>
+              <span className="text-[12px] leading-4 text-muted">{t("table.cut")}</span>
             </div>
           )}
         </div>
@@ -1601,6 +1612,7 @@ function PlayoffSummary({
   win: boolean;
   margin: string;
 }) {
+  const t = useT();
   return (
     <div className="flex items-center gap-3 py-3 border-t border-hairline">
       <span className="w-[110px] shrink-0 text-[13px] leading-[18px] text-muted">{stage}</span>
@@ -1611,7 +1623,7 @@ function PlayoffSummary({
         {win ? "W" : "L"}
       </span>
       <span className="flex-1 min-w-0 text-[15px] leading-5 truncate">
-        {win ? "Won" : "Lost"} by {tidyMargin(margin)}
+        {t(win ? "match.won" : "match.lost", { margin: localiseMargin(margin, t) })}
       </span>
       <span className="shrink-0 font-display font-semibold text-[20px] leading-5 pt-[3px] tabular">
         {gf} · {ga}
@@ -1639,6 +1651,7 @@ function ShareButtons({
   setChallengeCopied: (v: boolean) => void;
   onPlate?: boolean;
 }) {
+  const t = useT();
   return (
     <>
       <a
@@ -1648,7 +1661,7 @@ function ShareButtons({
         className="flex items-center justify-center gap-2.5 h-14 rounded-control bg-turf text-white font-semibold text-[16px] hover:bg-[#15702f] transition-colors"
       >
         <WhatsAppIcon />
-        Share on WhatsApp
+        {t("share.whatsapp")}
       </a>
       <OutlineButton
         onPlate={onPlate}
@@ -1659,26 +1672,26 @@ function ShareButtons({
           }
         }}
       >
-        {copied ? "Copied" : "Copy result card"}
+        {copied ? t("share.copied") : t("share.copy")}
       </OutlineButton>
       <OutlineButton
         onPlate={onPlate}
         onClick={async () => {
           const url = `${window.location.origin}/?challenge=${spins.join(",")}`;
-          if (await copyText(`Beat my board: ${url}`)) {
+          if (await copyText(t("share.beatMyBoard", { url }))) {
             setChallengeCopied(true);
             setTimeout(() => setChallengeCopied(false), 2000);
           }
         }}
       >
-        {challengeCopied ? "Link copied" : "Challenge a friend"}
+        {challengeCopied ? t("share.linkCopied") : t("share.challenge")}
       </OutlineButton>
       <p
         className={`text-[13px] leading-[18px] pt-0.5 ${
           onPlate ? "text-muted-plate" : "text-muted"
         }`}
       >
-        Anyone can replay this exact run at /r/{seed}
+        {t("share.replayNote", { seed })}
       </p>
     </>
   );
@@ -1707,6 +1720,7 @@ function ShareBlock({
   challengeCopied: boolean;
   setChallengeCopied: (v: boolean) => void;
 }) {
+  const t = useT();
   return (
     <div className="mt-6 flex flex-col gap-2.5 max-w-[420px]">
       <ShareButtons
@@ -1719,22 +1733,10 @@ function ShareBlock({
         setChallengeCopied={setChallengeCopied}
       />
       <PrimaryButton className="w-full mt-1" onClick={() => startDraft(mode, draftConfig)}>
-        Play another run
+        {t("end.playAnother")}
       </PrimaryButton>
     </div>
   );
-}
-
-function roleWord(r: Role, n: number): string {
-  const words: Record<Role, string> = {
-    Opener: n === 1 ? "opener" : "openers",
-    Middle: "middle order",
-    WK: "keeper",
-    AR: n === 1 ? "all-rounder" : "all-rounders",
-    Pace: n === 1 ? "pacer" : "pacers",
-    Spin: n === 1 ? "spinner" : "spinners",
-  };
-  return words[r];
 }
 
 const OPP_HEROES = ["Warner", "Buttler", "Bumrah", "Rashid", "Gayle", "Dhoni", "ABD", "Malinga", "Narine", "Pant", "SKY", "Head"];
@@ -1749,24 +1751,35 @@ function shortName(full: string): string {
 function leagueHero(
   g: GameResult,
   i: number,
+  t: (k: string, v?: Record<string, string | number>) => string,
   star?: { bat: { player: string; runs: number; balls: number }; bowl: { player: string; wickets: number; runsConceded: number } }
 ): string {
   if (g.result === "W" && star) {
     return g.margin.includes("runs")
-      ? `${shortName(star.bowl.player)} ${star.bowl.wickets} for ${star.bowl.runsConceded} defended it`
-      : `${shortName(star.bat.player)} ${star.bat.runs} off ${star.bat.balls} finished it`;
+      ? t("hero.defended", {
+          name: shortName(star.bowl.player),
+          w: star.bowl.wickets,
+          r: star.bowl.runsConceded,
+        })
+      : t("hero.finished", {
+          name: shortName(star.bat.player),
+          runs: star.bat.runs,
+          balls: star.bat.balls,
+        });
   }
   const h = OPP_HEROES[(g.opp.length + i) % OPP_HEROES.length];
-  return `${h} stunned you`;
+  return t("hero.opp", { name: h });
 }
 
 function leagueRuns(games: GameResult[]): number {
   return games.reduce((a, g) => a + (parseInt(g.gf.split("/")[0], 10) || 0), 0);
 }
 
-function knockoutStage(r: SeasonResult): string {
+function knockoutStage(
+  r: SeasonResult,
+  t: (k: string, v?: Record<string, string | number>) => string
+): string {
   const last = r.playoffs[r.playoffs.length - 1];
-  if (!last) return "the league";
-  if (last.stage === "Final") return "the final";
-  return last.stage;
+  if (!last) return t("stage.playoffs");
+  return t(`stage.${last.stage}`);
 }

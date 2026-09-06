@@ -270,11 +270,3 @@ export function Crown({ size = 16, colour = "#E0A81C" }: { size?: number; colour
   );
 }
 
-/** The sim writes "1 runs" and "1 wkts"; say it the way a commentator would. */
-export function tidyMargin(m: string): string {
-  return m
-    .replace(/^1 runs\b/, "1 run")
-    .replace(/^1 wkts\b/, "1 wicket")
-    .replace(/\bwkts\b/, "wickets")
-    .replace(/\bwkt\b/, "wicket");
-}
