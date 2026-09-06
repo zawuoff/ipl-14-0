@@ -127,20 +127,6 @@ function SiteFooter() {
 
 /* ------------------------------------------------------------------ home */
 
-const RAIL: { role: string; name?: string; code?: string; season?: number; colour?: string }[] = [
-  { role: "Opener", name: "Rohit", code: "MI", season: 2019, colour: "#004BA0" },
-  { role: "Opener", name: "Gayle", code: "RCB", season: 2012, colour: "#EC1C24" },
-  { role: "Middle", name: "Kohli", code: "RCB", season: 2016, colour: "#EC1C24" },
-  { role: "Middle", name: "Raina", code: "CSK", season: 2013, colour: "#FDB913" },
-  { role: "Middle" },
-  { role: "Keeper" },
-  { role: "All-rounder" },
-  { role: "All-rounder" },
-  { role: "Pace" },
-  { role: "Pace" },
-  { role: "Spin" },
-];
-
 function HomeScreen({
   today,
   play,
@@ -198,43 +184,6 @@ function HomeScreen({
             </div>
           </div>
 
-          {/* Eleven slots teach the whole mechanic before anyone scrolls. */}
-          <div className="hidden lg:flex flex-col gap-3 mt-11 pt-9 border-t border-plate-line">
-            <div className="flex items-baseline gap-3">
-              <span className="text-[15px] leading-5 font-medium text-muted-plate">A run in progress</span>
-              <span className="flex-1" />
-              <span className="text-[15px] leading-5 text-muted-plate">4 of 11 picked · 2 re-spins left</span>
-            </div>
-            <div className="flex gap-2">
-              {RAIL.map((s, i) =>
-                s.name ? (
-                  <div
-                    key={i}
-                    className="flex-1 min-w-0 h-24 flex flex-col gap-1.5 p-2.5 rounded-control bg-plate border border-plate-line"
-                  >
-                    <span
-                      className="inline-flex w-fit items-center h-5 px-1.5 pt-[2px] rounded-chip font-display font-semibold text-[14px] leading-[14px]"
-                      style={{ backgroundColor: s.colour, color: s.code === "CSK" ? "#000" : "#fff" }}
-                    >
-                      {s.code} {s.season}
-                    </span>
-                    <span className="font-display font-semibold text-[24px] leading-6 pt-0.5 truncate">
-                      {s.name}
-                    </span>
-                    <span className="flex-1" />
-                    <span className="text-[12px] leading-4 text-muted-plate">{s.role}</span>
-                  </div>
-                ) : (
-                  <div
-                    key={i}
-                    className="flex-1 min-w-0 h-24 flex flex-col justify-end p-2.5 rounded-control border border-dashed border-plate-dash"
-                  >
-                    <span className="text-[12px] leading-4 text-[#7A7A7A] truncate">{s.role}</span>
-                  </div>
-                )
-              )}
-            </div>
-          </div>
         </div>
       </section>
 
