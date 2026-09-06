@@ -2,15 +2,7 @@
 import type { Forecast, SeasonResult } from "@/lib/sim/engine";
 import { SectionHead } from "./ui";
 import { unitWord } from "./XIPanel";
-
-const ROLE_LABEL: Record<string, string> = {
-  Opener: "Opener",
-  Middle: "Middle",
-  WK: "Keeper",
-  AR: "All-rounder",
-  Pace: "Pace",
-  Spin: "Spin",
-};
+import { useT } from "@/lib/i18n";
 
 export function SeasonReport({
   result,
@@ -33,13 +25,14 @@ export function SeasonReport({
   // whose XI it came from.
   owners?: (player: string) => string[];
 }) {
+  const t = useT();
   // Checkpoint before the playoffs: where you finished, and how that compares.
   if (slim) {
     return (
       <div className="flex flex-wrap gap-x-10 gap-y-4">
-        <Stat value={`#${result.rank}`} label="finished" />
-        <Stat value={`~${forecast?.medRank ?? "–"}`} label="the bookies said" />
-        <Stat value={String(result.points)} label="points" />
+        <Stat value={`#${result.rank}`} label={t("report.finished")} />
+        <Stat value={`~${forecast?.medRank ?? "–"}`} label={t("report.bookiesSaid")} />
+        <Stat value={String(result.points)} label={t("word.points")} />
       </div>
     );
   }
@@ -49,24 +42,24 @@ export function SeasonReport({
       {leagueOnly && (
         <div className="flex flex-col gap-3">
           <h2 className="font-semibold text-[20px] leading-[26px] lg:text-[24px] lg:leading-8">
-            {verdict(result)}
+            {verdict(result, t)}
           </h2>
-          <p className="text-[15px] leading-6 text-muted max-w-[70ch]">{body(result, bat, bowl)}</p>
+          <p className="text-[15px] leading-6 text-muted max-w-[70ch]">{body(result, bat, bowl, t)}</p>
         </div>
       )}
 
       <div className="flex flex-col lg:flex-row lg:gap-12 lg:items-start">
         <section className="flex flex-col flex-1 min-w-0">
           <SectionHead
-            title="Your XI, season numbers"
-            note={`${result.games.length + result.playoffs.length} matches`}
+            title={t("report.xiNumbers")}
+            note={t("report.matches", { n: result.games.length + result.playoffs.length })}
           />
           <div className="flex items-center gap-3 h-7 mt-1 text-[12px] leading-4 text-muted">
-            <span className="flex-1">Player</span>
-            <span className="w-[84px] shrink-0 hidden sm:block">Role</span>
-            <span className="w-14 shrink-0 text-right">Runs</span>
-            <span className="w-14 shrink-0 text-right">Wickets</span>
-            <span className="w-11 shrink-0 text-right">Rating</span>
+            <span className="flex-1">{t("report.player")}</span>
+            <span className="w-[84px] shrink-0 hidden sm:block">{t("report.role")}</span>
+            <span className="w-14 shrink-0 text-right">{t("report.runs")}</span>
+            <span className="w-14 shrink-0 text-right">{t("report.wickets")}</span>
+            <span className="w-11 shrink-0 text-right">{t("report.rating")}</span>
           </div>
           {[...result.playerRuns]
             .sort((a, b) => b.runs + b.wickets * 20 - (a.runs + a.wickets * 20))
@@ -81,7 +74,7 @@ export function SeasonReport({
                   {p.player}
                 </span>
                 <span className="w-[84px] shrink-0 hidden sm:block text-[13px] leading-[18px] text-muted">
-                  {ROLE_LABEL[p.role] ?? p.role}
+                  {t(`role.${p.role}`)}
                 </span>
                 <Num value={p.runs} />
                 <Num value={p.wickets} />
@@ -93,25 +86,25 @@ export function SeasonReport({
         </section>
 
         <section className="flex flex-col mt-8 lg:mt-0 lg:w-[400px] lg:shrink-0">
-          <SectionHead title="Season awards" />
+          <SectionHead title={t("report.awards")} />
           <Award
             colour="#FF822A"
             name={result.orangeCap.player}
-            note="Orange Cap, most runs"
+            note={t("report.orangeCap")}
             value={result.orangeCap.runs}
             owners={owners?.(result.orangeCap.player)}
           />
           <Award
             colour="#6B3FA0"
             name={result.purpleCap.player}
-            note="Purple Cap, most wickets"
+            note={t("report.purpleCap")}
             value={result.purpleCap.wickets}
             owners={owners?.(result.purpleCap.player)}
           />
           <Award
             colour="#E0A81C"
             name={result.mvp.player}
-            note="Player of the season"
+            note={t("report.mvp")}
             value={result.mvp.points}
             owners={owners?.(result.mvp.player)}
             last
@@ -119,9 +112,9 @@ export function SeasonReport({
 
           {!compact && (
             <div className="flex flex-wrap gap-x-8 gap-y-3 pt-6">
-              <Stat value={unitWord(bat)} label="batting" />
-              <Stat value={unitWord(bowl)} label="bowling" />
-              <Stat value={`${result.nrr > 0 ? "+" : ""}${result.nrr}`} label="net run rate" />
+              <Stat value={t(`unit.${unitWord(bat)}`)} label={t("report.batting")} />
+              <Stat value={t(`unit.${unitWord(bowl)}`)} label={t("report.bowling")} />
+              <Stat value={`${result.nrr > 0 ? "+" : ""}${result.nrr}`} label={t("word.nrr")} />
             </div>
           )}
         </section>
@@ -196,28 +189,32 @@ function Award({
   );
 }
 
-function verdict(r: SeasonResult): string {
-  if (r.perfect14) return "Fourteen from fourteen in the league.";
-  if (r.rank === 1) return "Top of the table.";
-  if (r.madePlayoffs) return "Through to the knockouts.";
-  if (r.rank <= 6) return "The playoffs were right there.";
-  if (r.rank <= 8) return "Mid-table, and nowhere near it.";
-  return "Rock bottom.";
+type T = (k: string, v?: Record<string, string | number>) => string;
+
+function verdict(r: SeasonResult, t: T): string {
+  if (r.perfect14) return t("verdict.perfect14");
+  if (r.rank === 1) return t("verdict.top");
+  if (r.madePlayoffs) return t("verdict.through");
+  if (r.rank <= 6) return t("verdict.rightThere");
+  if (r.rank <= 8) return t("verdict.midTable");
+  return t("verdict.bottom");
 }
 
-function body(r: SeasonResult, bat: number, bowl: number): string {
+function body(r: SeasonResult, bat: number, bowl: number, t: T): string {
   const bits: string[] = [];
-  bits.push(`${r.wins} won, ${r.losses} lost, ${r.points} points, finished #${r.rank}.`);
+  bits.push(t("report.recordLine", { w: r.wins, l: r.losses, points: r.points, rank: r.rank }));
   const weak: string[] = [];
-  if (bat < 78) weak.push("the batting");
-  if (bowl < 78) weak.push("the bowling");
+  if (bat < 78) weak.push(t("report.theBatting"));
+  if (bowl < 78) weak.push(t("report.theBowling"));
   bits.push(
     weak.length
-      ? `This XI was built on ${unitWord(Math.max(bat, bowl)).toLowerCase()} ${
-          bat >= bowl ? "batting" : "bowling"
-        }, and ${weak.join(" and ")} let it down.`
-      : "No weak links. This XI had everything."
+      ? t("report.weakLink", {
+          strength: t(`unit.${unitWord(Math.max(bat, bowl))}`),
+          unit: bat >= bowl ? t("report.batting") : t("report.bowling"),
+          weak: weak.join(" / "),
+        })
+      : t("report.noWeak")
   );
-  if (!r.madePlayoffs) bits.push("Top four was the promised land.");
+  if (!r.madePlayoffs) bits.push(t("end.promisedLand"));
   return bits.join(" ");
 }

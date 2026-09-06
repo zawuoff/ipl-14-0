@@ -1,15 +1,7 @@
 "use client";
 import type { PlayerSeason } from "@/lib/game/types";
 import { ratingTone, readableOn } from "./ui";
-
-const ROLE_LABEL: Record<PlayerSeason["role"], string> = {
-  Opener: "Opener",
-  Middle: "Middle",
-  WK: "Keeper",
-  AR: "All-rounder",
-  Pace: "Pace",
-  Spin: "Spin",
-};
+import { useT } from "@/lib/i18n";
 
 function PlayerRow({
   p,
@@ -24,6 +16,7 @@ function PlayerRow({
   reason?: string;
   teamColour?: string;
 }) {
+  const t = useT();
   const off = !!reason;
   // Ratings visible: the tile carries the rating heat. Legend mode: no number
   // to colour, so the tile wears the squad's own colour instead.
@@ -54,7 +47,7 @@ function PlayerRow({
           {p.player}
         </span>
         <span className={`text-[13px] leading-[18px] truncate ${off ? "text-[#8A8A8A]" : "text-muted"}`}>
-          {off ? reason : p.overseas ? `${p.country} · Overseas` : p.country}
+          {off ? reason : p.overseas ? `${p.country} · ${t("xi.overseas")}` : p.country}
         </span>
       </span>
       <span
@@ -62,7 +55,7 @@ function PlayerRow({
           off ? "text-[#8A8A8A]" : ""
         }`}
       >
-        {ROLE_LABEL[p.role]}
+        {t(`role.${p.role}`)}
       </span>
     </button>
   );

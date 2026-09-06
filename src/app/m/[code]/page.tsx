@@ -5,10 +5,12 @@ import { api } from "../../../../convex/_generated/api";
 import { RoomSeason, deviceId } from "@/components/RoomSeason";
 import { copyText } from "@/lib/clipboard";
 import { PrimaryButton, OutlineButton, WhatsAppIcon, Wordmark } from "@/components/ui";
+import { useT, LangToggle } from "@/lib/i18n";
 
 export default function RoomPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const upper = code.toUpperCase();
+  const t = useT();
   const room = useQuery((api as any).rooms?.get, { code: upper });
   // Both XIs locked: the league is on, so the lobby chrome gets out of the way.
   const started =
@@ -30,8 +32,10 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
         <div className="mx-auto w-full max-w-[1000px] px-5 lg:px-8 py-3.5 flex items-center gap-3">
           <a href="/" className="flex items-baseline gap-3">
             <Wordmark className="text-[30px]" />
-            <span className="text-[13px] leading-[18px] text-muted">Back to the game</span>
+            <span className="text-[13px] leading-[18px] text-muted">{t("nav.backToGame")}</span>
           </a>
+          <span className="flex-1" />
+          <LangToggle className="w-11 h-8 text-[14px]" />
         </div>
       </header>
 
@@ -39,21 +43,20 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
         {!started && (
           <>
             <h1 className="font-semibold text-[26px] leading-8 lg:text-[32px] lg:leading-10">
-              Play a friend
+              {t("home.friend.title")}
             </h1>
             <p className="text-[15px] leading-[22px] text-muted mt-1 max-w-[70ch]">
-              You both draft your own XI. Then one shared league of 18 games decides it, and your
-              head-to-head games count for real.
+              {t("mroom.how2")}
             </p>
           </>
         )}
 
-        {room === undefined && <p className="text-[15px] text-muted py-6">Finding the room…</p>}
+        {room === undefined && <p className="text-[15px] text-muted py-6">{t("mroom.finding")}</p>}
         {room === null && (
           <div className="mt-5 border border-hairline rounded-control p-5">
-            <p className="font-semibold text-[18px] leading-6">No room with that code</p>
+            <p className="font-semibold text-[18px] leading-6">{t("mroom.noRoomTitle")}</p>
             <p className="text-[15px] leading-[22px] text-muted mt-1">
-              Codes look like KX7Q2M. Check the link, or start a new room from the home page.
+              {t("mroom.noRoomBody")}
             </p>
           </div>
         )}
@@ -103,6 +106,7 @@ function RoomLobby({
   copied: boolean;
   setCopied: (v: boolean) => void;
 }) {
+  const t = useT();
   const members: any[] = room.members ?? [];
   const me = members.find((m) => m.deviceId === meId);
   const mate = members.find((m) => m.deviceId !== meId);
@@ -118,17 +122,17 @@ function RoomLobby({
     setJoining(false);
   };
 
-  const invite = `Play me at 14-0, the IPL draft game. Room ${code}: ${roomUrl}`;
+  const invite = t("mroom.inviteText", { code, url: roomUrl });
 
   if (bothReady) {
     return (
       <>
         <div className="flex items-baseline gap-3 flex-wrap">
           <h1 className="font-semibold text-[22px] leading-7 lg:text-[26px] lg:leading-8">
-            {members.map((m) => m.name).join(" against ")}
+            {members.map((m) => m.name).join(t("mroom.against"))}
           </h1>
           <span className="text-[14px] leading-5 text-muted">
-            Room {code} · <span className="capitalize">{room.difficulty}</span> · one 18-game table
+            {t("mroom.headerMeta", { code, difficulty: t(`difficulty.${room.difficulty}`) })}
           </span>
         </div>
         <div className="mt-4">
@@ -142,11 +146,11 @@ function RoomLobby({
     <>
       <div className="mt-5 -mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-5 lg:px-7 lg:py-6 flex flex-col gap-3.5">
         <div className="flex items-baseline gap-3">
-          <span className="text-[13px] leading-[18px] text-muted-plate">Room code</span>
+          <span className="text-[13px] leading-[18px] text-muted-plate">{t("mroom.roomCode")}</span>
           <span className="flex-1" />
           <span className="text-[13px] leading-[18px] text-muted-plate">
-            <span className="capitalize">{room.difficulty}</span> ·{" "}
-            {bothIn ? "both seats taken" : "one seat open"}
+            {t(`difficulty.${room.difficulty}`)} ·{" "}
+            {bothIn ? t("mroom.bothSeats") : t("mroom.oneSeat")}
           </span>
         </div>
 
@@ -177,15 +181,19 @@ function RoomLobby({
                     m ? "" : "text-muted-plate"
                   }`}
                 >
-                  {m ? m.name : "Open seat"}
-                  {m && m.deviceId === meId ? " (you)" : ""}
+                  {m ? m.name : t("mroom.openSeat")}
+                  {m && m.deviceId === meId ? ` ${t("room.you")}` : ""}
                 </span>
                 <span
                   className={`text-[13px] leading-[18px] ${
                     m?.picks?.length === 11 ? "text-turf-soft" : "text-muted-plate"
                   }`}
                 >
-                  {m ? (m.picks?.length === 11 ? "XI locked" : "Drafting") : "Waiting for a friend"}
+                  {m
+                    ? m.picks?.length === 11
+                      ? t("mroom.xiLocked")
+                      : t("mroom.drafting")
+                    : t("mroom.waitingFriend")}
                 </span>
               </div>
             );
@@ -201,7 +209,7 @@ function RoomLobby({
               className="flex items-center justify-center gap-2.5 h-14 rounded-control bg-turf text-white font-semibold text-[17px] hover:bg-[#15702f] transition-colors"
             >
               <WhatsAppIcon />
-              Send invite on WhatsApp
+              {t("mroom.sendInvite")}
             </a>
             <button
               onClick={async () => {
@@ -212,7 +220,7 @@ function RoomLobby({
               }}
               className="text-[13px] leading-[18px] text-muted-plate text-center hover:text-white transition-colors"
             >
-              {copied ? "Link copied" : `Or copy the link: ${roomUrl}`}
+              {copied ? t("share.linkCopied") : t("mroom.orCopy", { url: roomUrl })}
             </button>
           </>
         )}
@@ -220,18 +228,18 @@ function RoomLobby({
 
       {!me && !bothIn && (
         <div className="mt-6 flex flex-col gap-2.5">
-          <h2 className="font-semibold text-[17px] leading-[22px]">Take the open seat</h2>
+          <h2 className="font-semibold text-[17px] leading-[22px]">{t("mroom.takeSeat")}</h2>
           <div className="flex gap-2">
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && doJoin()}
-              placeholder="Your name"
+              placeholder={t("setup.yourName")}
               maxLength={14}
               className="flex-1 h-13 rounded-control border border-[#8A8A8A] px-3.5 text-[16px] outline-none focus:border-ink"
             />
             <OutlineButton className="h-13 px-6" disabled={!name.trim() || joining} onClick={doJoin}>
-              {joining ? "…" : "Join"}
+              {joining ? "…" : t("setup.join")}
             </OutlineButton>
           </div>
         </div>
@@ -239,7 +247,7 @@ function RoomLobby({
 
       {!me && bothIn && (
         <p className="mt-6 text-[15px] leading-[22px] text-muted border border-hairline rounded-control p-4">
-          This room is full. Rematches are free — ask the host to start a new one.
+          {t("mroom.full")}
         </p>
       )}
 
@@ -249,33 +257,25 @@ function RoomLobby({
             className="w-full sm:w-auto sm:px-10"
             onClick={() => (window.location.href = `/?room=${room.code}`)}
           >
-            {mate ? `Draft against ${mate.name}` : "Start your draft"}
+            {mate ? t("mroom.draftAgainst", { name: mate.name }) : t("mroom.startDraft")}
           </PrimaryButton>
         </div>
       )}
 
       {me && me.picks?.length === 11 && !bothReady && (
         <p className="mt-6 text-[15px] leading-[22px] border border-hairline rounded-control p-4">
-          Your XI is locked. Waiting for <b>{mate ? mate.name : "your opponent"}</b> to finish
-          drafting. This page updates on its own.
+          {t("mroom.waitingFor", { name: mate ? mate.name : t("mroom.opponent") })}
         </p>
       )}
 
       {!bothReady && (
         <div className="mt-8 flex flex-col gap-3">
           <h2 className="font-semibold text-[17px] leading-[22px] lg:text-[20px] lg:leading-[26px]">
-            How a 1v1 works
+            {t("mroom.howTitle")}
           </h2>
-          <p className="text-[15px] leading-[22px]">
-            Each of you spins your own board and drafts your own XI. Same difficulty, same rules.
-          </p>
-          <p className="text-[15px] leading-[22px]">
-            Once both XIs are locked, one 18-game league plays out with both teams in it. You meet
-            each other twice.
-          </p>
-          <p className="text-[15px] leading-[22px]">
-            Whoever finishes higher wins the room. A playoff final between you settles a tie.
-          </p>
+          <p className="text-[15px] leading-[22px]">{t("mroom.how1")}</p>
+          <p className="text-[15px] leading-[22px]">{t("mroom.how2")}</p>
+          <p className="text-[15px] leading-[22px]">{t("mroom.how3")}</p>
         </div>
       )}
     </>

@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Flap, PrimaryButton } from "./ui";
+import { useT } from "@/lib/i18n";
 
 // The board: SQUAD x SEASON cells cycle, decelerate, then lock.
 // Outcome-first (the target is already decided), theatre second.
@@ -67,6 +68,7 @@ function split(teamId: string): [string, string] {
 }
 
 export function SlotSpin({ targetTeamId, targetName, targetColour, clubPool, spinKey, onLanded }: Props) {
+  const t = useT();
   const [club, setClub] = useState("");
   const [season, setSeason] = useState("");
   const [cycling, setCycling] = useState(false);
@@ -133,7 +135,7 @@ export function SlotSpin({ targetTeamId, targetName, targetColour, clubPool, spi
         <div className="flex gap-3 lg:gap-3.5">
           <div className="flex-1 min-w-0">
             <Flap
-              label="Squad"
+              label={t("draft.squad")}
               value={<span className={dim ? "text-[#3A3A3A]" : ""}>{club || "···"}</span>}
               tone={locked ? "team" : "plate"}
               colour={targetColour}
@@ -143,7 +145,7 @@ export function SlotSpin({ targetTeamId, targetName, targetColour, clubPool, spi
           </div>
           <div className="flex-1 min-w-0">
             <Flap
-              label="Season"
+              label={t("draft.season")}
               value={<span className={dim ? "text-[#3A3A3A]" : ""}>{season || "····"}</span>}
               className="h-[112px] lg:h-[116px]"
               valueClassName="text-[56px] leading-[52px] sm:text-[64px] sm:leading-[58px] lg:text-[72px] lg:leading-[66px]"
@@ -156,10 +158,10 @@ export function SlotSpin({ targetTeamId, targetName, targetColour, clubPool, spi
         ) : (
           <>
             <PrimaryButton className="w-full" disabled={cycling} onClick={start}>
-              {cycling ? "Spinning…" : "Spin the board"}
+              {cycling ? t("draft.spinning") : t("draft.spinBoard")}
             </PrimaryButton>
             <p className="text-[13px] leading-[18px] text-muted-plate text-center">
-              156 real team-seasons, 2008 to 2025. Tap the board or press space.
+              {t("draft.spinHint")}
             </p>
           </>
         )}

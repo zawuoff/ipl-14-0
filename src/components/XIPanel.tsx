@@ -1,15 +1,9 @@
 "use client";
 import type { PlayerSeason, Role, XIConfig } from "@/lib/game/types";
 import { TeamChip } from "./ui";
+import { useT } from "@/lib/i18n";
 
-const ORDER: { role: Role; label: string }[] = [
-  { role: "Opener", label: "Opener" },
-  { role: "Middle", label: "Middle" },
-  { role: "WK", label: "Keeper" },
-  { role: "AR", label: "All-rounder" },
-  { role: "Pace", label: "Pace" },
-  { role: "Spin", label: "Spin" },
-];
+const ORDER: Role[] = ["Opener", "Middle", "WK", "AR", "Pace", "Spin"];
 
 export function unitWord(x: number): string {
   if (x >= 88) return "Elite";
@@ -30,7 +24,7 @@ export function XIPanel({
   hideRatings,
   config,
   teamMeta,
-  title = "Your XI so far",
+  title,
 }: {
   picks: (PlayerSeason | null)[];
   overseas: number;
@@ -42,6 +36,7 @@ export function XIPanel({
   teamMeta: TeamMeta;
   title?: string;
 }) {
+  const t = useT();
   const filled = picks.filter(Boolean) as PlayerSeason[];
   const remaining = [...filled];
   const takeFor = (role: Role): PlayerSeason | null => {
@@ -51,20 +46,20 @@ export function XIPanel({
   };
 
   // One row per slot the chosen style asks for, in batting order.
-  const slots: { label: string; role: Role; player: PlayerSeason | null }[] = [];
-  for (const { role, label } of ORDER) {
+  const slots: { role: Role; player: PlayerSeason | null }[] = [];
+  for (const role of ORDER) {
     for (let i = 0; i < (config[role] ?? 0); i++) {
-      slots.push({ label, role, player: takeFor(role) });
+      slots.push({ role, player: takeFor(role) });
     }
   }
 
   return (
     <section className="flex flex-col">
       <div className="flex items-baseline gap-3 pb-2.5">
-        <h2 className="font-semibold text-[17px] leading-[22px] lg:text-[20px] lg:leading-[26px]">{title}</h2>
+        <h2 className="font-semibold text-[17px] leading-[22px] lg:text-[20px] lg:leading-[26px]">{title ?? t("draft.xiSoFar")}</h2>
         <span className="flex-1" />
         <span className="text-[13px] leading-[18px] lg:text-[14px] lg:leading-5 text-muted">
-          {overseas} of 4 overseas
+          {t("draft.overseasCount", { n: overseas })}
         </span>
       </div>
 
@@ -78,7 +73,7 @@ export function XIPanel({
             } ${i === slots.length - 1 ? "border-b" : ""}`}
           >
             <span className="w-[74px] lg:w-[78px] shrink-0 text-[13px] leading-[18px] text-muted">
-              {s.label}
+              {t(`role.${s.role}`)}
             </span>
             {s.player ? (
               <>
@@ -91,7 +86,7 @@ export function XIPanel({
                 </span>
               </>
             ) : (
-              <span className="flex-1 text-[15px] leading-5 text-faint">Not picked yet</span>
+              <span className="flex-1 text-[15px] leading-5 text-faint">{t("draft.notPicked")}</span>
             )}
           </div>
         );
@@ -99,14 +94,14 @@ export function XIPanel({
 
       {remaining.length > 0 && (
         <p className="text-[13px] leading-[18px] text-loss pt-2">
-          Over quota: {remaining.map((p) => p.player).join(", ")}
+          {t("draft.overQuota", { names: remaining.map((p) => p.player).join(", ") })}
         </p>
       )}
 
       {power != null && filled.length > 0 && (
         <div className="flex items-end gap-7 pt-4">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[13px] leading-[18px] text-muted">Team power</span>
+            <span className="text-[13px] leading-[18px] text-muted">{t("xi.teamPower")}</span>
             <span className="font-display font-bold text-[44px] leading-[38px] pt-1 tabular">
               {hideRatings ? "?" : Math.round(power)}
             </span>
@@ -114,12 +109,12 @@ export function XIPanel({
           {!hideRatings && bat != null && bowl != null && (
             <div className="flex flex-col gap-1.5 pb-1">
               <div className="flex items-baseline gap-2">
-                <span className="w-[62px] text-[14px] leading-5 text-muted">Batting</span>
-                <span className="font-semibold text-[15px] leading-5">{unitWord(bat)}</span>
+                <span className="w-[62px] text-[14px] leading-5 text-muted">{t("xi.batting")}</span>
+                <span className="font-semibold text-[15px] leading-5">{t(`unit.${unitWord(bat)}`)}</span>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="w-[62px] text-[14px] leading-5 text-muted">Bowling</span>
-                <span className="font-semibold text-[15px] leading-5">{unitWord(bowl)}</span>
+                <span className="w-[62px] text-[14px] leading-5 text-muted">{t("xi.bowling")}</span>
+                <span className="font-semibold text-[15px] leading-5">{t(`unit.${unitWord(bowl)}`)}</span>
               </div>
             </div>
           )}
