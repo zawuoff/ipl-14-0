@@ -22,7 +22,7 @@ import {
   splitName,
   IconButton,
   SoundIcon,
-  RestartIcon,
+  TrophyIcon,
 } from "@/components/ui";
 import { QuietBoundary } from "@/components/QuietBoundary";
 import { ChromeProvider, useChrome } from "@/components/Chrome";
@@ -152,31 +152,13 @@ function TopBar({
     return () => window.clearTimeout(id);
   }, [confirmRestart]);
 
-  // While a run is on, the strapline slot carries the run instead. A phone gets
-  // the run only: the re-spins in hand are already on the re-spin button.
-  const subtitle = run ? run.label : t("app.tagline");
-  const extra =
-    run && run.respins !== undefined ? t("draft.respinsLeft", { n: run.respins }) : null;
-
+  /* The drawn design centres the wordmark and balances it: navigation on one
+     side, one action on the other. Three chips crowded down the right-hand end
+     was never the shape of it. */
   return (
     <header className="bg-band">
-      <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 h-[60px] lg:h-[72px] flex items-center gap-3 lg:gap-5">
-        <button
-          onClick={() => !inGame && go("home")}
-          className="flex items-baseline gap-2.5 lg:gap-3 min-w-0"
-        >
-          <Wordmark className="shrink-0 text-[30px] lg:text-[34px]" />
-          <span
-            className={`text-[13px] lg:text-[14px] leading-[18px] text-white/70 truncate ${
-              run ? "" : "hidden sm:block"
-            }`}
-          >
-            {subtitle}
-            {extra && <span className="hidden sm:inline"> · {extra}</span>}
-          </span>
-        </button>
-        <span className="flex-1" />
-        {!run && (
+      <div className="relative mx-auto w-full max-w-[1440px] px-3 lg:px-10 h-[56px] lg:h-[72px] flex items-center">
+        <div className="flex items-center gap-1 lg:gap-7 min-w-0">
           <nav className="hidden lg:flex items-center gap-7">
             <button className={link} onClick={() => go("home")}>{t("nav.howItWorks")}</button>
             <button
@@ -187,18 +169,36 @@ function TopBar({
             </button>
             <button className={link} onClick={() => goFriend()}>{t("nav.playAFriend")}</button>
           </nav>
-        )}
-        <div className="shrink-0 flex items-center gap-2">
           <IconButton
             onClick={toggleMuted}
             label={muted ? t("run.soundOff") : t("run.soundOn")}
-            className="w-9"
+            className="w-10 lg:hidden"
           >
             <SoundIcon on={!muted} />
           </IconButton>
-          <LangToggle className="w-10 h-9 text-[13px]" />
+          <LangToggle plain className="lg:hidden w-10 h-9 text-[13px]" />
+        </div>
+
+        <button
+          onClick={() => !inGame && go("home")}
+          aria-label="14-0"
+          className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2"
+        >
+          <Wordmark className="text-[30px] lg:text-[40px]" />
+        </button>
+
+        <span className="flex-1" />
+        <div className="shrink-0 flex items-center gap-1 lg:gap-3">
+          <IconButton
+            onClick={toggleMuted}
+            label={muted ? t("run.soundOff") : t("run.soundOn")}
+            className="hidden lg:flex w-10"
+          >
+            <SoundIcon on={!muted} />
+          </IconButton>
+          <LangToggle className="hidden lg:flex w-[46px] h-[34px] text-[14px]" />
           {run ? (
-            <IconButton
+            <button
               onClick={() => {
                 if (!confirmRestart) {
                   setConfirmRestart(true);
@@ -207,22 +207,21 @@ function TopBar({
                 setConfirmRestart(false);
                 run.onRestart();
               }}
-              label={t("run.restart")}
-              active={confirmRestart}
-              className={confirmRestart ? "px-3.5" : "w-9"}
+              className={`shrink-0 h-[34px] px-3.5 flex items-center gap-1.5 rounded-full text-[14px] font-semibold transition-colors ${
+                confirmRestart ? "bg-loss text-white" : "bg-white/12 text-white hover:bg-white/20"
+              }`}
             >
-              <RestartIcon />
-              {confirmRestart && (
-                <span className="text-[13px] font-semibold">{t("run.restartSure")}</span>
-              )}
-            </IconButton>
-          ) : (
-            <button
-              onClick={() => go("board")}
-              className="lg:hidden text-[14px] font-semibold px-3.5 h-9 flex items-center rounded-full bg-white/12 hover:bg-white/20 transition-colors"
-            >
-              {t("nav.board")}
+              {confirmRestart ? t("run.restartSure") : t("run.restartShort")}
             </button>
+          ) : (
+            /* A wide screen already has the leaderboard in the nav. */
+            <IconButton
+              onClick={() => go("board")}
+              label={t("nav.leaderboard")}
+              className="w-10 lg:hidden"
+            >
+              <TrophyIcon />
+            </IconButton>
           )}
         </div>
       </div>
@@ -268,8 +267,7 @@ function HomeScreen({
 
   return (
     <>
-      <StripeBand height={56} className="hidden lg:block" />
-      <StripeBand height={44} className="lg:hidden" />
+      <StripeBand />
 
       {/* The board is the hero. On desktop it sits inside a night card. */}
       <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-6 lg:pt-8">

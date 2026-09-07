@@ -148,10 +148,12 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "role.Spin": { en: "Spin", hi: "स्पिन" },
   /* -------------------------------------------------------------- run bar */
   "draft.respinsLeft": { en: "{n} re-spins left", hi: "{n} री-स्पिन बचे" },
+  "draft.respinLeftOne": { en: "1 re-spin left", hi: "1 री-स्पिन बचा" },
   "run.restart": { en: "Restart run", hi: "रन दोबारा शुरू करें" },
   "run.soundOn": { en: "Sound on", hi: "आवाज़ चालू" },
   "run.soundOff": { en: "Sound off", hi: "आवाज़ बंद" },
   "run.restartSure": { en: "Sure?", hi: "पक्का?" },
+  "run.restartShort": { en: "Restart", hi: "दोबारा" },
   "run.classic": { en: "Classic", hi: "क्लासिक" },
   "run.dailyWithDate": { en: "Today's challenge · {date}", hi: "आज की चुनौती · {date}" },
   "run.room": { en: "Room {code}", hi: "रूम {code}" },

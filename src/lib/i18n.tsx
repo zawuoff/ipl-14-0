@@ -77,7 +77,14 @@ export function useT() {
 }
 
 /** Switches the language and always shows the language you would switch to. */
-export function LangToggle({ className = "" }: { className?: string }) {
+export function LangToggle({
+  className = "",
+  plain = false,
+}: {
+  className?: string;
+  /** Sits in a row of bare marks rather than as a chip of its own. */
+  plain?: boolean;
+}) {
   const { lang, setLang } = useLang();
   const next: Lang = lang === "en" ? "hi" : "en";
   return (
@@ -86,7 +93,9 @@ export function LangToggle({ className = "" }: { className?: string }) {
       onClick={() => setLang(next)}
       aria-label={lang === "en" ? "हिंदी में पढ़ें" : "Read in English"}
       title={lang === "en" ? "हिंदी में पढ़ें" : "Read in English"}
-      className={`flex items-center justify-center shrink-0 rounded-full bg-white/12 text-white font-semibold hover:bg-white/20 transition-colors ${className}`}
+      className={`flex items-center justify-center shrink-0 rounded-full text-white font-semibold transition-colors ${
+        plain ? "hover:bg-white/15 active:bg-white/20" : "bg-white/12 hover:bg-white/20"
+      } ${className}`}
     >
       {lang === "en" ? "हिं" : "EN"}
     </button>
