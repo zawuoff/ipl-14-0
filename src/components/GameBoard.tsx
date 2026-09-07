@@ -865,7 +865,6 @@ export function GameBoard({
                     targetName={spunTeam?.name ?? ""}
                     targetColour={spunTeam?.colour ?? "#141414"}
                     clubPool={ALL_TEAMS.map((t) => t.teamId)}
-                    spinKey={slotKey}
                     onLanded={() => setPhase("squad")}
                   />
                 </div>
