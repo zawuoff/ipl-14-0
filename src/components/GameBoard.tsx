@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import {
   MAX_OVERSEAS,
-  TOTAL_REROLLS,
+  REROLLS,
   STYLE_TEMPLATES,
   istDateKey,
   makeSeed,
@@ -155,7 +155,9 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
     if (el) el.scrollTop = el.scrollHeight;
   }, [simIdx, simPhase]);
 
-  const hideRatings = difficulty === "Legend"; // Legend = pick on knowledge alone
+  // Legend hides the squad list, so you pick on what you know. Once a player is
+  // in your XI you see exactly what you took.
+  const hideRatings = difficulty === "Legend";
 
   const today = istDateKey();
   const dailyQuery = useQuery(
@@ -202,7 +204,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
         config,
         spins: spins.map((teamId, index) => ({ index, teamId })),
         picks: Array(11).fill(null),
-        rerollsLeft: TOTAL_REROLLS,
+        rerollsLeft: REROLLS[diff],
         status: "drafting",
       });
       setResult(null);
@@ -527,7 +529,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
               {modeLabel} · {t(`difficulty.${draft.difficulty}`)}
             </span>
             <span className="flex-1" />
-            {draft.status === "drafting" && (
+            {draft.status === "drafting" && REROLLS[draft.difficulty] > 0 && (
               <span className="hidden sm:block text-[14px] leading-5 font-medium">
                 {t("draft.respinsLeft", { n: draft.rerollsLeft })}
               </span>
@@ -823,7 +825,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                 power={strength?.power}
                 bat={strength?.bat}
                 bowl={strength?.bowl}
-                hideRatings={hideRatings}
+                hideRatings={false}
                 teamMeta={teamMeta}
               />
             </div>
@@ -876,13 +878,15 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                           {hideRatings ? t("draft.legendNote") : t("draft.takeOne")}
                         </span>
                       </div>
-                      <PlateButton
-                        className="h-11 shrink-0"
-                        onClick={rerollSpin}
-                        disabled={draft.rerollsLeft <= 0}
-                      >
-                        {t("draft.respin", { n: draft.rerollsLeft })}
-                      </PlateButton>
+                      {REROLLS[draft.difficulty] > 0 && (
+                        <PlateButton
+                          className="h-11 shrink-0"
+                          onClick={rerollSpin}
+                          disabled={draft.rerollsLeft <= 0}
+                        >
+                          {t("draft.respin", { n: draft.rerollsLeft })}
+                        </PlateButton>
+                      )}
                     </div>
                   </div>
 
@@ -906,6 +910,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     <SquadList
                       squad={shownOptions}
                       hideRatings={hideRatings}
+                      shuffleKey={hideRatings ? `${draft.seed}:${currentSpin?.teamId ?? ""}` : undefined}
                       onPick={pick}
                       unavailable={effectiveUnavailable}
                       teamColour={spunTeam?.colour}
@@ -938,13 +943,13 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
               <div className="flex flex-col gap-1">
                 <Eyebrow>{t("xi.teamPower")}</Eyebrow>
                 <span className="font-display font-bold text-[72px] leading-[62px] pt-1.5 tabular">
-                  {hideRatings ? "?" : Math.round(strength?.power ?? 0)}
+                  {Math.round(strength?.power ?? 0)}
                 </span>
               </div>
               <div className="flex flex-col gap-2 pt-1">
                 {[
-                  [t("xi.batting"), hideRatings ? t("xi.hidden") : t(`unit.${unitWord(strength?.bat ?? 0)}`)],
-                  [t("xi.bowling"), hideRatings ? t("xi.hidden") : t(`unit.${unitWord(strength?.bowl ?? 0)}`)],
+                  [t("xi.batting"), t(`unit.${unitWord(strength?.bat ?? 0)}`)],
+                  [t("xi.bowling"), t(`unit.${unitWord(strength?.bowl ?? 0)}`)],
                   [t("xi.overseas"), t("xi.ofFour", { n: overseas })],
                 ].map(([k, v]) => (
                   <div key={k} className="flex items-baseline gap-2">
@@ -961,7 +966,12 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                 <div className="flex gap-2">
                   {[
                     [String(forecast.expPts), t("xi.expPoints")],
-                    [ordinal(forecast.medRank, t), t("xi.likelyFinish")],
+                    [
+                      forecast.rankLo === forecast.rankHi
+                        ? ordinal(forecast.medRank, t)
+                        : `${forecast.rankLo}–${forecast.rankHi}`,
+                      t("xi.likelyFinish"),
+                    ],
                     [`${forecast.playoffPct}%`, t("xi.makePlayoffs")],
                     [`${forecast.titlePct}%`, t("xi.winTitle")],
                   ].map(([v, k]) => (
@@ -1031,7 +1041,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
               config={draft.config}
               picks={draft.picks}
               overseas={overseas}
-              hideRatings={hideRatings}
+              hideRatings={false}
               teamMeta={teamMeta}
             />
           </div>
@@ -1122,11 +1132,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                   />
                   <div
                     ref={feedRef}
-                    className={`mt-3 flex flex-col gap-2.5 ${
-                      simPhase === "league"
-                        ? "h-[360px] lg:h-[440px] overflow-y-auto pr-1"
-                        : ""
-                    }`}
+                    className="mt-3 flex flex-col gap-2.5 h-[360px] lg:h-[440px] overflow-y-auto pr-1"
                     onClick={simPhase === "league" ? simAdvance : undefined}
                   >
                     {[...simShown.games].map((g, i) => (
@@ -1511,7 +1517,7 @@ function MatchRow({ n, g, hero }: { n: number; g: GameResult; hero: string }) {
     ? t(win ? "match.beatSO" : "match.lostToSO", { opp: g.opp })
     : t(win ? "match.beat" : "match.lostTo", { opp: g.opp, margin: m });
   return (
-    <div className="bg-surface rounded-card overflow-hidden">
+    <div className="shrink-0 bg-surface rounded-card overflow-hidden">
       <div className="flex items-center gap-2.5 px-3.5 lg:px-4 py-2.5">
         <span
           className={`w-6 h-6 lg:w-[26px] lg:h-[26px] shrink-0 flex items-center justify-center rounded-chip font-display font-bold text-[18px] lg:text-[19px] leading-none text-white pt-[2px] ${

@@ -1,5 +1,5 @@
 "use client";
-import type { PlayerSeason } from "@/lib/game/types";
+import { fnv1a32, type PlayerSeason } from "@/lib/game/types";
 import { ratingTone, readableOn } from "./ui";
 import { useT } from "@/lib/i18n";
 
@@ -65,12 +65,17 @@ function PlayerRow({
 export function SquadList({
   squad,
   hideRatings,
+  shuffleKey,
   onPick,
   unavailable,
   teamColour,
 }: {
   squad: PlayerSeason[];
   hideRatings?: boolean;
+  // Legend hides the numbers, so the order must not give them away either.
+  // Hashing the seed with each player id shuffles the list in a way that is
+  // stable across renders and reproducible from the seed.
+  shuffleKey?: string;
   onPick?: (p: PlayerSeason) => void;
   // playerId -> reason the pick is blocked (role slot filled / overseas cap)
   unavailable?: Map<string, string>;
@@ -80,6 +85,7 @@ export function SquadList({
     const au = unavailable?.has(a.id) ? 1 : 0;
     const bu = unavailable?.has(b.id) ? 1 : 0;
     if (au !== bu) return au - bu; // available first, greyed at the bottom
+    if (shuffleKey) return fnv1a32(shuffleKey + a.id) - fnv1a32(shuffleKey + b.id);
     return b.overall - a.overall;
   });
 

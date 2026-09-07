@@ -1,5 +1,5 @@
 "use client";
-import type { Forecast, SeasonResult } from "@/lib/sim/engine";
+import { seasonForm, type Forecast, type SeasonResult } from "@/lib/sim/engine";
 import { Card, Eyebrow, SectionHead, StatCell, StatStrip } from "./ui";
 import { unitWord } from "./XIPanel";
 import { useT } from "@/lib/i18n";
@@ -26,6 +26,11 @@ export function SeasonReport({
   owners?: (player: string) => string[];
 }) {
   const t = useT();
+  // Judge the XI on the season it actually played. The ratings it was drafted
+  // on are what the bookies used; they are not what happened.
+  const played = seasonForm(result.games);
+  const batIdx = result.games.length ? played.bat : bat;
+  const bowlIdx = result.games.length ? played.bowl : bowl;
   // Checkpoint before the playoffs: where you finished, and how that compares.
   if (slim) {
     return (
@@ -44,7 +49,7 @@ export function SeasonReport({
           <h2 className="font-semibold text-[20px] leading-[26px] lg:text-[24px] lg:leading-8">
             {verdict(result, t)}
           </h2>
-          <p className="text-[15px] leading-6 text-muted max-w-[70ch]">{body(result, bat, bowl, t)}</p>
+          <p className="text-[15px] leading-6 text-muted max-w-[70ch]">{body(result, batIdx, bowlIdx, t)}</p>
         </div>
       )}
 
@@ -116,8 +121,8 @@ export function SeasonReport({
 
           {!compact && (
             <StatStrip className="mt-1">
-              <StatCell label={t("report.batting")} value={t(`unit.${unitWord(bat)}`)} />
-              <StatCell label={t("report.bowling")} value={t(`unit.${unitWord(bowl)}`)} />
+              <StatCell label={t("report.batting")} value={t(`unit.${unitWord(batIdx)}`)} />
+              <StatCell label={t("report.bowling")} value={t(`unit.${unitWord(bowlIdx)}`)} />
               <StatCell
                 label={t("word.nrr")}
                 value={`${result.nrr > 0 ? "+" : ""}${result.nrr}`}

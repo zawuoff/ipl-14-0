@@ -91,7 +91,14 @@ export const STYLE_TEMPLATES: StyleTemplate[] = [
 
 export const MAX_OVERSEAS = 4;
 export const TOTAL_PICKS = 11;
-export const TOTAL_REROLLS = 2;
+
+// How many spins you may throw away. Rookie can shop around, Pro gets one
+// mulligan, Legend takes what the board gives.
+export const REROLLS: Record<Difficulty, number> = {
+  Rookie: 3,
+  Pro: 1,
+  Legend: 0,
+};
 
 export function validateXI(xi: PlayerSeason[], config: XIConfig = ROLE_QUOTA): {
   valid: boolean;

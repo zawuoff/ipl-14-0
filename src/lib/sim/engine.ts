@@ -61,6 +61,9 @@ const DIFF_MOD: Record<Difficulty, number> = { Rookie: -7, Pro: 0, Legend: 7 };
 
 // Opponent pool strength by difficulty (Pro league ~ 77-87 — tuned so real drafted
 // XIs go ~8-10 wins and 14-0 stays mythical; playoffs draw elite 82-92 sides)
+// How far a side can play from its rating on a given day.
+export const FORM_SWING = 16;
+
 export function oppPower(rng: () => number, diff: Difficulty, elite = false): number {
   const base = elite ? 80 + rng() * 10 : 77 + rng() * 10;
   return round1(base + DIFF_MOD[diff] * 0.6);
@@ -146,8 +149,8 @@ export interface GameResult {
 const OPP_NAMES = ["MI", "CSK", "RCB", "KKR", "DC", "SRH", "RR", "PBKS", "GT", "LSG"];
 
 export function simMatch(
-  myBat: number,
-  myBowl: number,
+  myBatBase: number,
+  myBowlBase: number,
   myPower: number,
   rng: () => number,
   diff: Difficulty,
@@ -155,9 +158,16 @@ export function simMatch(
   elite = false
 ): GameResult {
   const oPow = oppPower(rng, diff, elite);
-  // derive opp bat/bowl around oPow with variance
-  const oBat = clamp(oPow + (rng() - 0.5) * 6, 60, 95);
-  const oBowl = clamp(oPow + (rng() - 0.5) * 6, 60, 95);
+  // Cricket is not a ratings table read out loud. A side plays above or below
+  // itself on the day — the toss, the pitch, one player having a blinder — which
+  // is why the best T20 team in the world still loses a third of its games.
+  // Two uniforms summed gives a soft bell: most days are ordinary, the outlier
+  // days are rare, and an underdog gets a live chance rather than a rounding one.
+  const form = () => (rng() + rng() - 1) * FORM_SWING;
+  const myBat = clamp(myBatBase + form(), 45, 99);
+  const myBowl = clamp(myBowlBase + form(), 45, 99);
+  const oBat = clamp(oPow + (rng() - 0.5) * 6 + form(), 45, 99);
+  const oBowl = clamp(oPow + (rng() - 0.5) * 6 + form(), 45, 99);
   const opp = OPP_NAMES[oppIdx % OPP_NAMES.length];
   const batFirst = rng() < 0.5;
   let gf = "";
@@ -231,6 +241,24 @@ const AI_TEAMS = ["MI", "CSK", "RCB", "KKR", "DC", "SRH", "RR", "PBKS", "GT", "L
 
 // Believable 10-team table, seeded (verifiable) — AI rows are cosmetic,
 // your row is 100% your results. Top 4 make playoffs.
+/* What the season says about your batting and bowling, rather than what the
+   ratings promised before a ball was bowled. A side that was bowled out cheaply
+   every week should not be told its batting was strong.
+
+   The run figures are the measured spread across a few hundred drafted seasons:
+   sides score a median 172 a game (p10 162, p90 186) and concede a median 170
+   (p10 157, p90 180). Those percentiles are mapped onto the same 0-99 scale the
+   rating words already read, so Elite really is the top of the league. */
+export function seasonForm(games: GameResult[]): { bat: number; bowl: number } {
+  if (!games.length) return { bat: 70, bowl: 70 };
+  const scored = avg(games.map((g) => g.userRuns));
+  const conceded = avg(games.map((g) => g.oppRuns));
+  return {
+    bat: round1(clamp(70 + (scored - 164) * 0.9, 40, 99)),
+    bowl: round1(clamp(70 + (178 - conceded) * 0.9, 40, 99)),
+  };
+}
+
 export function buildTable(
   userWins: number,
   userNrr: number,
@@ -545,6 +573,10 @@ function seasonAwards(
 export interface Forecast {
   expPts: number;
   medRank: number;
+  // Where three seasons in five land. A single "likely finish" reads like a
+  // prediction; a range says what it really is.
+  rankLo: number;
+  rankHi: number;
   playoffPct: number;
   titlePct: number;
   perfectPct: number;
@@ -573,6 +605,8 @@ export function forecastSeason(
   return {
     expPts: Math.round((pts / n) * 10) / 10,
     medRank: ranks[Math.floor(n / 2)],
+    rankLo: ranks[Math.floor(n * 0.2)],
+    rankHi: ranks[Math.floor(n * 0.8)],
     playoffPct: Math.round((po / n) * 100),
     titlePct: Math.round((ti / n) * 100),
     perfectPct: Math.round((pf / n) * 1000) / 10,

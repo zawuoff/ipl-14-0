@@ -476,9 +476,7 @@ export function RoomSeason({ room }: { room: any }) {
             />
             <div
               ref={feedRef}
-              className={`mt-2.5 ${
-                phase === "league" ? "h-[360px] lg:h-[440px] overflow-y-auto pr-1" : ""
-              }`}
+              className="mt-2.5 h-[360px] lg:h-[440px] overflow-y-auto pr-1"
             >
               {shown.map((f, i) => {
                 const iAmHome = f.home === myIdx;
@@ -520,7 +518,7 @@ export function RoomSeason({ room }: { room: any }) {
                     {isH2H ? (
                       <button
                         onClick={() => (isH2H && f.detail ? setExpanded(expanded === i ? null : i) : undefined)}
-                        className={`w-full my-2.5 block text-left bg-surface rounded-card overflow-hidden ${
+                        className={`w-full my-2.5 block shrink-0 text-left bg-surface rounded-card overflow-hidden ${
                           isH2H && f.detail ? "hover:bg-white/8" : ""
                         }`}
                       >
@@ -549,7 +547,7 @@ export function RoomSeason({ room }: { room: any }) {
                     ) : (
                       <button
                         onClick={() => (isH2H && f.detail ? setExpanded(expanded === i ? null : i) : undefined)}
-                        className={`w-full min-h-[44px] flex items-center gap-2.5 lg:gap-3.5 py-2.5 text-left border-t border-hairline ${
+                        className={`w-full min-h-[44px] shrink-0 flex items-center gap-2.5 lg:gap-3.5 py-2.5 text-left border-t border-hairline ${
                           i === shown.length - 1 ? "border-b" : ""
                         }`}
                       >
@@ -810,7 +808,7 @@ function PlayoffSummary({ p, myIdx, teams }: { p: SharedPlayoff; myIdx: number; 
   const win = p.winner === myIdx;
   const opp = teams[iAmHome ? p.t2 : p.t1].name;
   return (
-    <div className="bg-surface rounded-card overflow-hidden">
+    <div className="shrink-0 bg-surface rounded-card overflow-hidden">
       <SplitScore
         homeName={teams[myIdx].name}
         homeScore={iAmHome ? p.s1 : p.s2}
