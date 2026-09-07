@@ -130,7 +130,7 @@ export function SlotSpin({ targetTeamId, targetName, targetColour, clubPool, spi
   const dim = !club && !locked;
 
   return (
-    <div className="bg-ink text-white px-5 lg:px-16 py-6 lg:py-7" onClick={start}>
+    <div className="bg-surface text-white px-5 lg:px-16 py-6 lg:py-7" onClick={start}>
       <div className="mx-auto w-full max-w-[1440px] flex flex-col gap-4 lg:gap-5">
         <div className="flex gap-3 lg:gap-3.5">
           <div className="flex-1 min-w-0">

@@ -69,6 +69,40 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
     hi: "चौदह लीग मैच, फिर प्लेऑफ़, और फ़ाइनल गेंद-दर-गेंद। ऊपर की चार टीमें आगे जाती हैं। हर नतीजा उसी सीड से दोबारा निकाला जा सकता है।",
   },
 
+  /* --------------------------------------------------- home: today's board */
+  "home.target": { en: "The target", hi: "निशाना" },
+  "home.targetNote": { en: "14 league games", hi: "14 लीग मैच" },
+  "home.todayNumbers": { en: "Today in numbers", hi: "आज के आँकड़े" },
+  "home.card.runs": { en: "Runs", hi: "रन" },
+  "home.card.picks": { en: "Picks", hi: "पिक" },
+  "home.card.records": { en: "Records", hi: "रिकॉर्ड" },
+  "home.sinceMidnight": { en: "Since midnight IST", hi: "आधी रात (IST) से" },
+  "home.acrossRuns": { en: "Across today's runs", hi: "आज के सारे रन मिलाकर" },
+  "home.todayOnly": { en: "Today only", hi: "सिर्फ़ आज के" },
+  "stat.played": { en: "Played", hi: "खेले गए" },
+  "stat.perfect": { en: "Perfect 14–0", hi: "परफ़ेक्ट 14–0" },
+  "stat.champions": { en: "Champions", hi: "चैंपियन" },
+  "stat.onTheBoard": { en: "On the board", hi: "बोर्ड पर" },
+  "stat.mostPicked": { en: "Most picked", hi: "सबसे ज़्यादा चुने गए" },
+  "stat.topBowler": { en: "Top bowler", hi: "टॉप गेंदबाज़" },
+  "stat.topSquad": { en: "Top squad", hi: "टॉप स्क्वाड" },
+  "stat.bestToday": { en: "Best today", hi: "आज का सबसे अच्छा" },
+  "stat.bestNrr": { en: "Best NRR", hi: "सबसे अच्छा NRR" },
+  "stat.none": { en: "—", hi: "—" },
+  "xi.sr": { en: "S/R", hi: "S/R" },
+  "xi.econ": { en: "Econ", hi: "इकॉनमी" },
+  "home.mostPicked": { en: "Most picked today", hi: "आज सबसे ज़्यादा चुने गए" },
+  "home.mostPickedNote": {
+    en: "One player from each spun squad. These are the names people keep taking.",
+    hi: "हर घुमाई गई स्क्वाड से एक खिलाड़ी। ये वो नाम हैं जो लोग बार-बार चुन रहे हैं।",
+  },
+  "home.pickedIn": { en: "In {pct}% of XIs", hi: "{pct}% XI में" },
+  "home.noPicksYet": {
+    en: "Nobody has drafted today yet. Spin a squad and you will be the first name on this row.",
+    hi: "आज तक किसी ने ड्राफ़्ट नहीं किया। एक स्क्वाड घुमाइए और इस लाइन पर पहला नाम आपका होगा।",
+  },
+  "home.statsLoading": { en: "Counting today's runs…", hi: "आज के रन गिने जा रहे हैं…" },
+
   /* ----------------------------------------------------------- leaderboard */
   "board.title": { en: "Leaderboard", hi: "लीडरबोर्ड" },
   "board.sub": {

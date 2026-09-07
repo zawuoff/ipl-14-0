@@ -34,7 +34,7 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
   const r = data?.result;
 
   return (
-    <main className="min-h-screen bg-ground text-ink flex flex-col">
+    <main className="min-h-screen bg-ground text-white flex flex-col">
       <header className="border-b border-hairline">
         <div className="mx-auto w-full max-w-[1000px] px-5 lg:px-8 py-3.5 flex items-center gap-3">
           <a href="/" className="flex items-baseline gap-3">
@@ -63,7 +63,7 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
 
         {r && (
           <>
-            <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-6 lg:px-9 lg:py-9 flex flex-col lg:flex-row lg:items-end gap-6 lg:gap-12">
+            <div className="-mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden bg-surface text-white px-5 py-6 lg:px-9 lg:py-9 flex flex-col lg:flex-row lg:items-end gap-6 lg:gap-12">
               <div className="flex gap-3 lg:shrink-0">
                 <Flap
                   label={t("word.won")}

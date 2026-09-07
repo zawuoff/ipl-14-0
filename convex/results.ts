@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { istDay } from "./stats";
 
 const gameValidator = v.object({
   opp: v.string(),
@@ -53,10 +54,12 @@ export const saveResult = mutation({
       .first();
     const draftId = draft?._id;
     if (draft) await ctx.db.patch(draft._id, { status: "simulated" });
+    const now = Date.now();
     return await ctx.db.insert("simResults", {
       ...args,
       draftId,
-      createdAt: Date.now(),
+      createdAt: now,
+      day: istDay(now),
     });
   },
 });

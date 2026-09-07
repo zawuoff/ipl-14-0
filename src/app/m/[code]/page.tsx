@@ -27,7 +27,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     typeof window !== "undefined" ? `${window.location.origin}/m/${upper}` : `https://14-0.app/m/${upper}`;
 
   return (
-    <main className="min-h-screen bg-ground text-ink flex flex-col">
+    <main className="min-h-screen bg-ground text-white flex flex-col">
       <header className="border-b border-hairline">
         <div className="mx-auto w-full max-w-[1000px] px-5 lg:px-8 py-3.5 flex items-center gap-3">
           <a href="/" className="flex items-baseline gap-3">
@@ -144,7 +144,7 @@ function RoomLobby({
 
   return (
     <>
-      <div className="mt-5 -mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-5 lg:px-7 lg:py-6 flex flex-col gap-3.5">
+      <div className="mt-5 -mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden bg-surface text-white px-5 py-5 lg:px-7 lg:py-6 flex flex-col gap-3.5">
         <div className="flex items-baseline gap-3">
           <span className="text-[13px] leading-[18px] text-muted-plate">{t("mroom.roomCode")}</span>
           <span className="flex-1" />
@@ -236,7 +236,7 @@ function RoomLobby({
               onKeyDown={(e) => e.key === "Enter" && doJoin()}
               placeholder={t("setup.yourName")}
               maxLength={14}
-              className="flex-1 h-13 rounded-control border border-[#8A8A8A] px-3.5 text-[16px] outline-none focus:border-ink"
+              className="flex-1 h-13 rounded-control border border-white/25 px-3.5 text-[16px] outline-none focus:border-white/30"
             />
             <OutlineButton className="h-13 px-6" disabled={!name.trim() || joining} onClick={doJoin}>
               {joining ? "…" : t("setup.join")}

@@ -95,7 +95,7 @@ export function SeasonReport({
             owners={owners?.(result.orangeCap.player)}
           />
           <Award
-            colour="#6B3FA0"
+            colour="#A76BFF"
             name={result.purpleCap.player}
             note={t("report.purpleCap")}
             value={result.purpleCap.wickets}
@@ -173,7 +173,7 @@ function Award({
             <span
               key={o}
               className={`shrink-0 inline-flex items-center h-[19px] px-1.5 rounded-chip text-[12px] leading-none font-medium ${
-                o === "You" ? "bg-ink text-white" : "border border-ink text-ink"
+                o === "You" ? "bg-accent text-ground" : "border border-white/30 text-white"
               }`}
             >
               {o}

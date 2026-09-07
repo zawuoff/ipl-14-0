@@ -3,11 +3,45 @@ import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { GameBoard } from "@/components/GameBoard";
-import { istDateKey } from "@/lib/game/types";
-import { Flap, PrimaryButton, OutlineButton, SectionHead, Wordmark } from "@/components/ui";
-import { useT, useLang, LangToggle } from "@/lib/i18n";
+import { istDateKey, type PlayerSeason, type TeamSeason } from "@/lib/game/types";
+import { buildPlayerSeasons, buildTeamSeasons } from "@/lib/game/data";
+import {
+  Card,
+  Chevron,
+  Eyebrow,
+  Flap,
+  PageBand,
+  PlayerBurstCard,
+  PrimaryButton,
+  SectionHead,
+  StatCell,
+  StatStrip,
+  StripeBand,
+  Wordmark,
+  splitName,
+} from "@/components/ui";
+import { useT, useLang, LangToggle, type T } from "@/lib/i18n";
 
 type Screen = "home" | "game" | "board";
+
+/* The player and squad tables already ship to the client for the draft, so the
+   home page resolves the day's pick counts locally instead of asking the
+   backend for names it already has. */
+const PLAYER_BY_ID = new Map(buildPlayerSeasons().map((p) => [p.id, p]));
+const TEAM_BY_ID = new Map(buildTeamSeasons().map((t) => [t.teamId, t]));
+
+type TodayStats = {
+  date: string;
+  drafts: number;
+  runs: number;
+  perfect14: number;
+  champions: number;
+  best: { wins: number; losses: number } | null;
+  bestNrr: number | null;
+  topPicks: { id: string; count: number }[];
+  topSquad: { teamId: string; count: number } | null;
+  drafting: number;
+};
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("home");
@@ -41,6 +75,10 @@ export default function Home() {
     (api as any).results?.leaderboard,
     show === "board" ? { limit: 20 } : "skip"
   );
+  const todayStats = useQuery(
+    (api as any).stats?.homeToday,
+    show === "home" ? { date: today } : "skip"
+  ) as TodayStats | undefined;
 
   const play = (m: "classic" | "daily") => {
     setMode(m);
@@ -49,10 +87,18 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-ground text-ink flex flex-col">
+    <main className="min-h-screen bg-ground text-white flex flex-col">
       <TopBar screen={show} go={setScreen} inGame={entered === "game"} />
 
-      {show === "home" && <HomeScreen today={today} play={play} rows={dailyBoard as Row[] | undefined} />}
+      {show === "home" && (
+        <HomeScreen
+          today={today}
+          play={play}
+          rows={dailyBoard as Row[] | undefined}
+          stats={todayStats}
+          goBoard={() => setScreen("board")}
+        />
+      )}
 
       {show === "game" && (
         <GameBoard
@@ -76,31 +122,34 @@ export default function Home() {
 
 function TopBar({ screen, go, inGame }: { screen: Screen; go: (s: Screen) => void; inGame: boolean }) {
   const t = useT();
-  const link = "text-[15px] leading-5 font-medium hover:text-turf transition-colors";
+  const link = "text-[15px] leading-5 font-medium text-white/80 hover:text-accent transition-colors";
   return (
-    <header className="border-b border-hairline">
-      <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 py-3.5 lg:py-5 flex items-center gap-3 lg:gap-5">
+    <header className="bg-band">
+      <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 h-[60px] lg:h-[72px] flex items-center gap-3 lg:gap-5">
         <button onClick={() => !inGame && go("home")} className="flex items-baseline gap-3 min-w-0">
           <Wordmark className="text-[30px] lg:text-[34px]" />
-          <span className="hidden sm:block text-[13px] lg:text-[14px] leading-[18px] text-muted truncate">
+          <span className="hidden sm:block text-[13px] lg:text-[14px] leading-[18px] text-white/70 truncate">
             {t("app.tagline")}
           </span>
         </button>
         <span className="flex-1" />
         <nav className="hidden lg:flex items-center gap-7">
           <button className={link} onClick={() => go("home")}>{t("nav.howItWorks")}</button>
-          <button className={`${link} ${screen === "board" ? "text-turf" : ""}`} onClick={() => go("board")}>
+          <button
+            className={`${link} ${screen === "board" ? "text-accent" : ""}`}
+            onClick={() => go("board")}
+          >
             {t("nav.leaderboard")}
           </button>
           <button className={link} onClick={() => go("game")}>{t("nav.playAFriend")}</button>
         </nav>
         <button
           onClick={() => go("board")}
-          className="lg:hidden text-[15px] font-medium px-3 h-9 flex items-center rounded-control border border-ink"
+          className="lg:hidden text-[14px] font-semibold px-3.5 h-9 flex items-center rounded-full bg-white/12 hover:bg-white/20 transition-colors"
         >
           {t("nav.board")}
         </button>
-        <LangToggle className="w-11 h-8 lg:w-[46px] lg:h-[34px] text-[14px]" />
+        <LangToggle className="w-11 h-9 lg:w-[46px] lg:h-[34px] text-[14px]" />
       </div>
     </header>
   );
@@ -111,10 +160,10 @@ function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-hairline">
       <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 py-8 lg:py-10 flex flex-col lg:flex-row lg:items-start gap-3 lg:gap-10">
-        <p className="flex-1 max-w-[720px] text-[13px] leading-5 text-muted">
+        <p className="flex-1 max-w-[720px] text-[13px] leading-5 text-faint">
           {t("footer.legal")}
         </p>
-        <p className="text-[13px] lg:text-[14px] leading-5 font-medium">
+        <p className="text-[13px] lg:text-[14px] leading-5 font-medium text-accent">
           {t("footer.links")}
         </p>
       </div>
@@ -128,10 +177,14 @@ function HomeScreen({
   today,
   play,
   rows,
+  stats,
+  goBoard,
 }: {
   today: string;
   play: (m: "classic" | "daily") => void;
   rows: Row[] | undefined;
+  stats: TodayStats | undefined;
+  goBoard: () => void;
 }) {
   const t = useT();
   const { lang } = useLang();
@@ -142,134 +195,279 @@ function HomeScreen({
 
   return (
     <>
-      {/* The board is the hero. On desktop it fills the screen. */}
-      <section className="bg-ink text-white">
-        <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 py-7 lg:py-14">
-          <div className="flex flex-col lg:flex-row lg:items-end gap-6 lg:gap-16">
-            <div className="flex gap-3 lg:gap-3.5 lg:shrink-0">
+      <StripeBand height={56} className="hidden lg:block" />
+      <StripeBand height={44} className="lg:hidden" />
+
+      {/* The board is the hero. On desktop it sits inside a night card. */}
+      <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-6 lg:pt-8">
+        <div className="lg:bg-surface lg:rounded-card lg:px-14 lg:py-12 flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-16">
+          <div className="flex flex-col gap-4 lg:gap-5 lg:flex-1 lg:order-1 order-2">
+            <Eyebrow className="hidden lg:block">{t("app.tagline")}</Eyebrow>
+            <h1 className="head-display text-[46px] leading-[42px] lg:text-[76px] lg:leading-[68px]">
+              <span className="lg:hidden">{t("home.headline.mobile")}</span>
+              <span className="hidden lg:inline">{t("home.headline.desktop")}</span>
+            </h1>
+            <p className="text-[15px] leading-[22px] lg:text-[18px] lg:leading-7 text-muted lg:max-w-[540px]">
+              {t("home.sub")}
+            </p>
+            <div className="hidden lg:flex items-center gap-5 pt-2">
+              <PrimaryButton className="h-14 px-9 text-[17px]" onClick={() => play("classic")}>
+                {t("home.cta")}
+              </PrimaryButton>
+              <span className="text-[15px] leading-[22px] text-muted whitespace-nowrap">
+                {t("home.ctaNote")}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 lg:shrink-0 lg:order-2 order-1">
+            <div className="hidden lg:flex items-baseline justify-between">
+              <Eyebrow tone="muted">{t("home.target")}</Eyebrow>
+              <span className="text-[13px] leading-4 text-muted">{t("home.targetNote")}</span>
+            </div>
+            <div className="flex gap-3 lg:gap-3.5">
               <Flap
                 label={t("word.won")}
                 value="14"
-                wrapClassName="flex-1 lg:flex-none lg:w-[236px]"
-                className="h-[132px] lg:h-[280px]"
-                valueClassName="text-[128px] leading-[110px] lg:text-[216px] lg:leading-[186px]"
+                wrapClassName="flex-1 lg:flex-none lg:w-[210px]"
+                className="h-[132px] lg:h-[230px]"
+                valueClassName="text-[128px] leading-[110px] lg:text-[190px] lg:leading-[164px]"
               />
               <Flap
                 label={t("word.lost")}
                 value="0"
-                wrapClassName="flex-1 lg:flex-none lg:w-[236px]"
-                className="h-[132px] lg:h-[280px]"
-                valueClassName="text-[128px] leading-[110px] lg:text-[216px] lg:leading-[186px]"
+                wrapClassName="flex-1 lg:flex-none lg:w-[210px]"
+                className="h-[132px] lg:h-[230px]"
+                valueClassName="text-[128px] leading-[110px] lg:text-[190px] lg:leading-[164px]"
               />
             </div>
-
-            <div className="flex flex-col gap-5 lg:gap-5 lg:flex-1 lg:pb-2">
-              <h1 className="font-semibold text-[24px] leading-[30px] lg:text-[50px] lg:leading-[58px]">
-                <span className="lg:hidden">{t("home.headline.mobile")}</span>
-                <span className="hidden lg:inline">{t("home.headline.desktop")}</span>
-              </h1>
-              <p className="text-[15px] leading-[22px] lg:text-[18px] lg:leading-7 text-body-plate lg:max-w-[540px]">
-                {t("home.sub")}
-              </p>
-              <div className="hidden lg:flex items-center gap-5 pt-2">
-                <PrimaryButton className="h-15 px-9 text-[18px]" onClick={() => play("classic")}>
-                  {t("home.cta")}
-                </PrimaryButton>
-                <span className="text-[15px] leading-[22px] text-muted-plate whitespace-nowrap">
-                  {t("home.ctaNote")}
-                </span>
-              </div>
-            </div>
           </div>
-
         </div>
       </section>
 
-      {/* Mobile keeps the action on white, directly under the board. */}
-      <section className="lg:hidden px-5 pt-4 pb-2 flex flex-col gap-2.5">
+      {/* Mobile keeps the action directly under the board. */}
+      <section className="lg:hidden px-5 pt-5 pb-1 flex flex-col gap-2.5">
         <PrimaryButton className="w-full" onClick={() => play("classic")}>
           {t("home.cta")}
         </PrimaryButton>
         <p className="text-[13px] leading-[18px] text-muted text-center">{t("home.ctaNote")}</p>
       </section>
 
-      {/* Mobile: two straight choices. Desktop: real runs beside the choices. */}
-      <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-2 lg:pt-16 pb-2 lg:pb-[72px] flex flex-col lg:flex-row gap-0 lg:gap-[72px]">
-        <div className="hidden lg:flex flex-col flex-1">
-          <SectionHead title={t("home.bestRuns")} note={t("home.seeFullBoard")} />
-          <div className="mt-3.5">
-            <BoardRows rows={rows} empty={t("board.empty.daily")} />
-          </div>
-          <p className="text-[13px] leading-5 text-muted pt-3.5">
-            {t("home.resetNote")}
-          </p>
-        </div>
+      {/* Two ways in, then the day's numbers. */}
+      <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-5 lg:pt-14 flex flex-col lg:flex-row gap-3 lg:gap-6">
+        <ModeCard
+          eyebrow={t("home.daily.title")}
+          title={t("home.daily.blurb")}
+          note={`${month} ${day} · ${t("home.resetNote")}`}
+          onClick={() => play("daily")}
+        />
+        <ModeCard
+          eyebrow={t("home.friend.title")}
+          title={t("home.friend.blurb")}
+          note={t("home.friend.actionLong")}
+          onClick={() => play("classic")}
+        />
+      </section>
 
-        <div className="flex flex-col lg:w-[440px] lg:shrink-0 lg:gap-4">
-          <ModeRow
-            badge={
-              <span className="flex flex-col items-center justify-center w-13 h-13 lg:w-[58px] lg:h-[58px] shrink-0 rounded-control bg-ink">
-                <span className="text-[11px] lg:text-[12px] leading-[13px] text-muted-plate">{month}</span>
-                <span className="font-display font-bold text-[30px] lg:text-[32px] leading-[26px] lg:leading-7 text-white">
-                  {day}
-                </span>
-              </span>
-            }
-            title={t("home.daily.title")}
-            blurb={t("home.daily.blurb")}
-            action={t("home.daily.action")}
-            deskAction={t("home.daily.actionLong")}
-            onClick={() => play("daily")}
-            first
-          />
-          <ModeRow
-            badge={
-              <span className="flex items-center justify-center w-13 h-13 lg:w-[58px] lg:h-[58px] shrink-0 rounded-control bg-ink">
-                <span className="font-display font-bold text-[26px] lg:text-[28px] leading-6 text-white">1v1</span>
-              </span>
-            }
-            title={t("home.friend.title")}
-            blurb={t("home.friend.blurb")}
-            action={t("home.friend.action")}
-            deskAction={t("home.friend.actionLong")}
-            onClick={() => play("classic")}
-          />
-        </div>
+      <TodayNumbers stats={stats} goBoard={goBoard} />
+
+      <MostPickedToday stats={stats} />
+
+      {/* Today's best runs, straight off the board. */}
+      <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-9 lg:pt-14 flex flex-col gap-3.5">
+        <SectionHead title={t("home.bestRuns")} note={<button onClick={goBoard} className="text-accent font-semibold hover:underline">{t("home.seeFullBoard")}</button>} />
+        <BoardRows rows={rows} empty={t("board.empty.daily")} />
       </section>
 
       {/* How a run works */}
-      <section className="bg-ground lg:bg-panel">
-        <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-7 lg:pt-16 pb-2 lg:pb-[72px] flex flex-col gap-4 lg:gap-7">
-          <h2 className="font-semibold text-[20px] leading-[26px] lg:text-[24px] lg:leading-[30px]">
-            {t("home.steps.title")}
-          </h2>
-          <div className="flex flex-col lg:flex-row gap-4 lg:gap-12">
-            <Step
-              n={1}
-              title={t("home.step1.title")}
-              body={t("home.step1.body")}
-            />
-            <Step
-              n={2}
-              title={t("home.step2.title")}
-              body={t("home.step2.body")}
-            />
-            <Step
-              n={3}
-              title={t("home.step3.title")}
-              body={t("home.step3.body")}
-            />
-          </div>
+      <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-10 lg:pt-16 pb-4 flex flex-col gap-4 lg:gap-7">
+        <SectionHead title={t("home.steps.title")} />
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-12">
+          <Step n={1} title={t("home.step1.title")} body={t("home.step1.body")} />
+          <Step n={2} title={t("home.step2.title")} body={t("home.step2.body")} />
+          <Step n={3} title={t("home.step3.title")} body={t("home.step3.body")} />
         </div>
       </section>
     </>
   );
 }
 
+/* --------------------------------------------------------- today's board */
+
+function pct(count: number, of: number): number {
+  if (!of) return 0;
+  return Math.round((count / of) * 100);
+}
+
+/** The day's numbers, read straight out of what people actually played. */
+function TodayNumbers({ stats, goBoard }: { stats: TodayStats | undefined; goBoard: () => void }) {
+  const t = useT();
+
+  const mostPicked = stats?.topPicks[0];
+  const mostPickedPlayer = mostPicked ? PLAYER_BY_ID.get(mostPicked.id) : undefined;
+  const topBowlerPick = stats?.topPicks.find((p) => {
+    const player = PLAYER_BY_ID.get(p.id);
+    return player?.role === "Pace" || player?.role === "Spin";
+  });
+  const topBowler = topBowlerPick ? PLAYER_BY_ID.get(topBowlerPick.id) : undefined;
+  const topSquad = stats?.topSquad ? TEAM_BY_ID.get(stats.topSquad.teamId) : undefined;
+
+  const none = t("stat.none");
+  const surname = (p?: PlayerSeason) => (p ? splitName(p.player).last.toUpperCase() : none);
+
+  return (
+    <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-9 lg:pt-14 flex flex-col gap-3.5">
+      <SectionHead
+        title={t("home.todayNumbers")}
+        note={
+          <button onClick={goBoard} className="text-accent font-semibold hover:underline">
+            {t("nav.leaderboard")}
+          </button>
+        }
+      />
+
+      {stats === undefined ? (
+        <p className="text-[15px] text-muted py-4">{t("home.statsLoading")}</p>
+      ) : (
+        <>
+          {/* Mobile: one strip of four. */}
+          <StatStrip className="lg:hidden">
+            <StatCell label={t("stat.played")} value={stats.runs.toLocaleString("en-IN")} />
+            <StatCell label={t("stat.perfect")} value={stats.perfect14} tone="good" />
+            <StatCell label={t("stat.mostPicked")} value={surname(mostPickedPlayer)} />
+            <StatCell
+              label={t("stat.bestToday")}
+              value={stats.best ? `${stats.best.wins}–${stats.best.losses}` : none}
+            />
+          </StatStrip>
+
+          {/* Desktop: three cards, each with its own three numbers. */}
+          <div className="hidden lg:flex gap-5">
+            <StatCardGroup title={t("home.card.runs")} note={t("home.sinceMidnight")}>
+              <StatCell label={t("stat.played")} value={stats.runs.toLocaleString("en-IN")} />
+              <StatCell label={t("stat.perfect")} value={stats.perfect14} tone="good" />
+              <StatCell label={t("stat.onTheBoard")} value={stats.drafting} tone="accent" />
+            </StatCardGroup>
+            <StatCardGroup title={t("home.card.picks")} note={t("home.acrossRuns")}>
+              <StatCell label={t("stat.mostPicked")} value={surname(mostPickedPlayer)} />
+              <StatCell label={t("stat.topBowler")} value={surname(topBowler)} />
+              <StatCell
+                label={t("stat.topSquad")}
+                value={topSquad ? `${topSquad.code} ${topSquad.season}` : none}
+              />
+            </StatCardGroup>
+            <StatCardGroup title={t("home.card.records")} note={t("home.todayOnly")}>
+              <StatCell
+                label={t("stat.bestToday")}
+                value={stats.best ? `${stats.best.wins}–${stats.best.losses}` : none}
+              />
+              <StatCell
+                label={t("stat.bestNrr")}
+                value={stats.bestNrr === null ? none : `${stats.bestNrr > 0 ? "+" : ""}${stats.bestNrr}`}
+              />
+              <StatCell label={t("stat.champions")} value={stats.champions} tone="trophy" />
+            </StatCardGroup>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function StatCardGroup({
+  title,
+  note,
+  children,
+}: {
+  title: string;
+  note: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="flex flex-col flex-1 min-w-0 overflow-hidden">
+      <div className="flex items-baseline justify-between px-6 pt-5 pb-3.5">
+        <span className="head-display text-[26px] leading-[26px]">{title}</span>
+        <span className="text-[13px] leading-4 text-muted">{note}</span>
+      </div>
+      <div className="flex border-t border-hairline">{children}</div>
+    </Card>
+  );
+}
+
+/** The names people keep taking, on a burst of their own franchise colour. */
+function MostPickedToday({ stats }: { stats: TodayStats | undefined }) {
+  const t = useT();
+  if (stats === undefined) return null;
+
+  const cards = stats.topPicks
+    .map((row) => ({ row, player: PLAYER_BY_ID.get(row.id) }))
+    .filter((c): c is { row: { id: string; count: number }; player: PlayerSeason } => !!c.player)
+    .slice(0, 6);
+
+  return (
+    <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-9 lg:pt-14 flex flex-col gap-3.5">
+      <SectionHead title={t("home.mostPicked")} note={t("home.mostPickedNote")} />
+      {cards.length === 0 ? (
+        <p className="text-[15px] leading-[22px] text-muted py-3 max-w-[60ch]">
+          {t("home.noPicksYet")}
+        </p>
+      ) : (
+        <div className="-mx-5 lg:mx-0 px-5 lg:px-0 flex gap-3 lg:gap-4 overflow-x-auto lg:overflow-visible">
+          {cards.map(({ row, player }) => (
+            <PickCard
+              key={row.id}
+              player={player}
+              share={pct(row.count, stats.drafts)}
+              t={t}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PickCard({ player, share, t }: { player: PlayerSeason; share: number; t: T }) {
+  const team: TeamSeason | undefined = TEAM_BY_ID.get(player.teamId);
+  const { first, last } = splitName(player.player);
+  const bowler = player.role === "Pace" || player.role === "Spin";
+  const allRounder = player.role === "AR";
+
+  const stats = allRounder
+    ? [
+        { label: t("report.runs"), value: player.runs },
+        { label: t("report.wickets"), value: player.wickets },
+        { label: t("report.rating"), value: player.overall },
+      ]
+    : bowler
+      ? [
+          { label: t("report.wickets"), value: player.wickets },
+          { label: t("xi.econ"), value: player.econ.toFixed(1) },
+          { label: t("report.rating"), value: player.overall },
+        ]
+      : [
+          { label: t("report.runs"), value: player.runs },
+          { label: t("xi.sr"), value: Math.round(player.sr) },
+          { label: t("report.rating"), value: player.overall },
+        ];
+
+  return (
+    <PlayerBurstCard
+      first={first}
+      last={last.toUpperCase()}
+      chip={team ? `${team.code} ${team.season}` : String(player.season)}
+      colour={team?.colour ?? "#10215C"}
+      stats={stats}
+      footnote={share > 0 ? t("home.pickedIn", { pct: share }) : undefined}
+      className="w-[190px] lg:w-auto lg:flex-1 shrink-0"
+    />
+  );
+}
+
 function Step({ n, title, body }: { n: number; title: string; body: string }) {
   return (
     <div className="flex gap-3.5 lg:gap-[18px] flex-1 items-start">
-      <span className="w-9 lg:w-[46px] shrink-0 font-display font-bold text-[40px] leading-[34px] lg:text-[58px] lg:leading-[46px]">
+      <span className="flex items-center justify-center w-10 h-10 lg:w-11 lg:h-11 shrink-0 rounded-plate bg-plate border border-plate-line font-display font-bold text-[26px] leading-none pt-1.5">
         {n}
       </span>
       <span className="flex flex-col gap-1">
@@ -280,56 +478,33 @@ function Step({ n, title, body }: { n: number; title: string; body: string }) {
   );
 }
 
-function ModeRow({
-  badge,
+function ModeCard({
+  eyebrow,
   title,
-  blurb,
-  action,
-  deskAction,
+  note,
   onClick,
-  first,
 }: {
-  badge: React.ReactNode;
+  eyebrow: string;
   title: string;
-  blurb: string;
-  action: string;
-  deskAction: string;
+  note: string;
   onClick: () => void;
-  first?: boolean;
 }) {
   return (
-    <>
-      {/* mobile: a straight row with a hairline */}
-      <button
-        onClick={onClick}
-        className={`lg:hidden flex items-center gap-3.5 py-4 text-left border-hairline ${
-          first ? "border-t border-b" : "border-b"
-        }`}
-      >
-        {badge}
-        <span className="flex flex-col gap-0.5 flex-1 min-w-0">
-          <span className="font-semibold text-[17px] leading-[22px]">{title}</span>
-          <span className="text-[14px] leading-5 text-muted">{blurb}</span>
+    <button
+      onClick={onClick}
+      className="flex-1 flex items-center gap-4 text-left p-4 lg:p-5 bg-surface rounded-card hover:bg-[#15296d] transition-colors"
+    >
+      <span className="flex flex-col gap-1 flex-1 min-w-0">
+        <Eyebrow>{eyebrow}</Eyebrow>
+        <span className="font-semibold text-[16px] leading-[21px] lg:text-[17px] lg:leading-[22px]">
+          {title}
         </span>
-        <span className="flex items-center justify-center h-10 px-4 shrink-0 rounded-control border-[1.5px] border-ink font-semibold text-[15px]">
-          {action}
-        </span>
-      </button>
-
-      {/* desktop: a card with a full-width action */}
-      <div className="hidden lg:flex flex-col gap-4 p-6 rounded-control border border-[#D4D4D4]">
-        <div className="flex items-center gap-4">
-          {badge}
-          <div className="flex flex-col gap-0.5 flex-1">
-            <span className="font-semibold text-[18px] leading-6">{title}</span>
-            <span className="text-[15px] leading-[22px] text-muted">{blurb}</span>
-          </div>
-        </div>
-        <OutlineButton onClick={onClick} className="w-full text-[16px]">
-          {deskAction}
-        </OutlineButton>
-      </div>
-    </>
+        <span className="text-[13px] leading-[18px] text-muted">{note}</span>
+      </span>
+      <span className="flex items-center justify-center w-9 h-9 shrink-0 rounded-full bg-white/10 text-white">
+        <Chevron />
+      </span>
+    </button>
   );
 }
 
@@ -360,36 +535,34 @@ function Leaderboard({
   const [tab, setTab] = useState<"daily" | "all">("daily");
   const rows = tab === "daily" ? daily : allTime;
   return (
-    <div className="mx-auto w-full max-w-[900px] px-5 lg:px-16 pt-4 lg:pt-8 pb-10">
-      <h1 className="font-semibold text-[26px] leading-8 lg:text-[32px] lg:leading-10">{t("board.title")}</h1>
-      <p className="text-[15px] leading-[22px] text-muted mt-1">
-        {t("board.sub")}
-      </p>
+    <>
+      <PageBand eyebrow={t("board.sub")} title={t("board.title")} />
+      <div className="mx-auto w-full max-w-[900px] px-5 lg:px-16 pt-5 lg:pt-8 pb-10">
+        <div className="flex gap-1 p-1 rounded-full bg-surface">
+          {(["daily", "all"] as const).map((tabKey) => (
+            <button
+              key={tabKey}
+              onClick={() => setTab(tabKey)}
+              className={`flex-1 h-10 rounded-full font-semibold text-[15px] transition-colors ${
+                tab === tabKey ? "bg-accent text-ground" : "text-white hover:bg-white/8"
+              }`}
+            >
+              {tabKey === "daily" ? t("board.tab.daily") : t("board.tab.allTime")}
+            </button>
+          ))}
+        </div>
 
-      <div className="flex gap-2 mt-4">
-        {(["daily", "all"] as const).map((tabKey) => (
-          <button
-            key={tabKey}
-            onClick={() => setTab(tabKey)}
-            className={`flex-1 h-10 rounded-control font-semibold text-[15px] transition-colors ${
-              tab === tabKey ? "bg-ink text-white" : "border border-[#D4D4D4] text-ink hover:bg-panel"
-            }`}
-          >
-            {tabKey === "daily" ? t("board.tab.daily") : t("board.tab.allTime")}
-          </button>
-        ))}
+        <div className="mt-4">
+          <BoardRows
+            rows={rows}
+            empty={tab === "daily" ? t("board.empty.daily") : t("board.empty.allTime")}
+          />
+        </div>
+        <p className="text-[13px] leading-5 text-muted pt-3">
+          {tab === "daily" ? t("board.todayNote", { date: today }) : t("board.seedNote")}
+        </p>
       </div>
-
-      <div className="mt-4">
-        <BoardRows
-          rows={rows}
-          empty={tab === "daily" ? t("board.empty.daily") : t("board.empty.allTime")}
-        />
-      </div>
-      <p className="text-[13px] leading-5 text-muted pt-3">
-        {tab === "daily" ? t("board.todayNote", { date: today }) : t("board.seedNote")}
-      </p>
-    </div>
+    </>
   );
 }
 
@@ -409,11 +582,15 @@ function BoardRows({ rows, empty }: { rows: Row[] | undefined; empty: string }) 
         <a
           key={r.seed}
           href={`/r/${r.seed}`}
-          className={`flex items-center gap-3 lg:gap-4 h-[62px] border-t border-hairline hover:bg-panel transition-colors ${
+          className={`flex items-center gap-3 lg:gap-4 h-[62px] border-t border-hairline hover:bg-white/5 transition-colors ${
             i === rows.length - 1 ? "border-b" : ""
           }`}
         >
-          <span className="w-7 lg:w-[30px] shrink-0 font-display font-semibold text-[24px] leading-[22px] pt-[3px]">
+          <span
+            className={`flex items-center justify-center w-9 h-9 shrink-0 rounded-plate font-display font-bold text-[22px] leading-none pt-1 tabular ${
+              i === 0 ? "bg-trophy text-ground" : "bg-plate border border-plate-line text-white"
+            }`}
+          >
             {i + 1}
           </span>
           <span className="flex flex-col flex-1 min-w-0">
@@ -429,11 +606,15 @@ function BoardRows({ rows, empty }: { rows: Row[] | undefined; empty: string }) 
             </span>
           </span>
           {r.perfect14 && (
-            <span className="hidden sm:inline-flex items-center h-6 px-2 pt-[2px] shrink-0 rounded bg-trophy font-display font-semibold text-[16px] leading-4 text-ink">
+            <span className="hidden sm:inline-flex items-center h-6 px-2 pt-[2px] shrink-0 rounded-chip bg-trophy font-display font-semibold text-[16px] leading-4 text-ground">
               {t("board.perfect")}
             </span>
           )}
-          <span className="w-[62px] shrink-0 text-right font-display font-bold text-[30px] leading-7 pt-[3px] tabular">
+          <span
+            className={`w-[62px] shrink-0 text-right font-display font-bold text-[30px] leading-7 pt-[3px] tabular ${
+              r.perfect14 ? "text-trophy" : ""
+            }`}
+          >
             {r.wins}–{r.losses}
           </span>
         </a>

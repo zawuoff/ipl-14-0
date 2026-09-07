@@ -536,7 +536,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                   localStorage.setItem("14-0-mute", m ? "1" : "0");
                 } catch {}
               }}
-              className="h-9 px-3 rounded-control border border-ink text-[13px] lg:text-[14px] font-medium hover:bg-panel transition-colors"
+              className="h-9 px-3 rounded-control border border-white/30 text-[13px] lg:text-[14px] font-medium hover:bg-white/8 transition-colors"
             >
               {muted ? t("run.soundOff") : t("run.soundOn")}
             </button>
@@ -548,7 +548,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                 setSimIdx(0);
                 setPoIdx(0);
               }}
-              className="h-9 px-3 rounded-control border border-ink text-[13px] lg:text-[14px] font-medium hover:bg-panel transition-colors"
+              className="h-9 px-3 rounded-control border border-white/30 text-[13px] lg:text-[14px] font-medium hover:bg-white/8 transition-colors"
             >
               {t("run.restart")}
             </button>
@@ -573,7 +573,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
             </div>
           )}
           {initialRoom && roomQ && !myRoomMember && (
-            <div className="bg-ink text-white rounded-control p-5 flex flex-col gap-3">
+            <div className="bg-surface rounded-card p-5 flex flex-col gap-3">
               <span className="text-[13px] leading-[18px] text-muted-plate">{t("setup.inviteTitle")}</span>
               <span className="font-semibold text-[22px] leading-7">
                 {roomQ.members?.map((m: any) => m.name).join("  vs  ") || "1v1"}
@@ -630,7 +630,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                         key={m}
                         onClick={() => setMode(m)}
                         className={`flex flex-col gap-0.5 p-3.5 rounded-control text-left transition-colors ${
-                          mode === m ? "bg-ink text-white" : "border border-[#D4D4D4] hover:bg-panel"
+                          mode === m ? "bg-surface border-2 border-accent" : "bg-surface border-2 border-transparent hover:bg-white/8"
                         }`}
                       >
                         <span className="font-semibold text-[16px] leading-[22px]">
@@ -661,12 +661,12 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                       key={tpl.name}
                       onClick={() => setStyleIdx(i)}
                       className={`flex items-center gap-3 p-3.5 rounded-control text-left transition-colors ${
-                        on ? "border-2 border-ink" : "border border-[#D4D4D4] hover:bg-panel"
+                        on ? "border-2 border-white/30" : "border border-white/15 hover:bg-white/8"
                       }`}
                     >
                       <span
                         className={`w-5 h-5 shrink-0 rounded-full ${
-                          on ? "border-[6px] border-ink" : "border-[1.5px] border-[#8A8A8A]"
+                          on ? "border-[6px] border-white/30" : "border-[1.5px] border-white/25"
                         }`}
                       />
                       <span className="flex flex-col gap-1.5 flex-1 min-w-0">
@@ -710,7 +710,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                         key={d}
                         onClick={() => setDifficulty(d)}
                         className={`flex flex-col gap-0.5 p-3 rounded-control text-left transition-colors ${
-                          difficulty === d ? "bg-ink text-white" : "border border-[#D4D4D4] hover:bg-panel"
+                          difficulty === d ? "bg-surface border-2 border-accent" : "bg-surface border-2 border-transparent hover:bg-white/8"
                         }`}
                       >
                         <span className="font-semibold text-[16px] leading-[22px]">{t(`difficulty.${d}`)}</span>
@@ -757,7 +757,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                       onChange={(e) => setRoomName(e.target.value)}
                       placeholder={t("setup.yourName")}
                       maxLength={14}
-                      className="flex-1 h-13 rounded-control border border-[#8A8A8A] px-3.5 text-[16px] outline-none focus:border-ink"
+                      className="flex-1 h-13 rounded-control border border-white/25 px-3.5 text-[16px] outline-none focus:border-white/30"
                     />
                     <OutlineButton
                       className="h-13"
@@ -818,7 +818,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
 
             <div className="order-1 lg:order-2 min-w-0">
               {phase === "slot" ? (
-                <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden">
+                <div className="-mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden">
                   <SlotSpin
                     key={slotKey}
                     targetTeamId={currentSpin.teamId}
@@ -831,7 +831,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                 </div>
               ) : (
                 <>
-                  <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-5 lg:px-6 lg:py-6 flex flex-col gap-3.5">
+                  <div className="-mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden bg-surface text-white px-5 py-5 lg:px-6 lg:py-6 flex flex-col gap-3.5">
                     <div className="flex gap-3 lg:gap-3.5">
                       <div className="flex-1 min-w-0">
                         <Flap
@@ -920,7 +920,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
             </p>
           )}
 
-          <div className="mt-5 -mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-5 lg:px-7 lg:py-7 flex flex-col gap-5">
+          <div className="mt-5 -mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden bg-surface text-white px-5 py-5 lg:px-7 lg:py-7 flex flex-col gap-5">
             <div className="flex gap-6 lg:gap-10">
               <div className="flex flex-col gap-1">
                 <span className="text-[13px] leading-[18px] text-muted-plate">{t("xi.teamPower")}</span>
@@ -972,7 +972,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                   className={`flex items-center justify-center h-14 w-full rounded-control font-semibold text-[17px] transition-colors ${
                     roomBothReady
                       ? "bg-turf text-white hover:bg-[#15702f]"
-                      : "border-[1.5px] border-ink text-ink hover:bg-panel"
+                      : "border-[1.5px] border-white/30 text-white hover:bg-white/8"
                   }`}
                 >
                   {roomBothReady ? t("xi.startLeague") : t("xi.waitingOpponent")}
@@ -1030,7 +1030,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
         <>
           {(simPhase === "league" || simPhase === "leagueDone") && (
             <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-4 lg:pt-6 pb-12">
-              <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-5 lg:px-7 lg:py-7 flex flex-col lg:flex-row lg:items-end gap-5 lg:gap-11">
+              <div className="-mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden bg-surface text-white px-5 py-5 lg:px-7 lg:py-7 flex flex-col lg:flex-row lg:items-end gap-5 lg:gap-11">
                 <div className="flex gap-3 lg:shrink-0">
                   <Flap
                     label={t("word.won")}
@@ -1195,7 +1195,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                 <span className="flex-1" />
                 <button
                   onClick={() => setSimSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}
-                  className="h-9 px-3 rounded-control border border-ink text-[13px] font-medium"
+                  className="h-9 px-3 rounded-control border border-white/30 text-[13px] font-medium"
                 >
                   {t("league.speed", { n: simSpeed })}
                 </button>
@@ -1225,7 +1225,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
 
           {simPhase === "preFinal" && finalGame && (
             <div className="mx-auto w-full max-w-[900px] px-5 lg:px-8 pt-5 pb-12">
-              <div className="-mx-5 lg:mx-0 lg:rounded-control bg-ink text-white px-5 py-8 lg:px-10 lg:py-12 text-center flex flex-col items-center gap-3">
+              <div className="-mx-5 lg:mx-0 lg:rounded-card bg-surface text-white px-5 py-8 lg:px-10 lg:py-12 text-center flex flex-col items-center gap-3">
                 <span className="text-[13px] leading-[18px] text-muted-plate">{t("po.theFinal")}</span>
                 <span className="font-semibold text-[28px] leading-9 lg:text-[40px] lg:leading-[48px]">
                   {t("po.versus", { opp: finalGame.detail?.opp ?? "?" })}
@@ -1257,7 +1257,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
           {simPhase === "done" && (
             <div className="pb-12">
               <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-4 lg:pt-6">
-                <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-6 lg:px-9 lg:py-9 flex flex-col xl:flex-row xl:items-end gap-6 xl:gap-10 2xl:gap-14">
+                <div className="-mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden bg-surface text-white px-5 py-6 lg:px-9 lg:py-9 flex flex-col xl:flex-row xl:items-end gap-6 xl:gap-10 2xl:gap-14">
                   <div className="flex gap-3 xl:gap-3.5 xl:shrink-0">
                     <Flap
                       label={t("word.won")}
@@ -1548,7 +1548,7 @@ function PointsTable({ rows, championIsYou }: { rows: SeasonResult["table"]; cha
         <div key={r.team}>
           <div
             className={`flex items-center gap-2 h-[42px] px-2 ${
-              r.you ? "bg-ink text-white rounded-control" : "border-t border-hairline"
+              r.you ? "bg-accent/15 rounded-card" : "border-t border-hairline"
             } ${i === rows.length - 1 && !r.you ? "border-b" : ""}`}
           >
             <span className="w-[22px] shrink-0 font-display font-semibold text-[20px] leading-[18px] pt-[3px] tabular">
@@ -1589,7 +1589,7 @@ function PointsTable({ rows, championIsYou }: { rows: SeasonResult["table"]; cha
             </span>
           </div>
           {i === 3 && (
-            <div className="flex items-center h-7 pt-1.5 border-t-2 border-ink">
+            <div className="flex items-center h-7 pt-1.5 border-t-2 border-white/30">
               <span className="text-[12px] leading-4 text-muted">{t("table.cut")}</span>
             </div>
           )}

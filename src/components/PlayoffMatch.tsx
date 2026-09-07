@@ -121,7 +121,7 @@ export function PlayoffMatch({
   return (
     <div className="flex flex-col">
       {/* the board */}
-      <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-5 lg:px-7 lg:py-6 flex flex-col gap-4">
+      <div className="-mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden bg-surface text-white px-5 py-5 lg:px-7 lg:py-6 flex flex-col gap-4">
         <div className="flex items-baseline gap-3 flex-wrap">
           <span className="font-semibold text-[17px] leading-[22px]">{stage}</span>
           <span className="text-[13px] leading-[18px] text-muted-plate">

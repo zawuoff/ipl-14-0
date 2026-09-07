@@ -21,7 +21,7 @@ function PlayerRow({
   // Ratings visible: the tile carries the rating heat. Legend mode: no number
   // to colour, so the tile wears the squad's own colour instead.
   const tile = off
-    ? { bg: "#E4E4E4", fg: "#8A8A8A" }
+    ? { bg: "#16244A", fg: "rgba(255,255,255,0.45)" }
     : hideRatings
       ? { bg: teamColour ?? "#000000", fg: readableOn(teamColour ?? "#000000") }
       : ratingTone(p.overall);
@@ -31,7 +31,7 @@ function PlayerRow({
       disabled={!onPick || off}
       title={reason}
       className={`w-full flex items-center gap-3 py-2.5 text-left border-t border-hairline transition-colors ${
-        off ? "cursor-not-allowed" : "hover:bg-panel cursor-pointer"
+        off ? "cursor-not-allowed" : "hover:bg-white/8 cursor-pointer"
       }`}
     >
       <span
@@ -42,17 +42,17 @@ function PlayerRow({
       </span>
       <span className="flex flex-col flex-1 min-w-0">
         <span
-          className={`font-medium text-[16px] leading-[22px] truncate ${off ? "text-[#8A8A8A]" : ""}`}
+          className={`font-medium text-[16px] leading-[22px] truncate ${off ? "text-faint" : ""}`}
         >
           {p.player}
         </span>
-        <span className={`text-[13px] leading-[18px] truncate ${off ? "text-[#8A8A8A]" : "text-muted"}`}>
+        <span className={`text-[13px] leading-[18px] truncate ${off ? "text-faint" : "text-muted"}`}>
           {off ? reason : p.overseas ? `${p.country} · ${t("xi.overseas")}` : p.country}
         </span>
       </span>
       <span
         className={`w-[84px] shrink-0 text-right font-medium text-[14px] leading-[18px] ${
-          off ? "text-[#8A8A8A]" : ""
+          off ? "text-faint" : ""
         }`}
       >
         {t(`role.${p.role}`)}

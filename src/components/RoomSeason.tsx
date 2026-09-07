@@ -359,7 +359,7 @@ export function RoomSeason({ room }: { room: any }) {
     <div className="flex flex-col gap-6">
       {(phase === "league" || phase === "leagueDone") && (
         <>
-          <div className="-mx-5 lg:mx-0 lg:rounded-control lg:overflow-hidden bg-ink text-white px-5 py-6 lg:px-8 lg:py-8 flex flex-col items-center gap-5">
+          <div className="-mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden bg-surface text-white px-5 py-6 lg:px-8 lg:py-8 flex flex-col items-center gap-5">
             <div className="w-full flex items-center gap-3">
               <span className="text-[13px] leading-[18px] text-muted-plate truncate">
                 {t("room.youAre", { name: myName })}
@@ -443,7 +443,7 @@ export function RoomSeason({ room }: { room: any }) {
               title={t("room.yourResults")}
               note={
                 <>
-                  <span className="text-ink font-medium">{t("room.scoreKeyYours")}</span> ·{" "}
+                  <span className="text-white font-medium">{t("room.scoreKeyYours")}</span> ·{" "}
                   <span className="text-muted">{t("room.scoreKeyTheirs")}</span>
                 </>
               }
@@ -481,7 +481,7 @@ export function RoomSeason({ room }: { room: any }) {
                       onClick={() => (isH2H && f.detail ? setExpanded(expanded === i ? null : i) : undefined)}
                       className={`w-full flex items-center gap-2.5 lg:gap-3.5 py-2.5 text-left border-t border-hairline ${
                         i === shown.length - 1 ? "border-b" : ""
-                      } ${isH2H && f.detail ? "hover:bg-panel" : ""}`}
+                      } ${isH2H && f.detail ? "hover:bg-white/8" : ""}`}
                     >
                       <span className="w-7 shrink-0 text-[13px] leading-[18px] text-muted">R{f.round}</span>
                       <span
@@ -506,7 +506,7 @@ export function RoomSeason({ room }: { room: any }) {
                         </span>
                       </span>
                       <span className="shrink-0 text-right font-display font-semibold text-[19px] leading-5 lg:text-[22px] tabular pt-[3px] whitespace-nowrap">
-                        <span className="text-ink">{iAmHome ? f.hs : f.as}</span>
+                        <span className="text-white">{iAmHome ? f.hs : f.as}</span>
                         <span className="text-faint"> · </span>
                         <span className="text-muted">{iAmHome ? f.as : f.hs}</span>
                       </span>
@@ -597,7 +597,7 @@ export function RoomSeason({ room }: { room: any }) {
       )}
 
       {phase === "preFinal" && myFinal && (
-        <div className="-mx-5 lg:mx-0 lg:rounded-control bg-ink text-white px-5 py-8 lg:px-10 lg:py-12 text-center flex flex-col items-center gap-3">
+        <div className="-mx-5 lg:mx-0 lg:rounded-card bg-surface text-white px-5 py-8 lg:px-10 lg:py-12 text-center flex flex-col items-center gap-3">
           <span className="text-[13px] leading-[18px] text-muted-plate">{t("po.theFinal")}</span>
           <span className="font-semibold text-[26px] leading-8 lg:text-[36px] lg:leading-[44px]">
             {t("room.finalVersus", { me: myName, opp: oppOf(myFinal, myIdx, league) })}
@@ -622,7 +622,7 @@ export function RoomSeason({ room }: { room: any }) {
 
       {phase === "done" && holdForMate && (
         <div className="flex flex-col gap-4">
-          <div className="-mx-5 lg:mx-0 lg:rounded-control bg-ink text-white px-5 py-7 lg:px-9 lg:py-9 flex flex-col items-center gap-3 text-center">
+          <div className="-mx-5 lg:mx-0 lg:rounded-card bg-surface text-white px-5 py-7 lg:px-9 lg:py-9 flex flex-col items-center gap-3 text-center">
             <span className="font-semibold text-[24px] leading-8 lg:text-[30px] lg:leading-10">
               {t("room.noSpoilers")}
             </span>
@@ -792,7 +792,7 @@ function RoomTable({ rows, me, mate, champion }: { rows: TableRow[]; me: string;
           <div key={r.team}>
             <div
               className={`flex items-center gap-2 h-[42px] px-2 ${
-                isMe ? "bg-ink text-white rounded-control" : "border-t border-hairline"
+                isMe ? "bg-accent/15 rounded-card" : "border-t border-hairline"
               } ${i === rows.length - 1 && !isMe ? "border-b" : ""}`}
             >
               <span className="w-[22px] shrink-0 font-display font-semibold text-[20px] leading-[18px] pt-[3px] tabular">
@@ -836,7 +836,7 @@ function RoomTable({ rows, me, mate, champion }: { rows: TableRow[]; me: string;
               </span>
             </div>
             {i === 3 && (
-              <div className="flex items-center h-7 pt-1.5 border-t-2 border-ink">
+              <div className="flex items-center h-7 pt-1.5 border-t-2 border-white/30">
                 <span className="text-[12px] leading-4 text-muted">{t("table.cut")}</span>
               </div>
             )}
