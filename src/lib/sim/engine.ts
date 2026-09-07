@@ -1,3 +1,4 @@
+import { opponentSquad } from "../game/opponents2026";
 import { mulberry32, type PlayerSeason, type Difficulty, type XIConfig, ROLE_QUOTA } from "../game/types";
 
 // ---- Team strength ----
@@ -366,8 +367,14 @@ export function simSeason(
     const stages = ["Qualifier 1", "Eliminator / Q2", "Final"];
     // top-2 finish shortcut: win Q1 -> final; else Q2 -> final
     let alive = true;
+    // Knockouts are played against the sides that actually finished above and
+    // around you, not a fixed trio.
+    const others = table.filter((r) => !r.you).map((r) => r.team);
+    const q1Opp = others[0];
+    const q2Opp = others[2];
+    const finalOpp = others[1];
     const q1rng = mulberry32((seedU32 + 99 * 0x9e3779b9) >>> 0);
-    const q1 = simDetailedMatch(xi, bat, bowl, q1rng, diff, 21);
+    const q1 = simDetailedMatch(xi, bat, bowl, q1rng, diff, q1Opp);
     const pack = (stage: string, m: DetailedMatch) => ({
       stage,
       gf: m.gf,
@@ -379,18 +386,18 @@ export function simSeason(
     if (q1.result === "W") {
       playoffs.push(pack(stages[0], q1));
       const frng = mulberry32((seedU32 + 101 * 0x9e3779b9) >>> 0);
-      const f = simDetailedMatch(xi, bat, bowl, frng, diff, 23);
+      const f = simDetailedMatch(xi, bat, bowl, frng, diff, finalOpp);
       playoffs.push(pack(stages[2], f));
       champion = f.result === "W";
       alive = champion;
     } else {
       playoffs.push({ ...pack(stages[0], q1), result: "L" });
       const q2rng = mulberry32((seedU32 + 100 * 0x9e3779b9) >>> 0);
-      const q2 = simDetailedMatch(xi, bat, bowl, q2rng, diff, 22);
+      const q2 = simDetailedMatch(xi, bat, bowl, q2rng, diff, q2Opp);
       playoffs.push(pack(stages[1], q2));
       if (q2.result === "W") {
         const frng = mulberry32((seedU32 + 101 * 0x9e3779b9) >>> 0);
-        const f = simDetailedMatch(xi, bat, bowl, frng, diff, 23);
+        const f = simDetailedMatch(xi, bat, bowl, frng, diff, finalOpp);
         playoffs.push(pack(stages[2], f));
         champion = f.result === "W";
         alive = champion;
@@ -648,17 +655,6 @@ export interface DetailedInnings {
   events: BallEvent[];
 }
 
-const OPP_BAT_POOL: [string, number][] = [
-  ["Warner", 90], ["Buttler", 89], ["Kohli", 88], ["SKY", 87], ["Head", 86],
-  ["Gill", 85], ["Klaasen", 85], ["Pant", 83], ["Miller", 82], ["Jaiswal", 81],
-  ["Samson", 80], ["Maxwell", 80],
-];
-const OPP_BOWL_POOL: [string, number][] = [
-  ["Bumrah", 95], ["Rashid", 90], ["Malinga", 88], ["Narine", 86], ["Archer", 86],
-  ["Chahal", 84], ["Boult", 83], ["Shami", 83], ["Starc", 84], ["Jadeja", 82],
-  ["Kuldeep", 80], ["Cummins", 80],
-];
-
 function ballOutcome(batAtt: number, bowlDef: number, rng: () => number): { runs: number; wicket: boolean } {
   const wProb = clamp(0.052 + (bowlDef - batAtt) * 0.0012, 0.028, 0.085);
   if (rng() < wProb) return { runs: 0, wicket: true };
@@ -784,7 +780,7 @@ export function simDetailedInnings(
     });
     if (target !== undefined && runs >= target) break;
   }
-  runs = clamp(runs, 40, 250);
+  // The ball-by-ball is the record; the total must be what those balls add to.
   return {
     runs,
     wickets: Math.min(10, wkts),
@@ -814,12 +810,11 @@ export function simDetailedMatch(
   bowl: number,
   rng: () => number,
   diff: Difficulty,
-  oppIdx: number
+  opp: string
 ): DetailedMatch {
   const oPow = oppPower(rng, diff, true);
   const oBat = clamp(oPow + (rng() - 0.5) * 6, 60, 95);
   const oBowl = clamp(oPow + (rng() - 0.5) * 6, 60, 95);
-  const opp = OPP_NAMES[oppIdx % OPP_NAMES.length];
 
   // user batting order: openers first, then by bat
   const openers = xi.filter((p) => p.role === "Opener").sort((a, b) => b.bat - a.bat);
@@ -831,18 +826,13 @@ export function simDetailedMatch(
     .slice(0, 5)
     .map((p) => ({ name: shortName(p.player), w: p.bowl }));
 
-  const rotB = (pool: [string, number][]) =>
-    Array.from({ length: 7 }, (_, i) => {
-      const [name] = pool[(oppIdx * 3 + i) % pool.length];
-      return { name, w: clamp(Math.round(oBat + (rng() - 0.5) * 8), 55, 97) };
-    });
-  const rotW = (pool: [string, number][]) =>
-    Array.from({ length: 5 }, (_, i) => {
-      const [name] = pool[(oppIdx * 2 + i) % pool.length];
-      return { name, w: clamp(Math.round(oBowl + (rng() - 0.5) * 8), 55, 97) };
-    });
-  const oppBat = rotB(OPP_BAT_POOL);
-  const oppBowl = rotW(OPP_BOWL_POOL);
+  // The real 2026 side. Team strength on the day comes from the difficulty;
+  // the ratings only decide who within the XI carries it.
+  const squad = opponentSquad(opp);
+  const spread = (team: number, rating: number) =>
+    clamp(Math.round(team + (rating - 82) * 0.5 + (rng() - 0.5) * 8), 55, 97);
+  const oppBat = squad.bat.map((q) => ({ name: q.name, w: spread(oBat, q.rating) }));
+  const oppBowl = squad.bowl.map((q) => ({ name: q.name, w: spread(oBowl, q.rating) }));
 
   const batFirst = rng() < 0.5;
   let inn1: DetailedInnings;
@@ -1312,7 +1302,7 @@ export function simSharedLeague(
       const hi = aH ? iA : iB;
       const hsx = strengths[hi];
       const drng = mulberry32((roomSeed + salt + 13) >>> 0);
-      const m = simDetailedMatch(xis.get(hi)!, hsx.bat, hsx.bowl, drng, diff, salt % 10);
+      const m = simDetailedMatch(xis.get(hi)!, hsx.bat, hsx.bowl, drng, diff, hi === iA ? nB : nA);
       const userIsA = hi === iA;
       const s1 = userIsA ? (m.userFirst ? m.inn1.score : m.inn2.score) : (!m.userFirst ? m.inn1.score : m.inn2.score);
       const s2 = userIsA ? (!m.userFirst ? m.inn1.score : m.inn2.score) : (m.userFirst ? m.inn1.score : m.inn2.score);

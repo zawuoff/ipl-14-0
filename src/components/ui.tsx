@@ -353,52 +353,49 @@ export function SplitScore({
 }) {
   const away = panelColour(awayColour);
   const awayInk = readableOn(away);
+  // Each side stacks name / score / note. The note gets its own line and is
+  // clipped rather than wrapped, so on a phone nothing wanders under the seam
+  // or the VS badge — the away side pads past both.
   return (
     <div className={`relative flex ${height}`}>
-      <div className="flex flex-col justify-center flex-1 min-w-0 pl-4 lg:pl-5 pr-6 bg-plate">
+      <div className="flex flex-col justify-center flex-1 min-w-0 pl-4 lg:pl-5 pr-8 bg-plate">
         <span className="font-display font-semibold text-[19px] leading-[21px] text-white truncate">
           {homeName}
         </span>
-        <span className="flex items-baseline gap-1.5 min-w-0">
-          <span className={`font-display font-bold tabular text-white ${scoreClass}`}>
-            {homeScore}
-          </span>
-          {homeNote && (
-            <span className="text-[12px] leading-4 text-muted-plate whitespace-nowrap">
-              {homeNote}
-            </span>
-          )}
+        <span className={`font-display font-bold tabular text-white truncate ${scoreClass}`}>
+          {homeScore}
         </span>
+        {homeNote && (
+          <span className="text-[12px] leading-4 text-muted-plate truncate">{homeNote}</span>
+        )}
       </div>
       <div
-        className="flex flex-col justify-center items-end flex-1 min-w-0 -ml-[26px] pl-8 pr-4 lg:pr-5"
+        className="flex flex-col justify-center items-end text-right flex-1 min-w-0 -ml-[26px] pl-10 pr-4 lg:pr-5"
         style={{
           backgroundColor: away,
           clipPath: "polygon(26px 0, 100% 0, 100% 100%, 0 100%)",
         }}
       >
         <span
-          className="font-display font-semibold text-[19px] leading-[21px] truncate"
+          className="max-w-full font-display font-semibold text-[19px] leading-[21px] truncate"
           style={{ color: awayInk }}
         >
           {awayName}
         </span>
-        <span className="flex items-baseline gap-1.5 min-w-0">
-          <span
-            className={`font-display font-bold tabular ${scoreClass}`}
-            style={{ color: awayInk }}
-          >
-            {awayScore}
-          </span>
-          {awayNote && (
-            <span
-              className="text-[12px] leading-4 whitespace-nowrap"
-              style={{ color: awayInk, opacity: 0.65 }}
-            >
-              {awayNote}
-            </span>
-          )}
+        <span
+          className={`max-w-full font-display font-bold tabular truncate ${scoreClass}`}
+          style={{ color: awayInk }}
+        >
+          {awayScore}
         </span>
+        {awayNote && (
+          <span
+            className="max-w-full text-[12px] leading-4 truncate"
+            style={{ color: awayInk, opacity: 0.65 }}
+          >
+            {awayNote}
+          </span>
+        )}
       </div>
       <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-full bg-band border-2 border-surface pt-[3px] font-display font-bold text-[15px] leading-none text-white">
         VS

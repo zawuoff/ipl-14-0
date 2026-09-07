@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { DetailedInnings, SuperOverInnings } from "@/lib/sim/engine";
 import { buildTeamSeasons } from "@/lib/game/data";
-import { PageBand, PrimaryButton, SectionHead, SplitScore } from "./ui";
+import { PageBand, PrimaryButton, SplitScore } from "./ui";
 import { useT } from "@/lib/i18n";
 
 export interface PlayoffDetail {
@@ -141,10 +141,14 @@ export function PlayoffMatch({
   // The same two innings, read as one match card: your side on the plate,
   // theirs on their colour.
   const firstNote = t("pm.battedFirst", { overs: inn1Overs });
+  // No target on the card until the first innings is actually over — it would
+  // give away the total while the runs are still being scored.
   const secondNote =
     phase === "inn2" || done
       ? t("pm.chasingOvers", { overs: oversStr, target: detail.inn1.runs + 1 })
-      : t("pm.chasing", { target: detail.inn1.runs + 1 });
+      : inSO
+        ? t("pm.chasing", { target: detail.inn1.runs + 1 })
+        : t("pm.yetToBat");
   const secondScore = phase === "inn2" || done ? score : "—";
   const status = done
     ? t("pm.complete")
@@ -208,13 +212,20 @@ export function PlayoffMatch({
           </div>
         )}
 
+        {/* The card above already carries your score, so while you bat first
+            this is just the over in progress. When they bat, the big number
+            stays — it is the total you will be chasing. */}
         {!done && !inSO && phase === "inn1" && (
           <div className="px-4 py-4 lg:px-7 lg:py-5 border-t border-hairline flex flex-col gap-2.5">
             <div className="flex items-baseline gap-3 flex-wrap">
-              <span className="font-display font-bold text-[44px] leading-[38px] pt-1 tabular">
-                {score}
-              </span>
-              <span className="font-medium text-[16px] leading-[22px]">{t("pm.afterOvers", { overs: oversStr })}</span>
+              {!battingYou && (
+                <>
+                  <span className="font-display font-bold text-[44px] leading-[38px] pt-1 tabular">
+                    {score}
+                  </span>
+                  <span className="font-medium text-[16px] leading-[22px]">{t("pm.afterOvers", { overs: oversStr })}</span>
+                </>
+              )}
               <span className="flex-1" />
               {cur && (
                 <span className="text-[13px] leading-[18px] text-muted">
@@ -281,8 +292,8 @@ function BallStrip({
 }) {
   const empties = Math.max(0, 6 - slots);
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <span className="w-[60px] shrink-0 text-[13px] leading-[18px] text-muted">{over}</span>
+    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+      <span className="w-[50px] sm:w-[60px] shrink-0 text-[13px] leading-[18px] text-muted">{over}</span>
       {recent.slice(-6).map((e) => (
         <span key={e.n} className={`${BALL_BASE} ${ballSkin(e)}`}>
           {e.wicket ? "W" : e.runs}
@@ -444,10 +455,11 @@ export function InningsCard({
     <section className="bg-surface rounded-card px-4 py-3 lg:px-6 lg:py-4 flex flex-col">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full min-h-[44px] flex items-baseline gap-3 py-1"
+        className="w-full min-h-[44px] flex items-baseline gap-3 py-1 text-left"
       >
-        <SectionHead title={title} />
-        <span className="flex-1" />
+        <h2 className="flex-1 min-w-0 truncate head-display text-[26px] leading-[26px] lg:text-[30px] lg:leading-[28px]">
+          {title}
+        </h2>
         <span className="font-display font-semibold text-[22px] leading-5 pt-[3px] tabular whitespace-nowrap">
           {inn.score}
         </span>
@@ -467,7 +479,7 @@ export function InningsCard({
               .filter((b) => b.balls > 0)
               .map((b, i, arr) => (
                 <div
-                  key={b.name}
+                  key={`${b.name}-${i}`}
                   className={`flex items-center gap-3 h-9 border-t border-hairline ${
                     i === arr.length - 1 ? "border-b" : ""
                   }`}
@@ -496,7 +508,7 @@ export function InningsCard({
               .filter((b) => b.balls > 0)
               .map((b, i, arr) => (
                 <div
-                  key={b.name}
+                  key={`${b.name}-${i}`}
                   className={`flex items-center gap-3 h-9 border-t border-hairline ${
                     i === arr.length - 1 ? "border-b" : ""
                   }`}
