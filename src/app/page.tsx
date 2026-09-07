@@ -42,6 +42,7 @@ type TodayStats = FunctionReturnType<typeof api.stats.homeToday>;
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("home");
+  const [boardTab, setBoardTab] = useState<"daily" | "all">("daily");
   const [mode, setMode] = useState<"classic" | "daily">("classic");
   const [intent, setIntent] = useState<"solo" | "friend">("solo");
   const [gameKey, setGameKey] = useState(0);
@@ -85,13 +86,17 @@ export default function Home() {
     setGameKey((k) => k + 1);
     setScreen("game");
   };
+  const goBoard = (tab: "daily" | "all" = "daily") => {
+    setBoardTab(tab);
+    setScreen("board");
+  };
 
   return (
     <ChromeProvider>
     <main className="min-h-screen bg-ground text-white flex flex-col">
       <TopBar
         screen={show}
-        go={setScreen}
+        go={(s) => (s === "board" ? goBoard("daily") : setScreen(s))}
         goFriend={() => play("classic", "friend")}
         inGame={entered === "game"}
       />
@@ -101,7 +106,7 @@ export default function Home() {
           today={today}
           play={play}
           rows={todayBoard as Row[] | undefined}
-          goBoard={() => setScreen("board")}
+          goBoard={goBoard}
         />
       )}
 
@@ -116,7 +121,7 @@ export default function Home() {
       )}
 
       {show === "board" && (
-        <Leaderboard today={today} daily={dailyBoard as Row[] | undefined} allTime={allTimeBoard as Row[] | undefined} />
+        <Leaderboard today={today} daily={dailyBoard as Row[] | undefined} allTime={allTimeBoard as Row[] | undefined} initialTab={boardTab} />
       )}
 
       <SiteFooter />
@@ -256,7 +261,7 @@ function HomeScreen({
   today: string;
   play: (m: "classic" | "daily", how?: "solo" | "friend") => void;
   rows: Row[] | undefined;
-  goBoard: () => void;
+  goBoard: (tab?: "daily" | "all") => void;
 }) {
   const t = useT();
   const { lang } = useLang();
@@ -346,7 +351,16 @@ function HomeScreen({
 
       {/* Today's best runs, straight off the board. */}
       <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-9 lg:pt-14 flex flex-col gap-3.5">
-        <SectionHead title={t("home.bestRuns")} note={<button onClick={goBoard} className="text-accent font-semibold hover:underline">{t("home.seeFullBoard")}</button>} />
+        <SectionHead
+          title={t("home.bestRuns")}
+          note={
+            <>
+              <button onClick={() => goBoard("daily")} className="text-accent font-semibold hover:underline">{t("home.seeFullBoard")}</button>
+              <span className="text-faint"> · </span>
+              <button onClick={() => goBoard("all")} className="text-accent font-semibold hover:underline">{t("board.tab.allTime")}</button>
+            </>
+          }
+        />
         <BoardRows rows={rows} empty={t("board.empty.daily")} />
       </section>
 
@@ -367,7 +381,7 @@ function HomeScreen({
 
 /** Reads the day's numbers. Lives below QuietBoundary so a backend without
     this query yet costs these two sections and nothing else. */
-function TodaySections({ today, goBoard }: { today: string; goBoard: () => void }) {
+function TodaySections({ today, goBoard }: { today: string; goBoard: (tab?: "daily" | "all") => void }) {
   const stats = useQuery(api.stats.homeToday, { date: today });
   return (
     <>
@@ -383,7 +397,7 @@ function pct(count: number, of: number): number {
 }
 
 /** The day's numbers, read straight out of what people actually played. */
-function TodayNumbers({ stats, goBoard }: { stats: TodayStats | undefined; goBoard: () => void }) {
+function TodayNumbers({ stats, goBoard }: { stats: TodayStats | undefined; goBoard: (tab?: "daily" | "all") => void }) {
   const t = useT();
 
   const mostPicked = stats?.topPicks[0];
@@ -403,7 +417,7 @@ function TodayNumbers({ stats, goBoard }: { stats: TodayStats | undefined; goBoa
       <SectionHead
         title={t("home.todayNumbers")}
         note={
-          <button onClick={goBoard} className="text-accent font-semibold hover:underline">
+          <button onClick={() => goBoard("daily")} className="text-accent font-semibold hover:underline">
             {t("nav.leaderboard")}
           </button>
         }
@@ -610,13 +624,15 @@ function Leaderboard({
   today,
   daily,
   allTime,
+  initialTab,
 }: {
   today: string;
   daily: Row[] | undefined;
   allTime: Row[] | undefined;
+  initialTab: "daily" | "all";
 }) {
   const t = useT();
-  const [tab, setTab] = useState<"daily" | "all">("daily");
+  const [tab, setTab] = useState<"daily" | "all">(initialTab);
   const rows = tab === "daily" ? daily : allTime;
   return (
     <>
