@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Flap, PrimaryButton } from "./ui";
 import { useT } from "@/lib/i18n";
+import { tick, thud } from "@/lib/sound";
 
 // The board: SQUAD x SEASON cells cycle, decelerate, then lock.
 // Outcome-first (the target is already decided), theatre second.
@@ -13,52 +14,6 @@ interface Props {
   clubPool: string[]; // full teamIds to flash through
   spinKey: number; // remount/respin trigger (parent keys on this)
   onLanded: () => void;
-}
-
-let actx: AudioContext | null = null;
-function ac(): AudioContext | null {
-  try {
-    if (!actx) actx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    if (actx.state === "suspended") void actx.resume();
-    return actx;
-  } catch {
-    return null;
-  }
-}
-function muted(): boolean {
-  try {
-    return localStorage.getItem("14-0-mute") === "1";
-  } catch {
-    return false;
-  }
-}
-function tick(prog: number) {
-  if (muted()) return;
-  const c = ac();
-  if (!c) return;
-  const o = c.createOscillator();
-  const g = c.createGain();
-  o.type = "triangle";
-  o.frequency.value = 1300 - prog * 600;
-  g.gain.setValueAtTime(0.1, c.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.04);
-  o.connect(g).connect(c.destination);
-  o.start();
-  o.stop(c.currentTime + 0.045);
-}
-function thud() {
-  if (muted()) return;
-  const c = ac();
-  if (!c) return;
-  const o = c.createOscillator();
-  const g = c.createGain();
-  o.type = "sine";
-  o.frequency.value = 110;
-  g.gain.setValueAtTime(0.3, c.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.25);
-  o.connect(g).connect(c.destination);
-  o.start();
-  o.stop(c.currentTime + 0.26);
 }
 
 function split(teamId: string): [string, string] {

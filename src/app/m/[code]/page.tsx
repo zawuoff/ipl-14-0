@@ -12,13 +12,17 @@ import {
   SectionHead,
   WhatsAppIcon,
   Wordmark,
+  IconButton,
+  SoundIcon,
 } from "@/components/ui";
+import { useMuted } from "@/lib/sound";
 import { useT, LangToggle } from "@/lib/i18n";
 
 export default function RoomPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const upper = code.toUpperCase();
   const t = useT();
+  const [muted, toggleMuted] = useMuted();
   const room = useQuery((api as any).rooms?.get, { code: upper });
   // Both XIs locked: the league is on, so the lobby chrome gets out of the way.
   const started =
@@ -43,7 +47,16 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
             <span className="text-[13px] leading-[18px] text-white/70">{t("nav.backToGame")}</span>
           </a>
           <span className="flex-1" />
-          <LangToggle className="w-11 h-9 text-[14px]" />
+          <div className="shrink-0 flex items-center gap-2">
+            <IconButton
+              onClick={toggleMuted}
+              label={muted ? t("run.soundOff") : t("run.soundOn")}
+              className="w-9"
+            >
+              <SoundIcon on={!muted} />
+            </IconButton>
+            <LangToggle className="w-10 h-9 text-[13px]" />
+          </div>
         </div>
       </header>
 

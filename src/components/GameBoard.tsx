@@ -23,6 +23,9 @@ import {
 import { buildPlayerSeasons, buildTeamSeasons } from "@/lib/game/data";
 import { forecastSeason, simSeason, teamStrength, type GameResult, type SeasonResult } from "@/lib/sim/engine";
 import { SlotSpin } from "./SlotSpin";
+import { Confetti } from "./Confetti";
+import { usePublishRun } from "./Chrome";
+import { fanfare } from "@/lib/sound";
 import { SquadList } from "./SquadList";
 import { XIPanel, unitWord } from "./XIPanel";
 import {
@@ -150,7 +153,6 @@ export function GameBoard({
   const [draft, setDraft] = useState<DraftState | null>(null);
   const [phase, setPhase] = useState<"slot" | "squad">("slot"); // per-pick: spin first, then draft
   const [slotKey, setSlotKey] = useState(0);
-  const [muted, setMuted] = useState(false);
   const [result, setResult] = useState<SeasonResult | null>(null);
   const [simIdx, setSimIdx] = useState(0); // league games revealed
   const [simPhase, setSimPhase] = useState<"idle" | "league" | "leagueDone" | "playoffs" | "preFinal" | "final" | "done">("idle");
@@ -206,7 +208,6 @@ export function GameBoard({
   useEffect(() => {
     try {
       setStreak(parseInt(localStorage.getItem("14-0-streak") ?? "0", 10) || 0);
-      setMuted(localStorage.getItem("14-0-mute") === "1");
     } catch {}
   }, []);
 
@@ -545,48 +546,40 @@ export function GameBoard({
       ? t("run.dailyWithDate", { date: today })
       : t("run.classic");
 
+  const restart = useCallback(() => {
+    setDraft(null);
+    setResult(null);
+    setSimPhase("idle");
+    setSimIdx(0);
+    setPoIdx(0);
+  }, []);
+
+  // The one bar at the top carries this run: what it is, what is left, and the
+  // way out of it.
+  const wonIt = simPhase === "done" && !!result?.champion;
+  usePublishRun(
+    draft
+      ? {
+          label: `${modeLabel} · ${t(`difficulty.${draft.difficulty}`)}`,
+          respins:
+            draft.status === "drafting" && REROLLS[draft.difficulty] > 0
+              ? draft.rerollsLeft
+              : undefined,
+          onRestart: restart,
+        }
+      : null
+  );
+
+  // The cup is worth a noise, once.
+  const cheered = useRef(false);
+  useEffect(() => {
+    if (!wonIt || cheered.current) return;
+    cheered.current = true;
+    fanfare();
+  }, [wonIt]);
+
   return (
     <div className="flex-1 flex flex-col">
-      {draft && (
-        <div className="border-b border-hairline">
-          <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 py-2.5 lg:py-3.5 flex items-center gap-3">
-            <span className="text-[13px] lg:text-[14px] leading-5 text-muted truncate">
-              {modeLabel} · {t(`difficulty.${draft.difficulty}`)}
-            </span>
-            <span className="flex-1" />
-            {draft.status === "drafting" && REROLLS[draft.difficulty] > 0 && (
-              <span className="hidden sm:block text-[14px] leading-5 font-medium">
-                {t("draft.respinsLeft", { n: draft.rerollsLeft })}
-              </span>
-            )}
-            <button
-              onClick={() => {
-                const m = !muted;
-                setMuted(m);
-                try {
-                  localStorage.setItem("14-0-mute", m ? "1" : "0");
-                } catch {}
-              }}
-              className="h-9 px-4 rounded-full bg-white/10 text-[13px] lg:text-[14px] font-medium hover:bg-white/18 transition-colors"
-            >
-              {muted ? t("run.soundOff") : t("run.soundOn")}
-            </button>
-            <button
-              onClick={() => {
-                setDraft(null);
-                setResult(null);
-                setSimPhase("idle");
-                setSimIdx(0);
-                setPoIdx(0);
-              }}
-              className="h-9 px-4 rounded-full bg-white/10 text-[13px] lg:text-[14px] font-medium hover:bg-white/18 transition-colors"
-            >
-              {t("run.restart")}
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ------------------------------------------------------ set up a run */}
       {!draft && (
         <>
@@ -1303,6 +1296,7 @@ export function GameBoard({
 
           {simPhase === "done" && (
             <div className="pb-12">
+              {result.champion && <Confetti />}
               <PageBand
                 eyebrow={modeLabel}
                 title={headline(result, t)}

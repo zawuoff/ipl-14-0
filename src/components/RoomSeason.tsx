@@ -33,6 +33,8 @@ import {
   StatStrip,
   WhatsAppIcon,
 } from "./ui";
+import { Confetti } from "./Confetti";
+import { fanfare } from "@/lib/sound";
 import { useT, localiseMargin, ordinal } from "@/lib/i18n";
 
 function stageWords(stage: string | undefined, t: (k: string) => string): string {
@@ -368,8 +370,18 @@ export function RoomSeason({ room }: { room: any }) {
     url: `${typeof window !== "undefined" ? window.location.origin : "https://14-0.app"}/m/${room.code}`,
   });
 
+  // Winning the room is worth the same noise as winning the league.
+  const wonIt = phase === "done" && !holdForMate && report.champion;
+  const cheered = useRef(false);
+  useEffect(() => {
+    if (!wonIt || cheered.current) return;
+    cheered.current = true;
+    fanfare();
+  }, [wonIt]);
+
   return (
     <div className="flex flex-col gap-6">
+      {wonIt && <Confetti />}
       {/* One band for the room. The knockout screens bring their own. */}
       {phase !== "playoffs" && phase !== "final" && (
         <PageBand
