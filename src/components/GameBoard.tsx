@@ -25,14 +25,18 @@ import { SlotSpin } from "./SlotSpin";
 import { SquadList } from "./SquadList";
 import { XIPanel, unitWord } from "./XIPanel";
 import {
+  Eyebrow,
   Flap,
+  PageBand,
   SlotStrip,
+  SplitScore,
+  StatCell,
+  StatStrip,
   PrimaryButton,
   OutlineButton,
   PlateButton,
   SectionHead,
   WhatsAppIcon,
-  readableOn,
   Crown,
 } from "./ui";
 import { PlayoffMatch } from "./PlayoffMatch";
@@ -536,7 +540,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                   localStorage.setItem("14-0-mute", m ? "1" : "0");
                 } catch {}
               }}
-              className="h-9 px-3 rounded-control border border-white/30 text-[13px] lg:text-[14px] font-medium hover:bg-white/8 transition-colors"
+              className="h-9 px-4 rounded-full bg-white/10 text-[13px] lg:text-[14px] font-medium hover:bg-white/18 transition-colors"
             >
               {muted ? t("run.soundOff") : t("run.soundOn")}
             </button>
@@ -548,7 +552,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                 setSimIdx(0);
                 setPoIdx(0);
               }}
-              className="h-9 px-3 rounded-control border border-white/30 text-[13px] lg:text-[14px] font-medium hover:bg-white/8 transition-colors"
+              className="h-9 px-4 rounded-full bg-white/10 text-[13px] lg:text-[14px] font-medium hover:bg-white/18 transition-colors"
             >
               {t("run.restart")}
             </button>
@@ -558,28 +562,41 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
 
       {/* ------------------------------------------------------ set up a run */}
       {!draft && (
-        <div className="mx-auto w-full max-w-[720px] px-5 lg:px-8 pt-5 lg:pt-8 pb-10">
+        <>
+          {(!initialRoom || myRoomMember) && (
+            <PageBand
+              eyebrow={
+                initialRoom
+                  ? t("run.room", { code: initialRoom.toUpperCase() })
+                  : mode === "daily"
+                    ? t("run.dailyWithDate", { date: today })
+                    : t("run.classic")
+              }
+              title={t("setup.title")}
+            />
+          )}
+          <div className="mx-auto w-full max-w-[720px] px-5 lg:px-8 pt-5 lg:pt-8 pb-10">
           {initialRoom && !roomQ && (
             <p className="text-[15px] text-muted text-center py-6">
               Finding room {initialRoom.toUpperCase()}…
             </p>
           )}
           {initialRoom && roomQ === null && (
-            <div className="border border-loss rounded-control p-4 text-center text-[15px]">
+            <div className="bg-surface rounded-card border border-loss p-4 text-center text-[15px]">
               {t("setup.noRoom")}{" "}
-              <button className="underline font-medium" onClick={() => (window.location.search = "")}>
+              <button className="underline font-medium text-accent" onClick={() => (window.location.search = "")}>
                 {t("setup.normalRun")}
               </button>
             </div>
           )}
           {initialRoom && roomQ && !myRoomMember && (
             <div className="bg-surface rounded-card p-5 flex flex-col gap-3">
-              <span className="text-[13px] leading-[18px] text-muted-plate">{t("setup.inviteTitle")}</span>
-              <span className="font-semibold text-[22px] leading-7">
+              <Eyebrow>{t("setup.inviteTitle")}</Eyebrow>
+              <span className="head-display text-[26px] leading-[26px] lg:text-[30px] lg:leading-[28px]">
                 {roomQ.members?.map((m: any) => m.name).join("  vs  ") || "1v1"}
                 {roomQ.members?.length < 2 ? " · one seat open" : ""}
               </span>
-              <span className="text-[15px] leading-[22px] text-body-plate">
+              <span className="text-[15px] leading-[22px] text-muted">
                 {t("setup.inviteRules", { difficulty: t(`difficulty.${roomQ.difficulty}`) })}
               </span>
               <div className="flex gap-2 pt-1">
@@ -588,7 +605,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                   onChange={(e) => setRoomName(e.target.value)}
                   placeholder={t("setup.yourName")}
                   maxLength={14}
-                  className="flex-1 h-13 rounded-control bg-plate border border-plate-line px-3.5 text-[16px] outline-none focus:border-white"
+                  className="flex-1 h-13 rounded-control bg-plate border border-plate-line px-3.5 text-[16px] outline-none focus:border-accent"
                 />
                 <PrimaryButton
                   disabled={!roomName.trim() || roomBusy}
@@ -607,29 +624,26 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
             </div>
           )}
           {initialRoom && roomQ && myRoomMember && (
-            <p className="text-[15px] leading-[22px] text-center border border-hairline rounded-control p-4">
+            <p className="text-[15px] leading-[22px] text-center bg-surface rounded-card p-4">
               {t("setup.playingAs")} <b>{myRoomMember.name}</b>. {t("setup.draftBelow")}
             </p>
           )}
 
           {(!initialRoom || myRoomMember) && (
             <>
-              <h1 className="font-semibold text-[26px] leading-8 lg:text-[32px] lg:leading-10 mt-2">
-                {t("setup.title")}
-              </h1>
-              <p className="text-[15px] leading-[22px] text-muted mt-1">
+              <p className="text-[15px] leading-[22px] lg:text-[16px] lg:leading-6 text-muted">
                 {t("setup.sub")}
               </p>
 
               {!initialRoom && (
-                <div className="mt-6 flex flex-col gap-2.5">
-                  <h2 className="font-semibold text-[17px] leading-[22px]">{t("setup.mode")}</h2>
-                  <div className="grid grid-cols-2 gap-2">
+                <div className="mt-7 flex flex-col gap-3">
+                  <SectionHead title={t("setup.mode")} />
+                  <div className="grid grid-cols-2 gap-2.5">
                     {(["classic", "daily"] as GameMode[]).map((m) => (
                       <button
                         key={m}
                         onClick={() => setMode(m)}
-                        className={`flex flex-col gap-0.5 p-3.5 rounded-control text-left transition-colors ${
+                        className={`flex flex-col gap-0.5 p-4 rounded-card text-left transition-colors ${
                           mode === m ? "bg-surface border-2 border-accent" : "bg-surface border-2 border-transparent hover:bg-white/8"
                         }`}
                       >
@@ -638,7 +652,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                         </span>
                         <span
                           className={`text-[13px] leading-[18px] ${
-                            mode === m ? "text-body-plate" : "text-muted"
+                            mode === m ? "text-white/85" : "text-muted"
                           }`}
                         >
                           {m === "daily" ? t("setup.dailySub") : t("setup.classicSub")}
@@ -649,24 +663,21 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                 </div>
               )}
 
-              <div className="mt-6 flex flex-col gap-2.5">
-                <div className="flex items-baseline gap-2">
-                  <h2 className="font-semibold text-[17px] leading-[22px]">{t("setup.shape")}</h2>
-                  <span className="text-[13px] leading-[18px] text-muted">{t("setup.always11")}</span>
-                </div>
+              <div className="mt-7 flex flex-col gap-2.5">
+                <SectionHead title={t("setup.shape")} note={t("setup.always11")} />
                 {STYLE_TEMPLATES.map((tpl, i) => {
                   const on = styleIdx === i;
                   return (
                     <button
                       key={tpl.name}
                       onClick={() => setStyleIdx(i)}
-                      className={`flex items-center gap-3 p-3.5 rounded-control text-left transition-colors ${
-                        on ? "border-2 border-white/30" : "border border-white/15 hover:bg-white/8"
+                      className={`flex items-center gap-3 p-4 rounded-card bg-surface text-left transition-colors ${
+                        on ? "border-2 border-accent" : "border-2 border-transparent hover:bg-white/8"
                       }`}
                     >
                       <span
                         className={`w-5 h-5 shrink-0 rounded-full ${
-                          on ? "border-[6px] border-white/30" : "border-[1.5px] border-white/25"
+                          on ? "border-[6px] border-accent" : "border-[1.5px] border-white/35"
                         }`}
                       />
                       <span className="flex flex-col gap-1.5 flex-1 min-w-0">
@@ -692,13 +703,13 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
               </div>
 
               {initialRoom && roomQ ? (
-                <p className="mt-6 text-[15px] leading-[22px] text-center border border-hairline rounded-control p-3.5">
+                <p className="mt-7 text-[15px] leading-[22px] text-center bg-surface rounded-card p-4">
                   {t("setup.roomLocked")} <b>{t(`difficulty.${roomQ.difficulty}`)}</b>
                 </p>
               ) : (
-                <div className="mt-6 flex flex-col gap-2.5">
-                  <h2 className="font-semibold text-[17px] leading-[22px]">{t("setup.difficulty")}</h2>
-                  <div className="grid grid-cols-3 gap-2">
+                <div className="mt-7 flex flex-col gap-3">
+                  <SectionHead title={t("setup.difficulty")} />
+                  <div className="grid grid-cols-3 gap-2.5">
                     {(
                       [
                         { d: "Rookie", sub: "setup.rookieSub" },
@@ -709,14 +720,14 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                       <button
                         key={d}
                         onClick={() => setDifficulty(d)}
-                        className={`flex flex-col gap-0.5 p-3 rounded-control text-left transition-colors ${
+                        className={`flex flex-col gap-0.5 p-3.5 rounded-card text-left transition-colors ${
                           difficulty === d ? "bg-surface border-2 border-accent" : "bg-surface border-2 border-transparent hover:bg-white/8"
                         }`}
                       >
                         <span className="font-semibold text-[16px] leading-[22px]">{t(`difficulty.${d}`)}</span>
                         <span
                           className={`text-[13px] leading-[18px] ${
-                            difficulty === d ? "text-body-plate" : "text-muted"
+                            difficulty === d ? "text-white/85" : "text-muted"
                           }`}
                         >
                           {t(sub)}
@@ -747,7 +758,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
 
               {!initialRoom && (
                 <div className="mt-7 pt-6 border-t border-hairline flex flex-col gap-2.5">
-                  <h2 className="font-semibold text-[17px] leading-[22px]">{t("home.friend.title")}</h2>
+                  <SectionHead title={t("home.friend.title")} />
                   <p className="text-[14px] leading-5 text-muted">
                     {t("setup.friendBlurb")}
                   </p>
@@ -757,7 +768,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                       onChange={(e) => setRoomName(e.target.value)}
                       placeholder={t("setup.yourName")}
                       maxLength={14}
-                      className="flex-1 h-13 rounded-control border border-white/25 px-3.5 text-[16px] outline-none focus:border-white/30"
+                      className="flex-1 h-13 rounded-control bg-surface border border-hairline px-3.5 text-[16px] outline-none focus:border-accent"
                     />
                     <OutlineButton
                       className="h-13"
@@ -783,7 +794,8 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
               )}
             </>
           )}
-        </div>
+          </div>
+        </>
       )}
 
       {/* --------------------------------------------------- spin, then pick */}
@@ -791,7 +803,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
         <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-4 lg:pt-6 pb-12">
           <div className="flex flex-col gap-3">
             <div className="flex items-baseline gap-3">
-              <h1 className="font-semibold text-[22px] leading-7 lg:text-[28px] lg:leading-9">
+              <h1 className="head-display text-[28px] leading-[28px] lg:text-[34px] lg:leading-[32px]">
                 {t("draft.pickOf", { n: picked + 1 })}
               </h1>
               <span className="flex-1" />
@@ -860,7 +872,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                             season: spunTeam?.season ?? "",
                           })}
                         </span>
-                        <span className="text-[13px] leading-[18px] lg:text-[15px] lg:leading-[22px] text-muted-plate">
+                        <span className="text-[13px] leading-[18px] lg:text-[15px] lg:leading-[22px] text-muted">
                           {hideRatings ? t("draft.legendNote") : t("draft.takeOne")}
                         </span>
                       </div>
@@ -875,14 +887,16 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                   </div>
 
                   <div className="mt-5 flex flex-col gap-2.5">
-                    <div className="flex flex-col gap-1">
-                      <h2 className="font-semibold text-[17px] leading-[22px] lg:text-[20px] lg:leading-[26px]">
-                        {lastResort
-                          ? t("draft.deadSpin")
-                          : deadSpin
-                            ? t("draft.noFit")
-                            : t("draft.pickFrom", { season: spunTeam?.season ?? "" })}
-                      </h2>
+                    <div className="flex flex-col gap-1.5">
+                      <SectionHead
+                        title={
+                          lastResort
+                            ? t("draft.deadSpin")
+                            : deadSpin
+                              ? t("draft.noFit")
+                              : t("draft.pickFrom", { season: spunTeam?.season ?? "" })
+                        }
+                      />
                       <p className="text-[13px] leading-[18px] lg:text-[14px] lg:leading-5 text-muted">
                         {deadSpin && !lastResort
                           ? t("draft.standIns")
@@ -906,11 +920,10 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
 
       {/* ------------------------------------------------------- XI is locked */}
       {draft && draft.status === "complete" && !result && (
+        <>
+        <PageBand eyebrow={modeLabel} title={t("xi.locked")} />
         <div className="mx-auto w-full max-w-[900px] px-5 lg:px-8 pt-4 lg:pt-7 pb-12">
-          <h1 className="font-semibold text-[26px] leading-8 lg:text-[32px] lg:leading-10">
-            {t("xi.locked")}
-          </h1>
-          <p className="text-[15px] leading-[22px] text-muted mt-1">
+          <p className="text-[15px] leading-[22px] lg:text-[16px] lg:leading-6 text-muted">
             {inRoomGame ? t("xi.lockedRoomSub") : t("xi.lockedSub")}
           </p>
 
@@ -923,7 +936,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
           <div className="mt-5 -mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden bg-surface text-white px-5 py-5 lg:px-7 lg:py-7 flex flex-col gap-5">
             <div className="flex gap-6 lg:gap-10">
               <div className="flex flex-col gap-1">
-                <span className="text-[13px] leading-[18px] text-muted-plate">{t("xi.teamPower")}</span>
+                <Eyebrow>{t("xi.teamPower")}</Eyebrow>
                 <span className="font-display font-bold text-[72px] leading-[62px] pt-1.5 tabular">
                   {hideRatings ? "?" : Math.round(strength?.power ?? 0)}
                 </span>
@@ -935,7 +948,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                   [t("xi.overseas"), t("xi.ofFour", { n: overseas })],
                 ].map(([k, v]) => (
                   <div key={k} className="flex items-baseline gap-2">
-                    <span className="w-[84px] text-[14px] leading-5 text-muted-plate">{k}</span>
+                    <span className="w-[84px] text-[14px] leading-5 text-muted">{k}</span>
                     <span className="font-semibold text-[16px] leading-5">{v}</span>
                   </div>
                 ))}
@@ -943,8 +956,8 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
             </div>
 
             {forecast && !inRoomGame && (
-              <div className="pt-5 border-t border-plate-line flex flex-col gap-2.5">
-                <span className="text-[13px] leading-[18px] text-muted-plate">{t("xi.bookies")}</span>
+              <div className="pt-5 border-t border-hairline flex flex-col gap-2.5">
+                <Eyebrow>{t("xi.bookies")}</Eyebrow>
                 <div className="flex gap-2">
                   {[
                     [String(forecast.expPts), t("xi.expPoints")],
@@ -956,7 +969,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                       <span className="font-display font-semibold text-[30px] leading-7 lg:text-[36px] lg:leading-8 pt-1 tabular">
                         {v}
                       </span>
-                      <span className="text-[13px] leading-[18px] text-body-plate">{k}</span>
+                      <span className="text-[13px] leading-[18px] text-muted">{k}</span>
                     </div>
                   ))}
                 </div>
@@ -969,10 +982,10 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
               roomSubmitted ? (
                 <a
                   href={`/m/${initialRoom!.toUpperCase()}`}
-                  className={`flex items-center justify-center h-14 w-full rounded-control font-semibold text-[17px] transition-colors ${
+                  className={`flex items-center justify-center h-14 w-full rounded-full font-semibold text-[17px] transition-colors ${
                     roomBothReady
-                      ? "bg-turf text-white hover:bg-[#15702f]"
-                      : "border-[1.5px] border-white/30 text-white hover:bg-white/8"
+                      ? "bg-accent text-ground hover:bg-accent-deep"
+                      : "bg-white/10 text-white hover:bg-white/18"
                   }`}
                 >
                   {roomBothReady ? t("xi.startLeague") : t("xi.waitingOpponent")}
@@ -1023,6 +1036,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
             />
           </div>
         </div>
+        </>
       )}
 
       {/* ------------------------------------------------------------ the sim */}
@@ -1043,7 +1057,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                   <Flap
                     label={t("word.lost")}
                     value={simShown.losses}
-                    valueColour="#FF6152"
+                    valueColour={simShown.losses ? "#FF5A47" : "#FFFFFF"}
                     wrapClassName="flex-1 lg:flex-none lg:w-[148px]"
                     className="h-[88px] lg:h-[132px]"
                     valueClassName="text-[72px] leading-[64px] lg:text-[108px] lg:leading-[96px]"
@@ -1051,14 +1065,14 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                 </div>
 
                 <div className="flex flex-col gap-2.5 flex-1 lg:pb-1.5">
-                  <span className="font-semibold text-[20px] leading-[26px] lg:text-[26px] lg:leading-8">
+                  <span className="head-display text-[26px] leading-[26px] lg:text-[32px] lg:leading-[30px]">
                     {simPhase === "league"
                       ? t("league.matchOf", { n: Math.min(simIdx + 1, 14) })
                       : t("league.complete")}
                   </span>
                   <span
                     className={`font-semibold text-[15px] leading-[22px] lg:text-[17px] lg:leading-6 ${
-                      simShown.losses === 0 && simShown.wins > 0 ? "text-turf-soft" : "text-body-plate"
+                      simShown.losses === 0 && simShown.wins > 0 ? "text-turf-soft" : "text-muted"
                     }`}
                   >
                     {simPhase === "leagueDone"
@@ -1069,20 +1083,6 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                         })
                       : leagueLine(simShown.wins, simShown.losses, t)}
                   </span>
-                  <div className="flex gap-6 lg:gap-8 pt-1">
-                    {[
-                      [String(simShown.wins * 2), t("word.points")],
-                      [`${simShown.nrr > 0 ? "+" : ""}${simShown.nrr}`, t("word.nrr")],
-                      [`${leagueRuns(simShown.games)}`, t("word.runsScored")],
-                    ].map(([v, k]) => (
-                      <div key={k} className="flex flex-col gap-0.5">
-                        <span className="font-display font-semibold text-[26px] leading-6 lg:text-[32px] lg:leading-7 pt-1 tabular">
-                          {v}
-                        </span>
-                        <span className="text-[13px] leading-[18px] text-body-plate">{k}</span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
                 <div className="flex gap-2.5 lg:shrink-0 lg:pb-2">
@@ -1100,6 +1100,16 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                 </div>
               </div>
 
+              <StatStrip className="mt-3">
+                <StatCell label={t("word.points")} value={simShown.wins * 2} tone="good" />
+                <StatCell
+                  label={t("word.nrr")}
+                  value={`${simShown.nrr > 0 ? "+" : ""}${simShown.nrr}`}
+                  tone={simShown.nrr >= 0 ? "plain" : "bad"}
+                />
+                <StatCell label={t("word.runsScored")} value={leagueRuns(simShown.games)} />
+              </StatStrip>
+
               <div
                 className={`mt-6 flex flex-col ${
                   simPhase === "leagueDone" ? "lg:flex-row lg:gap-12 lg:items-start" : ""
@@ -1112,7 +1122,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                   />
                   <div
                     ref={feedRef}
-                    className={`mt-2.5 ${
+                    className={`mt-3 flex flex-col gap-2.5 ${
                       simPhase === "league"
                         ? "h-[360px] lg:h-[440px] overflow-y-auto pr-1"
                         : ""
@@ -1125,7 +1135,6 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                         n={i + 1}
                         g={g}
                         hero={leagueHero(g, i, t, result.matchStars[i])}
-                        last={i === simShown.games.length - 1}
                       />
                     ))}
                   </div>
@@ -1188,17 +1197,16 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
           {simPhase === "playoffs" && (
             <div className="mx-auto w-full max-w-[900px] px-5 lg:px-8 pt-5 pb-12 flex flex-col gap-3.5">
               <div className="flex items-baseline gap-3">
-                <h1 className="font-semibold text-[22px] leading-7 lg:text-[26px] lg:leading-8">{t("po.title")}</h1>
+                <h1 className="head-display text-[28px] leading-[28px] lg:text-[34px] lg:leading-[32px]">
+                  {t("po.title")}
+                </h1>
                 <span className="text-[14px] leading-5 text-muted">
                   {t("po.via", { rank: result.rank, w: result.wins, l: result.losses })}
                 </span>
                 <span className="flex-1" />
-                <button
-                  onClick={() => setSimSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}
-                  className="h-9 px-3 rounded-control border border-white/30 text-[13px] font-medium"
-                >
+                <PlateButton onClick={() => setSimSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}>
                   {t("league.speed", { n: simSpeed })}
-                </button>
+                </PlateButton>
               </div>
               {nonFinals.slice(0, poIdx).map((p, i) => (
                 <PlayoffSummary key={i} stage={t(`stage.${p.stage}`)} gf={p.gf} ga={p.ga} win={p.result === "W"} margin={p.margin} />
@@ -1226,11 +1234,11 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
           {simPhase === "preFinal" && finalGame && (
             <div className="mx-auto w-full max-w-[900px] px-5 lg:px-8 pt-5 pb-12">
               <div className="-mx-5 lg:mx-0 lg:rounded-card bg-surface text-white px-5 py-8 lg:px-10 lg:py-12 text-center flex flex-col items-center gap-3">
-                <span className="text-[13px] leading-[18px] text-muted-plate">{t("po.theFinal")}</span>
-                <span className="font-semibold text-[28px] leading-9 lg:text-[40px] lg:leading-[48px]">
+                <Eyebrow tone="trophy">{t("po.theFinal")}</Eyebrow>
+                <span className="head-display text-[36px] leading-[34px] lg:text-[52px] lg:leading-[48px]">
                   {t("po.versus", { opp: finalGame.detail?.opp ?? "?" })}
                 </span>
-                <span className="text-[15px] leading-[22px] text-body-plate">
+                <span className="text-[15px] leading-[22px] text-muted">
                   {t("po.oneGame")}
                 </span>
                 <PrimaryButton className="mt-3 w-full sm:w-auto px-10" onClick={() => setSimPhase("final")}>
@@ -1256,6 +1264,11 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
 
           {simPhase === "done" && (
             <div className="pb-12">
+              <PageBand
+                eyebrow={modeLabel}
+                title={headline(result, t)}
+                tone={result.champion ? "trophy" : "accent"}
+              />
               <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-4 lg:pt-6">
                 <div className="-mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden bg-surface text-white px-5 py-6 lg:px-9 lg:py-9 flex flex-col xl:flex-row xl:items-end gap-6 xl:gap-10 2xl:gap-14">
                   <div className="flex gap-3 xl:gap-3.5 xl:shrink-0">
@@ -1270,40 +1283,18 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     <Flap
                       label={t("word.lost")}
                       value={result.losses}
-                      valueColour="#FF6152"
+                      valueColour={result.losses ? "#FF5A47" : "#FFFFFF"}
                       wrapClassName="flex-1 xl:flex-none xl:w-[150px] 2xl:w-[196px]"
                       className="h-[120px] xl:h-[180px] 2xl:h-[224px]"
                       valueClassName="text-[112px] leading-[98px] xl:text-[132px] xl:leading-[114px] 2xl:text-[176px] 2xl:leading-[152px]"
                     />
                   </div>
 
-                  <div className="flex flex-col gap-4 flex-1 min-w-0">
-                    <h1
-                      className={`font-semibold text-[28px] leading-[34px] lg:text-[36px] lg:leading-[44px] 2xl:text-[40px] 2xl:leading-[48px] ${
-                        result.champion ? "text-trophy" : ""
-                      }`}
-                    >
-                      {headline(result, t)}
-                    </h1>
-                    <p className="text-[15px] leading-[22px] lg:text-[17px] lg:leading-[26px] text-body-plate">
+                  <div className="flex flex-col gap-4 flex-1 min-w-0 xl:pb-1">
+                    <p className="text-[15px] leading-[22px] lg:text-[17px] lg:leading-[26px] text-muted">
                       {resultBlurb(result, t)}
                     </p>
                     <SeasonStrip result={result} />
-                    <div className="flex flex-wrap gap-x-8 gap-y-3 pt-1">
-                      {[
-                        [String(result.points), t("word.points")],
-                        [`${result.nrr > 0 ? "+" : ""}${result.nrr}`, t("word.nrr")],
-                        [ordinal(result.rank, t), t("word.onTheTable")],
-                        [t(`difficulty.${draft.difficulty}`), t("word.difficulty")],
-                      ].map(([v, k]) => (
-                        <div key={k} className="flex flex-col gap-0.5">
-                          <span className="font-display font-semibold text-[30px] leading-7 lg:text-[34px] lg:leading-[30px] pt-1 tabular">
-                            {v}
-                          </span>
-                          <span className="text-[13px] leading-[18px] text-body-plate">{k}</span>
-                        </div>
-                      ))}
-                    </div>
                   </div>
 
                   <div className="flex flex-col gap-2.5 xl:w-[268px] xl:shrink-0">
@@ -1319,6 +1310,28 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                     />
                   </div>
                 </div>
+
+                <StatStrip className="mt-3">
+                  <StatCell
+                    label={t("word.points")}
+                    value={result.points}
+                    tone={result.champion ? "trophy" : "good"}
+                  />
+                  <StatCell
+                    label={t("word.nrr")}
+                    value={`${result.nrr > 0 ? "+" : ""}${result.nrr}`}
+                    tone={result.nrr >= 0 ? "plain" : "bad"}
+                  />
+                  <StatCell
+                    label={t("word.onTheTable")}
+                    value={ordinal(result.rank, t)}
+                    tone={result.madePlayoffs ? "accent" : "plain"}
+                  />
+                  <StatCell
+                    label={t("word.difficulty")}
+                    value={t(`difficulty.${draft.difficulty}`)}
+                  />
+                </StatStrip>
               </div>
 
               <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 mt-8">
@@ -1442,7 +1455,7 @@ function SeasonStrip({ result }: { result: SeasonResult }) {
         <span
           key={i}
           className="flex-1 h-2.5 rounded-[2px]"
-          style={{ backgroundColor: g.result === "W" ? "#1A8A3C" : "#D8321F" }}
+          style={{ backgroundColor: g.result === "W" ? "#1A8A3C" : "#FF5A47" }}
         />
       ))}
       {result.playoffs.length > 0 && <span className="w-2.5" />}
@@ -1450,7 +1463,7 @@ function SeasonStrip({ result }: { result: SeasonResult }) {
         <span
           key={`p${i}`}
           className="flex-1 h-2.5 rounded-[2px]"
-          style={{ backgroundColor: p.result === "W" ? "#E0A81C" : "#D8321F" }}
+          style={{ backgroundColor: p.result === "W" ? "#E0A81C" : "#FF5A47" }}
         />
       ))}
     </div>
@@ -1483,7 +1496,9 @@ function StyleStrip({ config }: { config: XIConfig }) {
   );
 }
 
-function MatchRow({ n, g, hero, last }: { n: number; g: GameResult; hero: string; last?: boolean }) {
+/** One finished league game, as a match card: the result line, the split
+    scoreboard, then who won it for you. */
+function MatchRow({ n, g, hero }: { n: number; g: GameResult; hero: string }) {
   const t = useT();
   const win = g.result === "W";
   const colour = oppColour(g.opp);
@@ -1496,36 +1511,35 @@ function MatchRow({ n, g, hero, last }: { n: number; g: GameResult; hero: string
     ? t(win ? "match.beatSO" : "match.lostToSO", { opp: g.opp })
     : t(win ? "match.beat" : "match.lostTo", { opp: g.opp, margin: m });
   return (
-    <div
-      className={`flex items-center gap-2.5 lg:gap-3.5 py-2.5 border-t border-hairline ${
-        last ? "border-b" : ""
-      }`}
-    >
-      <span className="w-7 lg:w-8 shrink-0 text-[13px] leading-[18px] text-muted">M{n}</span>
-      <span
-        className="w-6 h-6 lg:w-[26px] lg:h-[26px] shrink-0 flex items-center justify-center rounded font-display font-bold text-[18px] lg:text-[19px] leading-none text-white pt-[2px]"
-        style={{ backgroundColor: win ? "#1A8A3C" : "#D8321F" }}
-      >
-        {g.result}
-      </span>
-      <span
-        className="hidden sm:flex w-14 h-[22px] shrink-0 items-center justify-center rounded-chip font-display font-semibold text-[15px] leading-none pt-[2px]"
-        style={{ backgroundColor: colour, color: readableOn(colour) }}
-      >
-        {g.opp}
-      </span>
-      <span className="flex flex-col flex-1 min-w-0 xl:flex-row xl:items-baseline xl:gap-3.5">
-        <span className="font-medium text-[15px] leading-5 xl:w-[210px] xl:shrink-0 truncate">
+    <div className="bg-surface rounded-card overflow-hidden">
+      <div className="flex items-center gap-2.5 px-3.5 lg:px-4 py-2.5">
+        <span
+          className={`w-6 h-6 lg:w-[26px] lg:h-[26px] shrink-0 flex items-center justify-center rounded-chip font-display font-bold text-[18px] lg:text-[19px] leading-none text-white pt-[2px] ${
+            win ? "bg-turf" : "bg-loss"
+          }`}
+        >
+          {g.result}
+        </span>
+        <span className="flex-1 min-w-0 font-medium text-[15px] leading-5 truncate">
           <span className="sm:hidden">{narrow}</span>
           <span className="hidden sm:inline">{wide}</span>
         </span>
-        <span className="text-[13px] leading-[18px] xl:text-[14px] xl:leading-5 text-muted truncate">
-          {hero}
-        </span>
-      </span>
-      <span className="shrink-0 text-right font-display font-semibold text-[19px] leading-5 lg:text-[22px] tabular pt-[3px] whitespace-nowrap">
-        {g.gf} · {g.ga}
-      </span>
+        <Eyebrow tone="muted" className="shrink-0">
+          M{n}
+        </Eyebrow>
+      </div>
+      <SplitScore
+        homeName={t("table.yourXI")}
+        homeScore={g.gf}
+        awayName={g.opp}
+        awayScore={g.ga}
+        awayColour={colour}
+        height="h-[84px] lg:h-[92px]"
+        scoreClass="text-[32px] leading-[32px] lg:text-[38px] lg:leading-[36px]"
+      />
+      <div className="px-3.5 lg:px-4 py-2.5 text-[13px] leading-[18px] lg:text-[14px] lg:leading-5 text-muted truncate">
+        {hero}
+      </div>
     </div>
   );
 }
@@ -1535,7 +1549,8 @@ function PointsTable({ rows, championIsYou }: { rows: SeasonResult["table"]; cha
   return (
     <section className="flex flex-col">
       <SectionHead title={t("table.title")} note={t("table.topFour")} />
-      <div className="flex items-center gap-2 h-7 mt-1 text-[12px] leading-4 text-muted">
+      <div className="mt-3 bg-surface rounded-card px-3 pt-1 pb-2">
+      <div className="flex items-center gap-2 h-7 px-2 text-[12px] leading-4 text-muted">
         <span className="w-[22px] shrink-0" />
         <span className="flex-1">{t("table.team")}</span>
         <span className="w-[26px] shrink-0 text-right">P</span>
@@ -1589,12 +1604,13 @@ function PointsTable({ rows, championIsYou }: { rows: SeasonResult["table"]; cha
             </span>
           </div>
           {i === 3 && (
-            <div className="flex items-center h-7 pt-1.5 border-t-2 border-white/30">
-              <span className="text-[12px] leading-4 text-muted">{t("table.cut")}</span>
+            <div className="flex items-center h-7 pt-1.5 px-2 border-t-2 border-accent/50">
+              <Eyebrow tone="muted">{t("table.cut")}</Eyebrow>
             </div>
           )}
         </div>
       ))}
+      </div>
     </section>
   );
 }
@@ -1614,11 +1630,14 @@ function PlayoffSummary({
 }) {
   const t = useT();
   return (
-    <div className="flex items-center gap-3 py-3 border-t border-hairline">
-      <span className="w-[110px] shrink-0 text-[13px] leading-[18px] text-muted">{stage}</span>
+    <div className="flex items-center gap-3 bg-surface rounded-card px-3.5 py-3">
+      <Eyebrow tone={win ? "trophy" : "muted"} className="w-[110px] shrink-0">
+        {stage}
+      </Eyebrow>
       <span
-        className="w-6 h-6 shrink-0 flex items-center justify-center rounded font-display font-bold text-[18px] leading-none text-white pt-[2px]"
-        style={{ backgroundColor: win ? "#E0A81C" : "#D8321F", color: win ? "#000" : "#fff" }}
+        className={`w-6 h-6 shrink-0 flex items-center justify-center rounded-chip font-display font-bold text-[18px] leading-none pt-[2px] ${
+          win ? "bg-trophy text-ground" : "bg-loss text-white"
+        }`}
       >
         {win ? "W" : "L"}
       </span>
@@ -1658,7 +1677,7 @@ function ShareButtons({
         href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center justify-center gap-2.5 h-14 rounded-control bg-turf text-white font-semibold text-[16px] hover:bg-[#15702f] transition-colors"
+        className="flex items-center justify-center gap-2.5 h-14 px-6 rounded-full bg-turf text-white font-semibold text-[17px] whitespace-nowrap hover:bg-[#15702f] active:bg-[#125f28] transition-colors"
       >
         <WhatsAppIcon />
         {t("share.whatsapp")}
@@ -1686,11 +1705,7 @@ function ShareButtons({
       >
         {challengeCopied ? t("share.linkCopied") : t("share.challenge")}
       </OutlineButton>
-      <p
-        className={`text-[13px] leading-[18px] pt-0.5 ${
-          onPlate ? "text-muted-plate" : "text-muted"
-        }`}
-      >
+      <p className="text-[13px] leading-[18px] pt-0.5 text-muted">
         {t("share.replayNote", { seed })}
       </p>
     </>

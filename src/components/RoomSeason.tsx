@@ -16,10 +16,23 @@ import {
 } from "@/lib/sim/engine";
 import { buildPlayerSeasons } from "@/lib/game/data";
 import { mulberry32, type Difficulty, type PlayerSeason } from "@/lib/game/types";
-import { PlayoffMatch, type PlayoffDetail } from "./PlayoffMatch";
+import { PlayoffMatch, franchiseColour, type PlayoffDetail } from "./PlayoffMatch";
 import { SeasonReport } from "./SeasonReport";
 import { copyText } from "@/lib/clipboard";
-import { Flap, PrimaryButton, OutlineButton, PlateButton, SectionHead, WhatsAppIcon, Crown } from "./ui";
+import {
+  Crown,
+  Eyebrow,
+  Flap,
+  OutlineButton,
+  PageBand,
+  PlateButton,
+  PrimaryButton,
+  SectionHead,
+  SplitScore,
+  StatCell,
+  StatStrip,
+  WhatsAppIcon,
+} from "./ui";
 import { useT, localiseMargin, ordinal } from "@/lib/i18n";
 
 function stageWords(stage: string | undefined, t: (k: string) => string): string {
@@ -357,11 +370,24 @@ export function RoomSeason({ room }: { room: any }) {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* One band for the room. The knockout screens bring their own. */}
+      {phase !== "playoffs" && phase !== "final" && (
+        <PageBand
+          eyebrow={t("mroom.headerMeta", {
+            code: room.code,
+            difficulty: t(`difficulty.${room.difficulty}`),
+          })}
+          title={mate ? t("room.finalVersus", { me: myName, opp: mate.name }) : t("home.friend.title")}
+          tone={phase === "done" && !holdForMate && report.champion ? "trophy" : "accent"}
+          className="-mx-5 lg:mx-0 lg:rounded-card"
+        />
+      )}
+
       {(phase === "league" || phase === "leagueDone") && (
         <>
           <div className="-mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden bg-surface text-white px-5 py-6 lg:px-8 lg:py-8 flex flex-col items-center gap-5">
             <div className="w-full flex items-center gap-3">
-              <span className="text-[13px] leading-[18px] text-muted-plate truncate">
+              <span className="text-[13px] leading-[18px] text-muted truncate">
                 {t("room.youAre", { name: myName })}
               </span>
               <span className="flex-1" />
@@ -402,12 +428,12 @@ export function RoomSeason({ room }: { room: any }) {
             </div>
 
             <div className="flex flex-col items-center gap-1 text-center">
-              <span className="font-semibold text-[20px] leading-[26px] sm:text-[24px] sm:leading-8">
+              <span className="head-display text-[26px] leading-[26px] sm:text-[30px] sm:leading-8">
                 {phase === "league"
                   ? t("room.roundOf", { n: myFixtures[Math.min(simIdx, myFixtures.length - 1)]?.round ?? 18 })
                   : t("league.complete")}
               </span>
-              <span className="text-[15px] leading-[22px] text-body-plate">
+              <span className="text-[15px] leading-[22px] text-muted">
                 {phase === "league"
                   ? losses === 0 && wins > 0
                     ? t("room.unbeatenAfter", { n: wins })
@@ -420,23 +446,23 @@ export function RoomSeason({ room }: { room: any }) {
               </span>
             </div>
 
-            {phase === "leagueDone" && (
-              <div className="flex gap-8 sm:gap-12 pt-1">
-                {[
-                  [String(report.points), t("word.points")],
-                  [`${report.nrr > 0 ? "+" : ""}${report.nrr}`, t("word.nrr")],
-                  [ordinal(report.rank, t), t("word.onTheTable")],
-                ].map(([v, k]) => (
-                  <div key={k} className="flex flex-col items-center gap-0.5">
-                    <span className="font-display font-semibold text-[30px] leading-7 pt-1 tabular">
-                      {v}
-                    </span>
-                    <span className="text-[13px] leading-[18px] text-body-plate">{k}</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
+
+          {phase === "leagueDone" && (
+            <StatStrip className="-mx-5 lg:mx-0 rounded-none lg:rounded-card">
+              <StatCell label={t("word.points")} value={report.points} />
+              <StatCell
+                label={t("word.nrr")}
+                value={`${report.nrr > 0 ? "+" : ""}${report.nrr}`}
+                tone={report.nrr >= 0 ? "good" : "bad"}
+              />
+              <StatCell
+                label={t("word.onTheTable")}
+                value={ordinal(report.rank, t)}
+                tone={report.madePlayoffs ? "trophy" : "plain"}
+              />
+            </StatStrip>
+          )}
 
           <div>
             <SectionHead
@@ -475,42 +501,75 @@ export function RoomSeason({ room }: { room: any }) {
                           balls: st.bat.balls,
                         })
                     : t("room.theirNight");
+                const line =
+                  f.margin === "Super Over"
+                    ? hero
+                    : t("room.feedLine", {
+                        result: t(won ? "match.won" : "match.lost", {
+                          margin: localiseMargin(f.margin, t),
+                        }),
+                        hero,
+                      });
+                const badge = `w-6 h-6 shrink-0 flex items-center justify-center rounded-chip font-display font-bold text-[18px] leading-none pt-[2px] ${
+                  won ? "bg-turf text-white" : "bg-loss text-ground"
+                }`;
                 return (
                   <div key={i}>
-                    <button
-                      onClick={() => (isH2H && f.detail ? setExpanded(expanded === i ? null : i) : undefined)}
-                      className={`w-full flex items-center gap-2.5 lg:gap-3.5 py-2.5 text-left border-t border-hairline ${
-                        i === shown.length - 1 ? "border-b" : ""
-                      } ${isH2H && f.detail ? "hover:bg-white/8" : ""}`}
-                    >
-                      <span className="w-7 shrink-0 text-[13px] leading-[18px] text-muted">R{f.round}</span>
-                      <span
-                        className="w-6 h-6 shrink-0 flex items-center justify-center rounded font-display font-bold text-[18px] leading-none text-white pt-[2px]"
-                        style={{ backgroundColor: won ? "#1A8A3C" : "#D8321F" }}
+                    {/* The two games against the other manager are the ones that
+                        matter, so they get the full match card. */}
+                    {isH2H ? (
+                      <button
+                        onClick={() => (isH2H && f.detail ? setExpanded(expanded === i ? null : i) : undefined)}
+                        className={`w-full my-2.5 block text-left bg-surface rounded-card overflow-hidden ${
+                          isH2H && f.detail ? "hover:bg-white/8" : ""
+                        }`}
                       >
-                        {won ? "W" : "L"}
-                      </span>
-                      <span className="flex flex-col flex-1 min-w-0 lg:flex-row lg:items-baseline lg:gap-3.5">
-                        <span className="font-medium text-[15px] leading-5 lg:w-[220px] lg:shrink-0 truncate">
-                          {isH2H ? t("room.headToHead", { name: opp }) : opp}
+                        <span className="flex items-center justify-between gap-3 px-4 pt-3 pb-2">
+                          <Eyebrow>{t("room.headToHead", { name: opp })}</Eyebrow>
+                          <span className="text-[12px] leading-4 text-muted shrink-0">
+                            {t("room.h2hRound", { n: f.round })}
+                          </span>
                         </span>
-                        <span className="text-[13px] leading-[18px] lg:text-[14px] text-muted truncate">
-                          {f.margin === "Super Over"
-                            ? hero
-                            : t("room.feedLine", {
-                                result: t(won ? "match.won" : "match.lost", {
-                                  margin: localiseMargin(f.margin, t),
-                                }),
-                                hero,
-                              })}
+                        <SplitScore
+                          homeName={myName}
+                          homeScore={iAmHome ? f.hs : f.as}
+                          awayName={opp}
+                          awayScore={iAmHome ? f.as : f.hs}
+                          awayColour={franchiseColour(opp)}
+                          height="h-[84px]"
+                          scoreClass="text-[34px] leading-[32px] lg:text-[38px] lg:leading-[36px]"
+                        />
+                        <span className="flex items-center gap-2.5 px-4 py-2.5 border-t border-hairline">
+                          <span className={badge}>{won ? "W" : "L"}</span>
+                          <span className="flex-1 min-w-0 text-[13px] leading-[18px] lg:text-[14px] text-muted truncate">
+                            {line}
+                          </span>
                         </span>
-                      </span>
-                      <span className="shrink-0 text-right font-display font-semibold text-[19px] leading-5 lg:text-[22px] tabular pt-[3px] whitespace-nowrap">
-                        <span className="text-white">{iAmHome ? f.hs : f.as}</span>
-                        <span className="text-faint"> · </span>
-                        <span className="text-muted">{iAmHome ? f.as : f.hs}</span>
-                      </span>
-                    </button>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => (isH2H && f.detail ? setExpanded(expanded === i ? null : i) : undefined)}
+                        className={`w-full min-h-[44px] flex items-center gap-2.5 lg:gap-3.5 py-2.5 text-left border-t border-hairline ${
+                          i === shown.length - 1 ? "border-b" : ""
+                        }`}
+                      >
+                        <span className="w-7 shrink-0 text-[13px] leading-[18px] text-muted">R{f.round}</span>
+                        <span className={badge}>{won ? "W" : "L"}</span>
+                        <span className="flex flex-col flex-1 min-w-0 lg:flex-row lg:items-baseline lg:gap-3.5">
+                          <span className="font-display font-semibold text-[19px] leading-5 pt-[3px] lg:w-[220px] lg:shrink-0 truncate">
+                            {opp}
+                          </span>
+                          <span className="text-[13px] leading-[18px] lg:text-[14px] text-muted truncate">
+                            {line}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-right font-display font-semibold text-[19px] leading-5 lg:text-[22px] tabular pt-[3px] whitespace-nowrap">
+                          <span className="text-white">{iAmHome ? f.hs : f.as}</span>
+                          <span className="text-faint"> · </span>
+                          <span className="text-muted">{iAmHome ? f.as : f.hs}</span>
+                        </span>
+                      </button>
+                    )}
                     {expanded === i && isH2H && f.detail && (
                       <div className="py-4">
                         <PlayoffMatch
@@ -564,12 +623,10 @@ export function RoomSeason({ room }: { room: any }) {
 
       {phase === "playoffs" && (
         <div className="flex flex-col gap-3.5">
-          <div className="flex items-baseline gap-3">
-            <h2 className="font-semibold text-[20px] leading-[26px]">{t("po.title")}</h2>
-            <span className="text-[14px] leading-5 text-muted">
-              {t("po.via", { rank: report.rank, w: report.wins, l: report.losses })}
-            </span>
-          </div>
+          <SectionHead
+            title={t("po.title")}
+            note={t("po.via", { rank: report.rank, w: report.wins, l: report.losses })}
+          />
           {myNonFinals.slice(0, poIdx).map((p, i) => (
             <PlayoffSummary key={i} p={p} myIdx={myIdx} teams={league.teams} />
           ))}
@@ -597,9 +654,9 @@ export function RoomSeason({ room }: { room: any }) {
       )}
 
       {phase === "preFinal" && myFinal && (
-        <div className="-mx-5 lg:mx-0 lg:rounded-card bg-surface text-white px-5 py-8 lg:px-10 lg:py-12 text-center flex flex-col items-center gap-3">
-          <span className="text-[13px] leading-[18px] text-muted-plate">{t("po.theFinal")}</span>
-          <span className="font-semibold text-[26px] leading-8 lg:text-[36px] lg:leading-[44px]">
+        <div className="-mx-5 lg:mx-0 rounded-none lg:rounded-card bg-surface text-white px-5 py-8 lg:px-10 lg:py-12 text-center flex flex-col items-center gap-3">
+          <Eyebrow tone="trophy">{t("po.theFinal")}</Eyebrow>
+          <span className="head-display text-[34px] leading-9 lg:text-[52px] lg:leading-[52px]">
             {t("room.finalVersus", { me: myName, opp: oppOf(myFinal, myIdx, league) })}
           </span>
           <PrimaryButton className="mt-3 w-full sm:w-auto sm:px-10" onClick={() => setPhase("final")}>
@@ -622,11 +679,11 @@ export function RoomSeason({ room }: { room: any }) {
 
       {phase === "done" && holdForMate && (
         <div className="flex flex-col gap-4">
-          <div className="-mx-5 lg:mx-0 lg:rounded-card bg-surface text-white px-5 py-7 lg:px-9 lg:py-9 flex flex-col items-center gap-3 text-center">
-            <span className="font-semibold text-[24px] leading-8 lg:text-[30px] lg:leading-10">
+          <div className="-mx-5 lg:mx-0 rounded-none lg:rounded-card bg-surface text-white px-5 py-7 lg:px-9 lg:py-9 flex flex-col items-center gap-3 text-center">
+            <span className="head-display text-[30px] leading-8 lg:text-[38px] lg:leading-10">
               {t("room.noSpoilers")}
             </span>
-            <span className="text-[15px] leading-[22px] lg:text-[17px] lg:leading-[26px] text-body-plate max-w-[52ch]">
+            <span className="text-[15px] leading-[22px] lg:text-[17px] lg:leading-[26px] text-muted max-w-[52ch]">
               {t("room.stillWatching", { name: mate!.name })}
             </span>
           </div>
@@ -653,7 +710,7 @@ export function RoomSeason({ room }: { room: any }) {
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
             <h2
-              className={`flex items-center gap-2.5 font-semibold text-[26px] leading-8 lg:text-[32px] lg:leading-10 ${
+              className={`flex items-center gap-2.5 head-display text-[30px] leading-8 lg:text-[40px] lg:leading-10 ${
                 report.champion ? "text-trophy" : ""
               }`}
             >
@@ -751,21 +808,31 @@ function PlayoffSummary({ p, myIdx, teams }: { p: SharedPlayoff; myIdx: number; 
   const t = useT();
   const iAmHome = p.t1 === myIdx;
   const win = p.winner === myIdx;
+  const opp = teams[iAmHome ? p.t2 : p.t1].name;
   return (
-    <div className="flex items-center gap-3 py-3 border-t border-hairline">
-      <span className="w-[110px] shrink-0 text-[13px] leading-[18px] text-muted">{t(`stage.${p.stage}`)}</span>
-      <span
-        className="w-6 h-6 shrink-0 flex items-center justify-center rounded font-display font-bold text-[18px] leading-none pt-[2px]"
-        style={{ backgroundColor: win ? "#E0A81C" : "#D8321F", color: win ? "#000" : "#fff" }}
-      >
-        {win ? "W" : "L"}
-      </span>
-      <span className="flex-1 min-w-0 text-[15px] leading-5 truncate">
-        {t(win ? "match.won" : "match.lost", { margin: localiseMargin(p.margin, t) })} · {teams[iAmHome ? p.t2 : p.t1].name}
-      </span>
-      <span className="shrink-0 font-display font-semibold text-[20px] leading-5 pt-[3px] tabular">
-        {iAmHome ? p.s1 : p.s2} · {iAmHome ? p.s2 : p.s1}
-      </span>
+    <div className="bg-surface rounded-card overflow-hidden">
+      <SplitScore
+        homeName={teams[myIdx].name}
+        homeScore={iAmHome ? p.s1 : p.s2}
+        homeNote={t(`stage.${p.stage}`)}
+        awayName={opp}
+        awayScore={iAmHome ? p.s2 : p.s1}
+        awayColour={franchiseColour(opp)}
+        height="h-[84px]"
+        scoreClass="text-[34px] leading-[32px] lg:text-[38px] lg:leading-[36px]"
+      />
+      <div className="flex items-center gap-2.5 px-4 py-2.5 border-t border-hairline">
+        <span
+          className={`w-6 h-6 shrink-0 flex items-center justify-center rounded-chip font-display font-bold text-[18px] leading-none pt-[2px] ${
+            win ? "bg-trophy text-ground" : "bg-loss text-ground"
+          }`}
+        >
+          {win ? "W" : "L"}
+        </span>
+        <span className="flex-1 min-w-0 text-[13px] leading-[18px] lg:text-[14px] text-muted truncate">
+          {t(win ? "match.won" : "match.lost", { margin: localiseMargin(p.margin, t) })}
+        </span>
+      </div>
     </div>
   );
 }
@@ -851,11 +918,24 @@ function RoomShare({ share, copied, setCopied, code }: { share: string; copied: 
   const t = useT();
   return (
     <div className="mt-6 flex flex-col gap-2.5 max-w-[420px]">
+      {/* The code reads off the board, one flap per character. */}
+      <Eyebrow tone="muted">{t("mroom.roomCode")}</Eyebrow>
+      <div className="flex gap-1.5">
+        {code.split("").map((ch, i) => (
+          <Flap
+            key={i}
+            value={ch}
+            wrapClassName="flex-1 min-w-0"
+            className="h-[52px]"
+            valueClassName="text-[30px] leading-[28px]"
+          />
+        ))}
+      </div>
       <a
         href={`https://wa.me/?text=${encodeURIComponent(share)}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center justify-center gap-2.5 h-14 rounded-control bg-turf text-white font-semibold text-[16px] hover:bg-[#15702f] transition-colors"
+        className="flex items-center justify-center gap-2.5 h-14 px-8 rounded-full bg-turf text-white font-semibold text-[17px] whitespace-nowrap hover:bg-[#15702f] active:bg-[#125f28] transition-colors mt-1"
       >
         <WhatsAppIcon />
         {t("share.whatsapp")}

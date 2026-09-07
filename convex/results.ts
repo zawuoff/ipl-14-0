@@ -81,12 +81,20 @@ export const leaderboard = query({
   args: {
     mode: v.optional(v.union(v.literal("classic"), v.literal("daily"))),
     dailyDate: v.optional(v.string()),
+    // Every run played on one IST day, whichever mode it was. `dailyDate` is
+    // narrower: only runs of that day's shared challenge.
+    day: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const lim = Math.min(50, args.limit ?? 20);
     let rows;
-    if (args.dailyDate) {
+    if (args.day) {
+      rows = await ctx.db
+        .query("simResults")
+        .withIndex("by_day", (q) => q.eq("day", args.day))
+        .take(4000);
+    } else if (args.dailyDate) {
       rows = await ctx.db
         .query("simResults")
         .withIndex("by_daily", (q) => q.eq("dailyDate", args.dailyDate))

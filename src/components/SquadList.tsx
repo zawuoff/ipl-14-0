@@ -50,9 +50,10 @@ function PlayerRow({
           {off ? reason : p.overseas ? `${p.country} · ${t("xi.overseas")}` : p.country}
         </span>
       </span>
+      {/* The role is what makes a name takeable, so it carries the accent. */}
       <span
-        className={`w-[84px] shrink-0 text-right font-medium text-[14px] leading-[18px] ${
-          off ? "text-faint" : ""
+        className={`w-[84px] shrink-0 text-right font-semibold text-[14px] leading-[18px] ${
+          off ? "text-faint" : "text-accent"
         }`}
       >
         {t(`role.${p.role}`)}

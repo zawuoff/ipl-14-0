@@ -2,7 +2,15 @@
 import { use } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { Flap, SectionHead, PrimaryButton, Wordmark } from "@/components/ui";
+import {
+  Flap,
+  PageBand,
+  SectionHead,
+  PrimaryButton,
+  StatCell,
+  StatStrip,
+  Wordmark,
+} from "@/components/ui";
 import { useT, LangToggle, localiseMargin } from "@/lib/i18n";
 
 const CODE_COLOUR: Record<string, string> = {
@@ -35,22 +43,38 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
 
   return (
     <main className="min-h-screen bg-ground text-white flex flex-col">
-      <header className="border-b border-hairline">
-        <div className="mx-auto w-full max-w-[1000px] px-5 lg:px-8 py-3.5 flex items-center gap-3">
+      <header className="bg-band">
+        <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 h-[60px] lg:h-[72px] flex items-center gap-3">
           <a href="/" className="flex items-baseline gap-3">
             <Wordmark className="text-[30px]" />
-            <span className="text-[13px] leading-[18px] text-muted">{t("nav.backToGame")}</span>
+            <span className="text-[13px] leading-[18px] text-white/70">{t("nav.backToGame")}</span>
           </a>
           <span className="flex-1" />
-          <LangToggle className="w-11 h-8 text-[14px]" />
+          <LangToggle className="w-11 h-9 text-[14px]" />
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-[1000px] px-5 lg:px-8 pt-5 pb-12">
+      {r && (
+        <PageBand
+          eyebrow={t(`difficulty.${r.difficulty}`)}
+          tone={r.champion ? "trophy" : "accent"}
+          title={
+            r.perfect14 && r.champion
+              ? t("end.perfect")
+              : r.champion
+                ? t("end.champions")
+                : r.madePlayoffs
+                  ? t("seed.madePlayoffs")
+                  : t("end.missed")
+          }
+        />
+      )}
+
+      <div className="mx-auto w-full max-w-[1000px] px-5 lg:px-16 pt-5 lg:pt-7 pb-12">
         {data === undefined && <p className="text-[15px] text-muted py-6">{t("seed.checking")}</p>}
 
         {data === null && (
-          <div className="border border-hairline rounded-control p-5 mt-2">
+          <div className="bg-surface rounded-card p-5 mt-2">
             <h1 className="font-semibold text-[22px] leading-7">{t("seed.notFound")}</h1>
             <p className="text-[15px] leading-[22px] text-muted mt-1.5">
               {t("seed.notFoundBody")}
@@ -63,7 +87,7 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
 
         {r && (
           <>
-            <div className="-mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden bg-surface text-white px-5 py-6 lg:px-9 lg:py-9 flex flex-col lg:flex-row lg:items-end gap-6 lg:gap-12">
+            <div className="bg-surface rounded-card p-4 lg:p-8 flex flex-col lg:flex-row lg:items-end gap-5 lg:gap-12">
               <div className="flex gap-3 lg:shrink-0">
                 <Flap
                   label={t("word.won")}
@@ -81,41 +105,25 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
                   valueClassName="text-[112px] leading-[98px] lg:text-[140px] lg:leading-[122px]"
                 />
               </div>
-              <div className="flex flex-col gap-3 flex-1 min-w-0">
-                <h1
-                  className={`font-semibold text-[26px] leading-8 lg:text-[36px] lg:leading-[44px] ${
-                    r.champion ? "text-trophy" : ""
-                  }`}
-                >
-                  {r.perfect14 && r.champion
-                    ? t("end.perfect")
-                    : r.champion
-                      ? t("end.champions")
-                      : r.madePlayoffs
-                        ? t("seed.madePlayoffs")
-                        : t("end.missed")}
-                </h1>
-                <div className="flex flex-wrap gap-x-8 gap-y-3">
-                  {[
-                    [String(r.points), t("word.points")],
-                    [`${r.nrr > 0 ? "+" : ""}${r.nrr}`, t("word.nrr")],
-                    [t(`difficulty.${r.difficulty}`), t("word.difficulty")],
-                  ].map(([v, k]) => (
-                    <div key={k} className="flex flex-col gap-0.5">
-                      <span className="font-display font-semibold text-[30px] leading-7 pt-1 tabular">{v}</span>
-                      <span className="text-[13px] leading-[18px] text-body-plate">{k}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[13px] leading-[18px] text-muted-plate">
-                  {t("seed.note", { seed: r.seed })}
-                </p>
-              </div>
+              <p className="flex-1 min-w-0 text-[13px] leading-[18px] lg:text-[14px] lg:leading-5 text-muted lg:max-w-[46ch]">
+                {t("seed.note", { seed: r.seed })}
+              </p>
             </div>
 
-            <div className="mt-8">
+            {/* The run in three numbers. */}
+            <StatStrip className="mt-3 lg:mt-4">
+              <StatCell label={t("word.points")} value={String(r.points)} />
+              <StatCell
+                label={t("word.nrr")}
+                value={`${r.nrr > 0 ? "+" : ""}${r.nrr}`}
+                tone={r.nrr >= 0 ? "good" : "bad"}
+              />
+              <StatCell label={t("word.difficulty")} value={t(`difficulty.${r.difficulty}`)} />
+            </StatStrip>
+
+            <div className="mt-8 flex flex-col gap-3">
               <SectionHead title={t("seed.theLeague")} note={t("report.matches", { n: r.games.length })} />
-              <div className="mt-2.5">
+              <div className="bg-surface rounded-card px-4 lg:px-5 pt-0.5 pb-1.5">
                 {r.games.map((g: any, i: number) => {
                   const colour = CODE_COLOUR[g.opp] ?? "#2E2E2E";
                   const win = g.result === "W";
@@ -129,14 +137,14 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
                   return (
                     <div
                       key={i}
-                      className={`flex items-center gap-3 py-2.5 border-t border-hairline ${
-                        i === r.games.length - 1 ? "border-b" : ""
+                      className={`flex items-center gap-3 py-2.5 ${
+                        i === 0 ? "" : "border-t border-hairline"
                       }`}
                     >
                       <span className="w-7 shrink-0 text-[13px] leading-[18px] text-muted">M{i + 1}</span>
                       <span
-                        className="w-6 h-6 shrink-0 flex items-center justify-center rounded font-display font-bold text-[18px] leading-none text-white pt-[2px]"
-                        style={{ backgroundColor: win ? "#1A8A3C" : "#D8321F" }}
+                        className="w-6 h-6 shrink-0 flex items-center justify-center rounded-chip font-display font-bold text-[18px] leading-none text-white pt-[2px]"
+                        style={{ backgroundColor: win ? "#1A8A3C" : "#FF5A47" }}
                       >
                         {g.result}
                       </span>
@@ -160,14 +168,14 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
             </div>
 
             {r.playoffs?.length > 0 && (
-              <div className="mt-8">
+              <div className="mt-8 flex flex-col gap-3">
                 <SectionHead title={t("po.title")} />
-                <div className="mt-2.5">
+                <div className="bg-surface rounded-card px-4 lg:px-5 pt-0.5 pb-1.5">
                   {r.playoffs.map((p: any, i: number) => (
                     <div
                       key={i}
-                      className={`flex items-center gap-3 py-2.5 border-t border-hairline ${
-                        i === r.playoffs.length - 1 ? "border-b" : ""
+                      className={`flex items-center gap-3 py-2.5 ${
+                        i === 0 ? "" : "border-t border-hairline"
                       }`}
                     >
                       <span className="w-[110px] shrink-0 text-[13px] leading-[18px] text-muted">

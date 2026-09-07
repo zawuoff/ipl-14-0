@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import { GameBoard } from "@/components/GameBoard";
 import { istDateKey, type PlayerSeason, type TeamSeason } from "@/lib/game/types";
@@ -31,18 +32,8 @@ type Screen = "home" | "game" | "board";
 const PLAYER_BY_ID = new Map(buildPlayerSeasons().map((p) => [p.id, p]));
 const TEAM_BY_ID = new Map(buildTeamSeasons().map((t) => [t.teamId, t]));
 
-type TodayStats = {
-  date: string;
-  drafts: number;
-  runs: number;
-  perfect14: number;
-  champions: number;
-  best: { wins: number; losses: number } | null;
-  bestNrr: number | null;
-  topPicks: { id: string; count: number }[];
-  topSquad: { teamId: string; count: number } | null;
-  drafting: number;
-};
+/* Shaped by the query itself, so the page cannot drift from the backend. */
+type TodayStats = FunctionReturnType<typeof api.stats.homeToday>;
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("home");
@@ -68,12 +59,18 @@ export default function Home() {
   const [entered] = useState(initialScreen);
   const show: Screen = entered === "game" ? "game" : screen;
 
+  // The board screen's first tab is the shared daily challenge. The home page
+  // shows the whole day, so it lines up with the day's numbers beside it.
   const dailyBoard = useQuery(
-    (api as any).results?.leaderboard,
-    show === "board" || show === "home" ? { dailyDate: today, limit: 20 } : "skip"
+    api.results.leaderboard,
+    show === "board" ? { dailyDate: today, limit: 20 } : "skip"
+  );
+  const todayBoard = useQuery(
+    api.results.leaderboard,
+    show === "home" ? { day: today, limit: 10 } : "skip"
   );
   const allTimeBoard = useQuery(
-    (api as any).results?.leaderboard,
+    api.results.leaderboard,
     show === "board" ? { limit: 20 } : "skip"
   );
   const play = (m: "classic" | "daily") => {
@@ -90,7 +87,7 @@ export default function Home() {
         <HomeScreen
           today={today}
           play={play}
-          rows={dailyBoard as Row[] | undefined}
+          rows={todayBoard as Row[] | undefined}
           goBoard={() => setScreen("board")}
         />
       )}
@@ -290,9 +287,7 @@ function HomeScreen({
 /** Reads the day's numbers. Lives below QuietBoundary so a backend without
     this query yet costs these two sections and nothing else. */
 function TodaySections({ today, goBoard }: { today: string; goBoard: () => void }) {
-  const stats = useQuery((api as any).stats?.homeToday, { date: today }) as
-    | TodayStats
-    | undefined;
+  const stats = useQuery(api.stats.homeToday, { date: today });
   return (
     <>
       <TodayNumbers stats={stats} goBoard={goBoard} />

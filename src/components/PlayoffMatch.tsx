@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import type { DetailedInnings, SuperOverInnings } from "@/lib/sim/engine";
-import { PrimaryButton, OutlineButton, PlateButton, SectionHead } from "./ui";
+import { buildTeamSeasons } from "@/lib/game/data";
+import { PageBand, PrimaryButton, SectionHead, SplitScore } from "./ui";
 import { useT } from "@/lib/i18n";
 
 export interface PlayoffDetail {
@@ -16,6 +17,25 @@ export interface PlayoffDetail {
     scoreline: string;
   };
 }
+
+/* The away half of a match card is painted in the opponent's franchise colour.
+   League opponents are franchise codes; a room opponent is another manager, so
+   they get the band stripe instead. */
+const FRANCHISE_COLOUR = new Map(buildTeamSeasons().map((tm) => [tm.code, tm.colour]));
+
+export function franchiseColour(name: string): string {
+  return FRANCHISE_COLOUR.get(name.trim().toUpperCase()) ?? "#2E5BC4";
+}
+
+/** A ball in the over: wicket, boundary, or anything else. */
+function ballSkin(e: { runs: number; wicket?: boolean }): string {
+  if (e.wicket) return "bg-loss text-white";
+  if (e.runs >= 4) return "bg-white text-ground";
+  return "border border-white/30 text-white";
+}
+
+const BALL_BASE =
+  "w-[34px] h-[34px] shrink-0 flex items-center justify-center rounded-full font-display font-semibold text-[20px] leading-none pt-[2px]";
 
 // Knockout theatre: fast batches through the bulk; only the last over goes
 // ball by ball, and only when the game is close. The result freezes for a click.
@@ -118,46 +138,49 @@ export function PlayoffMatch({
       ? oversStr
       : `${Math.floor(detail.inn1.balls / 6)}.${detail.inn1.balls % 6}`;
 
-  return (
-    <div className="flex flex-col">
-      {/* the board */}
-      <div className="-mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden bg-surface text-white px-5 py-5 lg:px-7 lg:py-6 flex flex-col gap-4">
-        <div className="flex items-baseline gap-3 flex-wrap">
-          <span className="font-semibold text-[17px] leading-[22px]">{stage}</span>
-          <span className="text-[13px] leading-[18px] text-muted-plate">
-            {done
-              ? t("pm.complete")
-              : inSO
-                ? t("pm.superOver")
-                : t(phase === "inn1" ? "pm.batting1st" : "pm.batting2nd", {
-                    side: battingYou ? userTag : detail.opp,
-                  })}
-          </span>
-        </div>
+  // The same two innings, read as one match card: your side on the plate,
+  // theirs on their colour.
+  const firstNote = t("pm.battedFirst", { overs: inn1Overs });
+  const secondNote =
+    phase === "inn2" || done
+      ? t("pm.chasingOvers", { overs: oversStr, target: detail.inn1.runs + 1 })
+      : t("pm.chasing", { target: detail.inn1.runs + 1 });
+  const secondScore = phase === "inn2" || done ? score : "—";
+  const status = done
+    ? t("pm.complete")
+    : inSO
+      ? t("pm.superOver")
+      : t(phase === "inn1" ? "pm.batting1st" : "pm.batting2nd", {
+          side: battingYou ? userTag : detail.opp,
+        });
 
-        <InningsLine
-          side={detail.userFirst ? userTag : detail.opp}
-          you={detail.userFirst}
-          note={t("pm.battedFirst", { overs: inn1Overs })}
-          score={inn1Score}
-        />
-        <InningsLine
-          side={!detail.userFirst ? userTag : detail.opp}
-          you={!detail.userFirst}
-          note={
-            phase === "inn2" || done
-              ? t("pm.chasingOvers", { overs: oversStr, target: detail.inn1.runs + 1 })
-              : t("pm.chasing", { target: detail.inn1.runs + 1 })
-          }
-          score={phase === "inn2" || done ? score : "—"}
+  return (
+    <div className="flex flex-col gap-3">
+      <PageBand
+        eyebrow={status}
+        title={stage}
+        tone={fullMatch ? "trophy" : "accent"}
+        className="rounded-card"
+      />
+
+      {/* the board */}
+      <div className="rounded-card overflow-hidden bg-surface text-white flex flex-col">
+        <SplitScore
+          homeName={userTag}
+          homeScore={detail.userFirst ? inn1Score : secondScore}
+          homeNote={detail.userFirst ? firstNote : secondNote}
+          awayName={detail.opp}
+          awayScore={detail.userFirst ? secondScore : inn1Score}
+          awayNote={detail.userFirst ? secondNote : firstNote}
+          awayColour={franchiseColour(detail.opp)}
         />
 
         {!done && !inSO && phase === "inn2" && need !== null && (
-          <div className="pt-4 border-t border-plate-line flex flex-col gap-2.5">
+          <div className="px-4 py-4 lg:px-7 lg:py-5 border-t border-hairline flex flex-col gap-2.5">
             <div className="flex items-baseline gap-3 flex-wrap">
               {need > 0 ? (
                 <>
-                  <span className="font-display font-bold text-[56px] leading-[48px] pt-1 tabular">
+                  <span className="font-display font-bold text-[56px] leading-[48px] pt-1 tabular text-trophy">
                     {need}
                   </span>
                   <span className="font-medium text-[17px] leading-[22px]">
@@ -169,13 +192,13 @@ export function PlayoffMatch({
               )}
               <span className="flex-1" />
               {cur && (
-                <span className="text-[13px] leading-[18px] text-muted-plate">
+                <span className="text-[13px] leading-[18px] text-muted">
                   {t("pm.bowlerTo", { bowler: cur.bowler, striker: cur.striker })}
                 </span>
               )}
             </div>
             <BallStrip recent={recent} slots={overSlots} over={t("pm.over", { n: Math.floor(balls / 6) + 1 })} />
-            <p className="text-[15px] leading-[22px] text-body-plate">
+            <p className="text-[15px] leading-[22px] text-muted">
               {tense && ballsLeft <= 6
                 ? t("pm.finalOver")
                 : tense
@@ -186,15 +209,15 @@ export function PlayoffMatch({
         )}
 
         {!done && !inSO && phase === "inn1" && (
-          <div className="pt-4 border-t border-plate-line flex flex-col gap-2.5">
-            <div className="flex items-baseline gap-3">
+          <div className="px-4 py-4 lg:px-7 lg:py-5 border-t border-hairline flex flex-col gap-2.5">
+            <div className="flex items-baseline gap-3 flex-wrap">
               <span className="font-display font-bold text-[44px] leading-[38px] pt-1 tabular">
                 {score}
               </span>
               <span className="font-medium text-[16px] leading-[22px]">{t("pm.afterOvers", { overs: oversStr })}</span>
               <span className="flex-1" />
               {cur && (
-                <span className="text-[13px] leading-[18px] text-muted-plate">
+                <span className="text-[13px] leading-[18px] text-muted">
                   {t("pm.bowlerTo", { bowler: cur.bowler, striker: cur.striker })}
                 </span>
               )}
@@ -224,7 +247,7 @@ export function PlayoffMatch({
       {/* scorecards */}
       {/* Scorecards only appear once an innings is over — no spoilers mid-chase. */}
       {(phase === "inn2" || inSO || done) && (
-        <div className="mt-6 flex flex-col lg:flex-row lg:gap-12 lg:items-start">
+        <div className="mt-3 flex flex-col lg:flex-row lg:gap-6 lg:items-start">
           <div className="flex-1 min-w-0">
             <InningsCard
               title={t("pm.innings1", { side: detail.userFirst ? userTag : detail.opp })}
@@ -233,7 +256,7 @@ export function PlayoffMatch({
             />
           </div>
           {done && (
-            <div className="flex-1 min-w-0 mt-6 lg:mt-0">
+            <div className="flex-1 min-w-0 mt-3 lg:mt-0">
               <InningsCard
                 title={t("pm.innings2", { side: !detail.userFirst ? userTag : detail.opp })}
                 inn={detail.inn2}
@@ -243,33 +266,6 @@ export function PlayoffMatch({
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-function InningsLine({
-  side,
-  you,
-  note,
-  score,
-}: {
-  side: string;
-  you: boolean;
-  note: string;
-  score: string;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <span
-        className="flex items-center justify-center w-14 h-[30px] shrink-0 rounded font-display font-bold text-[20px] leading-none pt-[2px]"
-        style={{ backgroundColor: you ? "#FFFFFF" : "#2E2E2E", color: you ? "#000000" : "#FFFFFF" }}
-      >
-        {side}
-      </span>
-      <span className="flex-1 min-w-0 text-[14px] leading-5 text-muted-plate truncate">{note}</span>
-      <span className="shrink-0 font-display font-bold text-[34px] leading-[30px] lg:text-[40px] lg:leading-[34px] pt-1 tabular">
-        {score}
-      </span>
     </div>
   );
 }
@@ -286,26 +282,16 @@ function BallStrip({
   const empties = Math.max(0, 6 - slots);
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <span className="w-[60px] shrink-0 text-[13px] leading-[18px] text-muted-plate">{over}</span>
+      <span className="w-[60px] shrink-0 text-[13px] leading-[18px] text-muted">{over}</span>
       {recent.slice(-6).map((e) => (
-        <span
-          key={e.n}
-          className="w-[34px] h-[34px] shrink-0 flex items-center justify-center rounded-full font-display font-semibold text-[20px] leading-none pt-[2px]"
-          style={
-            e.wicket
-              ? { backgroundColor: "#D8321F", color: "#FFFFFF" }
-              : e.runs >= 4
-                ? { backgroundColor: "#FFFFFF", color: "#000000" }
-                : { border: "1px solid #4A4A4A", color: "#FFFFFF" }
-          }
-        >
+        <span key={e.n} className={`${BALL_BASE} ${ballSkin(e)}`}>
           {e.wicket ? "W" : e.runs}
         </span>
       ))}
       {Array.from({ length: empties }, (_, i) => (
         <span
           key={`e${i}`}
-          className="w-[34px] h-[34px] shrink-0 rounded-full border border-dashed border-[#4A4A4A]"
+          className="w-[34px] h-[34px] shrink-0 rounded-full border border-dashed border-white/30"
         />
       ))}
     </div>
@@ -342,15 +328,16 @@ function MatchResult({
         ? t("pm.byWicketsShort", { w: 10 - chase.wickets })
         : t("pm.byRuns", { n: oppRuns - userRuns });
   return (
-    <div className="mt-5 flex flex-col gap-3">
+    <div className="rounded-card bg-surface px-4 py-5 lg:px-7 lg:py-6 flex flex-col gap-3">
       <div className="flex items-baseline gap-3 flex-wrap">
         <span
-          className="flex items-center justify-center h-7 px-2.5 pt-[2px] rounded font-display font-bold text-[20px] leading-none"
-          style={{ backgroundColor: won ? "#1A8A3C" : "#D8321F", color: "#FFFFFF" }}
+          className={`flex items-center justify-center h-7 px-2.5 pt-[2px] rounded-chip font-display font-bold text-[20px] leading-none ${
+            won ? "bg-turf text-white" : "bg-loss text-ground"
+          }`}
         >
           {won ? t("pm.won") : t("pm.lost")}
         </span>
-        <span className="font-semibold text-[20px] leading-7 lg:text-[24px] lg:leading-8">{margin}</span>
+        <span className="head-display text-[26px] leading-7 lg:text-[32px] lg:leading-9">{margin}</span>
       </div>
       <p className="text-[15px] leading-[22px] text-muted">
         {t("pm.versusLine", {
@@ -403,11 +390,11 @@ function SuperOverLive({
   const shown = inn.events.slice(0, cursor);
   const last = shown.length ? shown[shown.length - 1] : null;
   return (
-    <div className="pt-4 border-t border-plate-line flex flex-col gap-2.5">
-      <div className="flex items-baseline gap-3">
-        <span className="font-semibold text-[17px] leading-[22px]">{t("pm.soSide", { side: sideLabel })}</span>
+    <div className="px-4 py-4 lg:px-7 lg:py-5 border-t border-hairline flex flex-col gap-2.5">
+      <div className="flex items-baseline gap-3 flex-wrap">
+        <span className="head-display text-[22px] leading-6">{t("pm.soSide", { side: sideLabel })}</span>
         {other && (
-          <span className="text-[13px] leading-[18px] text-muted-plate">
+          <span className="text-[13px] leading-[18px] text-muted">
             {t("pm.soOther", { side: other.side, score: other.score, n: other.runs + 1 })}
           </span>
         )}
@@ -417,7 +404,7 @@ function SuperOverLive({
           {last ? last.score : "0/0"}
         </span>
         <span className="flex-1" />
-        <span className="text-[13px] leading-[18px] text-muted-plate">
+        <span className="text-[13px] leading-[18px] text-muted">
           {done ? t("pm.soComplete") : inn.events.length - cursor <= 3 ? t("pm.soLastThree") : ""}
         </span>
       </div>
@@ -425,16 +412,9 @@ function SuperOverLive({
         {inn.events.map((e, i) => (
           <span
             key={e.n}
-            className="w-[34px] h-[34px] shrink-0 flex items-center justify-center rounded-full font-display font-semibold text-[20px] leading-none pt-[2px]"
-            style={
-              i >= cursor
-                ? { border: "1px dashed #4A4A4A", color: "#4A4A4A" }
-                : e.wicket
-                  ? { backgroundColor: "#D8321F", color: "#FFFFFF" }
-                  : e.runs >= 4
-                    ? { backgroundColor: "#FFFFFF", color: "#000000" }
-                    : { border: "1px solid #4A4A4A", color: "#FFFFFF" }
-            }
+            className={`${BALL_BASE} ${
+              i >= cursor ? "border border-dashed border-white/30 text-transparent" : ballSkin(e)
+            }`}
           >
             {i < cursor ? (e.wicket ? "W" : e.runs) : ""}
           </span>
@@ -461,14 +441,17 @@ export function InningsCard({
   const t = useT();
   const [open, setOpen] = useState(!!defaultOpen);
   return (
-    <section className="flex flex-col">
-      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-baseline gap-3 py-1">
+    <section className="bg-surface rounded-card px-4 py-3 lg:px-6 lg:py-4 flex flex-col">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full min-h-[44px] flex items-baseline gap-3 py-1"
+      >
         <SectionHead title={title} />
         <span className="flex-1" />
         <span className="font-display font-semibold text-[22px] leading-5 pt-[3px] tabular whitespace-nowrap">
           {inn.score}
         </span>
-        <span className="text-[13px] text-muted w-14 text-right">
+        <span className="text-[13px] text-accent w-14 text-right">
           {open ? t("pm.hide") : t("pm.show")}
         </span>
       </button>
@@ -491,7 +474,7 @@ export function InningsCard({
                 >
                   <span className="flex-1 min-w-0 text-[15px] leading-5 truncate">
                     {b.name}
-                    {!b.out && <span className="text-turf"> {t("pm.notOut")}</span>}
+                    {!b.out && <span className="text-turf-soft"> {t("pm.notOut")}</span>}
                   </span>
                   <span className="w-12 shrink-0 text-right font-display font-semibold text-[20px] leading-5 pt-[3px] tabular">
                     {b.runs}

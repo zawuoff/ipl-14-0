@@ -458,7 +458,6 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "mroom.how3": { en: "Whoever finishes higher wins the room. A playoff final between you settles a tie.", hi: "जो ऊपर रहेगा वही रूम जीतेगा। बराबरी होने पर आपस का फ़ाइनल फ़ैसला करेगा।" },
   "mroom.headerMeta": { en: "Room {code} · {difficulty} · one 18-game table", hi: "रूम {code} · {difficulty} · एक 18-मैच की तालिका" },
   "mroom.inviteText": { en: "Play me at 14-0, the IPL draft game. Room {code}: {url}", hi: "मुझसे 14-0 खेलो, IPL ड्राफ़्ट गेम। रूम {code}: {url}" },
-  "mroom.against": { en: " against ", hi: " बनाम " },
   /* ------------------------------------------------------------- ordinals */
   "ord.1": { en: "1st", hi: "पहले" },
   "ord.2": { en: "2nd", hi: "दूसरे" },

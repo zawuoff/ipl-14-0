@@ -5,16 +5,56 @@ import type { ReactNode } from "react";
    strip, stat strips, split score cards, and the button shapes. Everything
    else is plain Tailwind. */
 
-/** Black text on light franchise colours, white on dark ones. */
-export function readableOn(hex: string): string {
+function rgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
   const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-  const r = parseInt(full.slice(0, 2), 16) / 255;
-  const g = parseInt(full.slice(2, 4), 16) / 255;
-  const b = parseInt(full.slice(4, 6), 16) / 255;
-  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
-  const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-  return L > 0.45 ? "#000000" : "#FFFFFF";
+  return [
+    parseInt(full.slice(0, 2), 16),
+    parseInt(full.slice(2, 4), 16),
+    parseInt(full.slice(4, 6), 16),
+  ];
+}
+
+function luminance(hex: string): number {
+  const lin = (v: number) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  const [r, g, b] = rgb(hex);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+function contrast(a: string, b: string): number {
+  const la = luminance(a);
+  const lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+function toHex(n: number): string {
+  return Math.round(Math.min(255, Math.max(0, n))).toString(16).padStart(2, "0");
+}
+
+/** Black text on light franchise colours, white on dark ones. Black and white
+    are equally legible at a luminance of about 0.18; the line sits a little
+    above that so Rajasthan's pink keeps the white lettering it wears in real
+    life, while Chennai's yellow and Sunrisers' orange take black. */
+export function readableOn(hex: string): string {
+  return luminance(hex) > 0.22 ? "#000000" : "#FFFFFF";
+}
+
+/** Some franchises are darker than the night ground — Gujarat's navy and
+    Deccan's are both close enough to the card that a panel painted in them
+    disappears. Lift a colour toward white until it separates from whatever it
+    sits on, keeping its hue so the team still reads as itself. */
+export function panelColour(hex: string, on = "#10215C", minRatio = 1.9): string {
+  let out = hex;
+  for (let i = 0; i < 14 && contrast(out, on) < minRatio; i++) {
+    const [r, g, b] = rgb(out);
+    out = `#${toHex(r + (255 - r) * 0.09)}${toHex(g + (255 - g) * 0.09)}${toHex(
+      b + (255 - b) * 0.09
+    )}`;
+  }
+  return out;
 }
 
 /** A card. Every panel in the night layout sits on this navy surface. */
@@ -311,7 +351,8 @@ export function SplitScore({
   height?: string;
   scoreClass?: string;
 }) {
-  const awayInk = readableOn(awayColour);
+  const away = panelColour(awayColour);
+  const awayInk = readableOn(away);
   return (
     <div className={`relative flex ${height}`}>
       <div className="flex flex-col justify-center flex-1 min-w-0 pl-4 lg:pl-5 pr-6 bg-plate">
@@ -332,7 +373,7 @@ export function SplitScore({
       <div
         className="flex flex-col justify-center items-end flex-1 min-w-0 -ml-[26px] pl-8 pr-4 lg:pr-5"
         style={{
-          backgroundColor: awayColour,
+          backgroundColor: away,
           clipPath: "polygon(26px 0, 100% 0, 100% 100%, 0 100%)",
         }}
       >
@@ -553,12 +594,13 @@ export function PlayerBurstCard({
   footnote?: ReactNode;
   className?: string;
 }) {
-  const ink = readableOn(colour);
+  const tone = panelColour(colour);
+  const ink = readableOn(tone);
   return (
     <div className={`flex flex-col bg-surface rounded-card overflow-hidden ${className}`}>
       <div
         className="relative flex flex-col justify-end h-[150px] p-3"
-        style={{ backgroundColor: colour }}
+        style={{ backgroundColor: tone }}
       >
         <svg
           viewBox="0 0 170 150"
@@ -576,7 +618,7 @@ export function PlayerBurstCard({
         </svg>
         <span
           className="absolute right-2.5 top-2.5 inline-flex items-center h-5 px-1.5 pt-[2px] rounded-chip bg-white font-display font-semibold text-[13px] leading-none"
-          style={{ color: colour }}
+          style={{ color: tone }}
         >
           {chip}
         </span>
