@@ -15,6 +15,7 @@ export const saveResult = mutation({
   args: {
     seed: v.string(),
     deviceId: v.string(),
+    name: v.optional(v.string()),
     mode: v.union(v.literal("classic"), v.literal("daily")),
     dailyDate: v.optional(v.string()),
     difficulty: v.string(),
@@ -110,6 +111,7 @@ export const leaderboard = query({
     return filtered.slice(0, lim).map((r) => ({
       seed: r.seed,
       deviceId: r.deviceId.slice(0, 6),
+      name: r.name,
       mode: r.mode,
       difficulty: r.difficulty,
       wins: r.wins,

@@ -38,6 +38,7 @@ type TodayStats = FunctionReturnType<typeof api.stats.homeToday>;
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("home");
   const [mode, setMode] = useState<"classic" | "daily">("classic");
+  const [intent, setIntent] = useState<"solo" | "friend">("solo");
   const [gameKey, setGameKey] = useState(0);
   const today = istDateKey();
 
@@ -73,15 +74,21 @@ export default function Home() {
     api.results.leaderboard,
     show === "board" ? { limit: 20 } : "skip"
   );
-  const play = (m: "classic" | "daily") => {
+  const play = (m: "classic" | "daily", how: "solo" | "friend" = "solo") => {
     setMode(m);
+    setIntent(how);
     setGameKey((k) => k + 1);
     setScreen("game");
   };
 
   return (
     <main className="min-h-screen bg-ground text-white flex flex-col">
-      <TopBar screen={show} go={setScreen} inGame={entered === "game"} />
+      <TopBar
+        screen={show}
+        go={setScreen}
+        goFriend={() => play("classic", "friend")}
+        inGame={entered === "game"}
+      />
 
       {show === "home" && (
         <HomeScreen
@@ -98,6 +105,7 @@ export default function Home() {
           initialMode={challengeSpins ? "classic" : mode}
           initialSpins={challengeSpins}
           initialRoom={roomCode}
+          initialIntent={intent}
         />
       )}
 
@@ -112,7 +120,17 @@ export default function Home() {
 
 /* ---------------------------------------------------------------- chrome */
 
-function TopBar({ screen, go, inGame }: { screen: Screen; go: (s: Screen) => void; inGame: boolean }) {
+function TopBar({
+  screen,
+  go,
+  goFriend,
+  inGame,
+}: {
+  screen: Screen;
+  go: (s: Screen) => void;
+  goFriend: () => void;
+  inGame: boolean;
+}) {
   const t = useT();
   const link = "text-[15px] leading-5 font-medium text-white/80 hover:text-accent transition-colors";
   return (
@@ -133,7 +151,7 @@ function TopBar({ screen, go, inGame }: { screen: Screen; go: (s: Screen) => voi
           >
             {t("nav.leaderboard")}
           </button>
-          <button className={link} onClick={() => go("game")}>{t("nav.playAFriend")}</button>
+          <button className={link} onClick={() => goFriend()}>{t("nav.playAFriend")}</button>
         </nav>
         <button
           onClick={() => go("board")}
@@ -172,7 +190,7 @@ function HomeScreen({
   goBoard,
 }: {
   today: string;
-  play: (m: "classic" | "daily") => void;
+  play: (m: "classic" | "daily", how?: "solo" | "friend") => void;
   rows: Row[] | undefined;
   goBoard: () => void;
 }) {
@@ -255,7 +273,7 @@ function HomeScreen({
           eyebrow={t("home.friend.title")}
           title={t("home.friend.blurb")}
           note={t("home.friend.actionLong")}
-          onClick={() => play("classic")}
+          onClick={() => play("classic", "friend")}
         />
       </section>
 
@@ -522,6 +540,7 @@ type Row = {
   perfect14?: boolean;
   madePlayoffs?: boolean;
   deviceId: string;
+  name?: string | null;
 };
 
 function Leaderboard({
@@ -597,7 +616,7 @@ function BoardRows({ rows, empty }: { rows: Row[] | undefined; empty: string }) 
           </span>
           <span className="flex flex-col flex-1 min-w-0">
             <span className="font-medium text-[16px] leading-[22px] truncate">
-              {t("board.manager", { id: r.deviceId.slice(0, 4).toUpperCase() })}
+              {r.name?.trim() || t("board.manager", { id: r.deviceId.slice(0, 4).toUpperCase() })}
             </span>
             <span className="text-[13px] leading-[18px] text-muted truncate">
               {t("board.rowMeta", {

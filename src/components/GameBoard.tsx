@@ -42,6 +42,7 @@ import {
 import { PlayoffMatch } from "./PlayoffMatch";
 import { SeasonReport } from "./SeasonReport";
 import { copyText } from "@/lib/clipboard";
+import { MAX_NAME, playerName, setPlayerName } from "@/lib/player";
 import { useT, localiseMargin, ordinal } from "@/lib/i18n";
 
 const ALL_TEAMS: TeamSeason[] = buildTeamSeasons();
@@ -128,7 +129,19 @@ function deviceId(): string {
   return d;
 }
 
-export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }: { initialMode?: GameMode; initialSpins?: string[]; initialRoom?: string }) {
+export function GameBoard({
+  initialMode = "classic",
+  initialSpins,
+  initialRoom,
+  initialIntent = "solo",
+}: {
+  initialMode?: GameMode;
+  initialSpins?: string[];
+  initialRoom?: string;
+  // Whether the player came here to draft alone or to open a room. The setup
+  // screen ends in a different button for each.
+  initialIntent?: "solo" | "friend";
+}) {
   const t = useT();
   const [mode, setMode] = useState<GameMode>(initialMode);
   const [difficulty, setDifficulty] = useState<Difficulty>("Pro");
@@ -169,7 +182,17 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
   const joinRoom = useMutation((api as any).rooms?.join);
   const submitRoomXI = useMutation((api as any).rooms?.submitXI);
   const createRoom2 = useMutation((api as any).rooms?.create);
+  // One name, whichever way you came in: it goes on a room seat and on the board.
   const [roomName, setRoomName] = useState("");
+  const friendFlow = initialIntent === "friend" && !initialRoom;
+  useEffect(() => {
+    // Reading the device's stored name has to wait for mount: it does not exist
+    // while this renders on the server, and seeding the input from it up front
+    // would hand React two different values to hydrate.
+    const saved = playerName();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (saved) setRoomName((n) => n || saved);
+  }, []);
   const [roomSubmitted, setRoomSubmitted] = useState(false);
   const [roomBusy, setRoomBusy] = useState(false);
   const roomQ = useQuery(
@@ -379,6 +402,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
         await saveResult({
           seed: draft.seed,
           deviceId: deviceId(),
+          name: playerName() || undefined,
           mode: draft.mode,
           dailyDate: draft.mode === "daily" ? today : undefined,
           difficulty: draft.difficulty,
@@ -637,7 +661,7 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                 {t("setup.sub")}
               </p>
 
-              {!initialRoom && (
+              {!initialRoom && !friendFlow && (
                 <div className="mt-7 flex flex-col gap-3">
                   <SectionHead title={t("setup.mode")} />
                   <div className="grid grid-cols-2 gap-2.5">
@@ -740,60 +764,68 @@ export function GameBoard({ initialMode = "classic", initialSpins, initialRoom }
                 </div>
               )}
 
-              <div className="mt-7 pt-5 border-t border-hairline flex flex-col gap-2.5">
-                <PrimaryButton
-                  className="w-full"
-                  onClick={() => {
-                    const diff = initialRoom && roomQ ? (roomQ.difficulty as Difficulty) : difficulty;
-                    if (initialRoom && roomQ) setDifficulty(roomQ.difficulty as Difficulty);
-                    startDraft(initialRoom ? "classic" : mode, STYLE_TEMPLATES[styleIdx].config, {
-                      difficulty: diff,
-                    });
-                  }}
-                >
-                  {t("setup.start")}
-                </PrimaryButton>
-                <p className="text-[13px] leading-[18px] text-muted text-center">
-                  {t("setup.rules")}
-                </p>
-              </div>
-
-              {!initialRoom && (
-                <div className="mt-7 pt-6 border-t border-hairline flex flex-col gap-2.5">
-                  <SectionHead title={t("home.friend.title")} />
-                  <p className="text-[14px] leading-5 text-muted">
-                    {t("setup.friendBlurb")}
-                  </p>
-                  <div className="flex gap-2 mt-1">
+              <div className="mt-7 pt-6 border-t border-hairline flex flex-col gap-2.5">
+                {!initialRoom && (
+                  <>
+                    <SectionHead title={t("setup.nameHead")} />
+                    <p className="text-[14px] leading-5 text-muted">
+                      {friendFlow ? t("setup.friendBlurb") : t("setup.nameNote")}
+                    </p>
                     <input
                       value={roomName}
                       onChange={(e) => setRoomName(e.target.value)}
                       placeholder={t("setup.yourName")}
-                      maxLength={14}
-                      className="flex-1 h-13 rounded-control bg-surface border border-hairline px-3.5 text-[16px] outline-none focus:border-accent"
+                      maxLength={MAX_NAME}
+                      className="h-13 rounded-control bg-surface border border-hairline px-3.5 text-[16px] outline-none focus:border-accent"
                     />
-                    <OutlineButton
-                      className="h-13"
-                      disabled={!roomName.trim() || roomBusy}
-                      onClick={async () => {
-                        if (!roomName.trim() || roomBusy) return;
-                        setRoomBusy(true);
-                        try {
-                          const r = (await createRoom2({
-                            name: roomName.trim(),
-                            difficulty,
-                            deviceId: deviceId(),
-                          })) as unknown as { code: string } | null;
-                          if (r?.code) window.location.href = `/m/${r.code}`;
-                        } catch {}
-                        setRoomBusy(false);
+                  </>
+                )}
+
+                {friendFlow ? (
+                  <PrimaryButton
+                    className="w-full mt-1"
+                    disabled={!roomName.trim() || roomBusy}
+                    onClick={async () => {
+                      if (!roomName.trim() || roomBusy) return;
+                      setRoomBusy(true);
+                      setPlayerName(roomName);
+                      try {
+                        const r = (await createRoom2({
+                          name: roomName.trim(),
+                          difficulty,
+                          deviceId: deviceId(),
+                        })) as unknown as { code: string } | null;
+                        if (r?.code) window.location.href = `/m/${r.code}`;
+                      } catch {}
+                      setRoomBusy(false);
+                    }}
+                  >
+                    {roomBusy ? "…" : t("setup.createRoom")}
+                  </PrimaryButton>
+                ) : (
+                  <>
+                    <PrimaryButton
+                      className="w-full mt-1"
+                      onClick={() => {
+                        const diff = initialRoom && roomQ ? (roomQ.difficulty as Difficulty) : difficulty;
+                        if (initialRoom && roomQ) setDifficulty(roomQ.difficulty as Difficulty);
+                        setPlayerName(roomName);
+                        startDraft(initialRoom ? "classic" : mode, STYLE_TEMPLATES[styleIdx].config, {
+                          difficulty: diff,
+                        });
                       }}
                     >
-                      {roomBusy ? "…" : t("setup.createRoom")}
-                    </OutlineButton>
-                  </div>
-                </div>
-              )}
+                      {t("setup.start")}
+                    </PrimaryButton>
+                    <p className="text-[13px] leading-[18px] text-muted text-center">
+                      {REROLLS[difficulty] > 0
+                        ? t("setup.rules", { n: REROLLS[difficulty] })
+                        : t("setup.rulesNone")}
+                    </p>
+                  </>
+                )}
+              </div>
+
             </>
           )}
           </div>
