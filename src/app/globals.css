@@ -72,10 +72,12 @@ body {
   letter-spacing: 0.005em;
 }
 
-/* Split-flap leaves. Both are full-card boxes turning about the card centre,
-   which is where the hinge is: the top one falls away, the bottom one swings
-   up into its place a beat later. The shade darkens the leaf mid-turn so the
-   fold reads as a fold and not a fading rectangle. */
+/* Split-flap leaves. Each is a half-card pivoting on the edge it shares with
+   the seam: the top one falls away under gravity, the bottom one swings up a
+   beat later and settles. The shade lives on the leaf alone and is a gradient,
+   so the fold darkens toward the hinge the way a real card does, and the half
+   that is holding still is never touched. `both` matters: the landing leaf
+   waits its turn edge-on rather than showing flat through the delay. */
 @keyframes flap-fall {
   from {
     transform: rotateX(0deg);
@@ -94,18 +96,18 @@ body {
   }
 }
 
-@keyframes flap-shade-out {
+@keyframes flap-shade-on {
   from {
     opacity: 0;
   }
   to {
-    opacity: 0.55;
+    opacity: 1;
   }
 }
 
-@keyframes flap-shade-in {
+@keyframes flap-shade-off {
   from {
-    opacity: 0.55;
+    opacity: 1;
   }
   to {
     opacity: 0;
@@ -113,40 +115,43 @@ body {
 }
 
 .flap-leaf {
-  animation-fill-mode: forwards;
+  animation-fill-mode: both;
   backface-visibility: hidden;
-  transform-style: preserve-3d;
+  will-change: transform;
 }
 
 .flap-leaf::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: #000000;
+  pointer-events: none;
   animation-duration: inherit;
   animation-delay: inherit;
-  animation-fill-mode: forwards;
-  pointer-events: none;
+  animation-fill-mode: both;
 }
 
 .flap-fall {
+  transform-origin: center bottom;
   animation-name: flap-fall;
-  animation-timing-function: cubic-bezier(0.36, 0, 0.66, 0.99);
+  animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
 }
 
 .flap-fall::after {
-  animation-name: flap-shade-out;
-  animation-timing-function: cubic-bezier(0.36, 0, 0.66, 0.99);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.45));
+  animation-name: flap-shade-on;
+  animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
 }
 
 .flap-land {
+  transform-origin: center top;
   animation-name: flap-land;
-  animation-timing-function: cubic-bezier(0.3, 0.5, 0.4, 1.05);
+  animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1.08);
 }
 
 .flap-land::after {
-  animation-name: flap-shade-in;
-  animation-timing-function: cubic-bezier(0.3, 0.5, 0.4, 1.05);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.45));
+  animation-name: flap-shade-off;
+  animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {

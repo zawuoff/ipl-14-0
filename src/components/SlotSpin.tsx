@@ -69,11 +69,11 @@ export function SlotSpin({ targetTeamId, targetName, targetColour, clubPool, onL
       const p = Math.min(1, (performance.now() - t0) / DUR);
       // The board starts fast and tires. A leaf has to finish falling before
       // the next one starts, so the turn is always a little under the gap.
-      // Nothing goes quicker than about eight turns a second: past that a leaf
-      // is gone inside three frames and the board reads as flicker rather than
+      // Nothing goes quicker than about five turns a second: past that a leaf
+      // is gone inside a few frames and the board reads as flicker rather than
       // as something mechanical, which is the whole point of it.
-      const gap = 145 + p * p * 240;
-      const flipMs = Math.min(gap * 0.9, 340);
+      const gap = 190 + p * p * 260;
+      const flipMs = Math.min(gap * 0.9, 400);
       const last = p >= 1;
       const pick = clubPool[Math.floor(Math.random() * clubPool.length)];
       const [c, s] = last ? [tClub, tSeason] : split(pick);
