@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Flap, PrimaryButton } from "./ui";
+import { PrimaryButton } from "./ui";
+import { SplitFlap } from "./SplitFlap";
 import { useT } from "@/lib/i18n";
 import { tick, thud } from "@/lib/sound";
 
@@ -12,7 +13,6 @@ interface Props {
   targetName: string;
   targetColour: string;
   clubPool: string[]; // full teamIds to flash through
-  spinKey: number; // remount/respin trigger (parent keys on this)
   onLanded: () => void;
 }
 
@@ -22,42 +22,80 @@ function split(teamId: string): [string, string] {
   return [teamId.slice(0, d), teamId.slice(d + 1)];
 }
 
-export function SlotSpin({ targetTeamId, targetName, targetColour, clubPool, spinKey, onLanded }: Props) {
+/* One turn of the board. Everything a flap needs to draw itself lives here so
+   the old and new faces can never drift apart between renders. */
+interface Board {
+  prevClub: string;
+  prevSeason: string;
+  club: string;
+  season: string;
+  turn: number;
+  flipMs: number;
+  landed: boolean;
+}
+
+const REST: Board = {
+  prevClub: "",
+  prevSeason: "",
+  club: "",
+  season: "",
+  turn: 0,
+  flipMs: 0,
+  landed: false,
+};
+
+export function SlotSpin({ targetTeamId, targetName, targetColour, clubPool, onLanded }: Props) {
   const t = useT();
-  const [club, setClub] = useState("");
-  const [season, setSeason] = useState("");
+  const [board, setBoard] = useState<Board>(REST);
   const [cycling, setCycling] = useState(false);
-  const [locked, setLocked] = useState(false);
   const onLandedRef = useRef(onLanded);
-  onLandedRef.current = onLanded;
+  // The spin runs on timers, so it must call whatever the parent last passed
+  // rather than the closure it started with.
+  useEffect(() => {
+    onLandedRef.current = onLanded;
+  });
   const stateRef = useRef({ cycling: false });
+  const locked = board.landed;
 
   const start = useCallback(() => {
     if (stateRef.current.cycling) return;
     stateRef.current.cycling = true;
     setCycling(true);
-    setLocked(false);
+    setBoard((b) => ({ ...b, landed: false }));
     const [tClub, tSeason] = split(targetTeamId);
     const DUR = 2100;
     const t0 = performance.now();
     const step = () => {
-      const t = Math.min(1, (performance.now() - t0) / DUR);
-      if (t >= 1) {
-        setClub(tClub);
-        setSeason(tSeason);
-        setCycling(false);
-        setLocked(true);
+      const p = Math.min(1, (performance.now() - t0) / DUR);
+      // The board starts fast and tires. A leaf has to finish falling before
+      // the next one starts, so the turn is always a little under the gap.
+      // Nothing goes quicker than about eight turns a second: past that a leaf
+      // is gone inside three frames and the board reads as flicker rather than
+      // as something mechanical, which is the whole point of it.
+      const gap = 145 + p * p * 240;
+      const flipMs = Math.min(gap * 0.9, 340);
+      const last = p >= 1;
+      const pick = clubPool[Math.floor(Math.random() * clubPool.length)];
+      const [c, s] = last ? [tClub, tSeason] : split(pick);
+      setBoard((b) => ({
+        prevClub: b.club,
+        prevSeason: b.season,
+        club: c,
+        season: s,
+        turn: b.turn + 1,
+        flipMs,
+        landed: last,
+      }));
+      if (last) {
         stateRef.current.cycling = false;
-        thud();
-        setTimeout(() => onLandedRef.current(), 800);
+        setCycling(false);
+        // The thud belongs to the leaf hitting the stop, not to the decision.
+        setTimeout(thud, flipMs);
+        setTimeout(() => onLandedRef.current(), flipMs + 800);
         return;
       }
-      const pick = clubPool[Math.floor(Math.random() * clubPool.length)];
-      const [c, s] = split(pick);
-      setClub(c);
-      setSeason(s);
-      tick(t);
-      setTimeout(step, 55 + t * t * 200);
+      tick(p);
+      setTimeout(step, gap);
     };
     step();
   }, [targetTeamId, clubPool]);
@@ -74,15 +112,12 @@ export function SlotSpin({ targetTeamId, targetName, targetColour, clubPool, spi
     return () => window.removeEventListener("keydown", h);
   }, [start]);
 
-  useEffect(() => {
-    setClub("");
-    setSeason("");
-    setLocked(false);
-    setCycling(false);
-    stateRef.current.cycling = false;
-  }, [spinKey]);
-
-  const dim = !club && !locked;
+  const dim = !board.club && !locked;
+  const face = (v: string, fallback: string) => (
+    <span className={dim ? "text-[#3A3A3A]" : ""}>{v || fallback}</span>
+  );
+  const SIZE =
+    "text-[56px] leading-[52px] sm:text-[64px] sm:leading-[58px] lg:text-[72px] lg:leading-[66px]";
 
   return (
     <div className="text-white px-5 lg:px-0" onClick={start}>
@@ -90,22 +125,35 @@ export function SlotSpin({ targetTeamId, targetName, targetColour, clubPool, spi
         {/* The board itself: two black plates on a night panel. */}
         <div className="bg-surface rounded-card p-4 lg:p-5 flex flex-col gap-3.5">
           <div className="flex gap-3 lg:gap-3.5">
-            <div className="flex-1 min-w-0">
-              <Flap
-                label={t("draft.squad")}
-                value={<span className={dim ? "text-[#3A3A3A]" : ""}>{club || "···"}</span>}
-                tone={locked ? "team" : "plate"}
-                colour={targetColour}
+            <div className="flex-1 min-w-0 flex flex-col gap-2">
+              <div className="text-[13px] leading-[18px] font-medium text-muted-plate">
+                {t("draft.squad")}
+              </div>
+              <SplitFlap
+                prev={face(board.prevClub, "···")}
+                next={face(board.club, "···")}
+                playKey={board.turn}
+                duration={board.flipMs}
+                bg="#0A0A0A"
+                nextBg={locked ? targetColour : undefined}
+                bordered={!locked}
                 className="h-[112px] lg:h-[116px]"
-                valueClassName="text-[56px] leading-[52px] sm:text-[64px] sm:leading-[58px] lg:text-[72px] lg:leading-[66px]"
+                valueClassName={SIZE}
               />
             </div>
-            <div className="flex-1 min-w-0">
-              <Flap
-                label={t("draft.season")}
-                value={<span className={dim ? "text-[#3A3A3A]" : ""}>{season || "····"}</span>}
+            <div className="flex-1 min-w-0 flex flex-col gap-2">
+              <div className="text-[13px] leading-[18px] font-medium text-muted-plate">
+                {t("draft.season")}
+              </div>
+              <SplitFlap
+                prev={face(board.prevSeason, "····")}
+                next={face(board.season, "····")}
+                playKey={board.turn}
+                duration={board.flipMs}
+                bg="#0A0A0A"
+                bordered
                 className="h-[112px] lg:h-[116px]"
-                valueClassName="text-[56px] leading-[52px] sm:text-[64px] sm:leading-[58px] lg:text-[72px] lg:leading-[66px]"
+                valueClassName={SIZE}
               />
             </div>
           </div>
