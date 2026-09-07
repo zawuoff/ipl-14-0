@@ -20,6 +20,7 @@ import {
   Wordmark,
   splitName,
 } from "@/components/ui";
+import { QuietBoundary } from "@/components/QuietBoundary";
 import { useT, useLang, LangToggle, type T } from "@/lib/i18n";
 
 type Screen = "home" | "game" | "board";
@@ -75,11 +76,6 @@ export default function Home() {
     (api as any).results?.leaderboard,
     show === "board" ? { limit: 20 } : "skip"
   );
-  const todayStats = useQuery(
-    (api as any).stats?.homeToday,
-    show === "home" ? { date: today } : "skip"
-  ) as TodayStats | undefined;
-
   const play = (m: "classic" | "daily") => {
     setMode(m);
     setGameKey((k) => k + 1);
@@ -95,7 +91,6 @@ export default function Home() {
           today={today}
           play={play}
           rows={dailyBoard as Row[] | undefined}
-          stats={todayStats}
           goBoard={() => setScreen("board")}
         />
       )}
@@ -177,13 +172,11 @@ function HomeScreen({
   today,
   play,
   rows,
-  stats,
   goBoard,
 }: {
   today: string;
   play: (m: "classic" | "daily") => void;
   rows: Row[] | undefined;
-  stats: TodayStats | undefined;
   goBoard: () => void;
 }) {
   const t = useT();
@@ -269,9 +262,9 @@ function HomeScreen({
         />
       </section>
 
-      <TodayNumbers stats={stats} goBoard={goBoard} />
-
-      <MostPickedToday stats={stats} />
+      <QuietBoundary>
+        <TodaySections today={today} goBoard={goBoard} />
+      </QuietBoundary>
 
       {/* Today's best runs, straight off the board. */}
       <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-9 lg:pt-14 flex flex-col gap-3.5">
@@ -293,6 +286,20 @@ function HomeScreen({
 }
 
 /* --------------------------------------------------------- today's board */
+
+/** Reads the day's numbers. Lives below QuietBoundary so a backend without
+    this query yet costs these two sections and nothing else. */
+function TodaySections({ today, goBoard }: { today: string; goBoard: () => void }) {
+  const stats = useQuery((api as any).stats?.homeToday, { date: today }) as
+    | TodayStats
+    | undefined;
+  return (
+    <>
+      <TodayNumbers stats={stats} goBoard={goBoard} />
+      <MostPickedToday stats={stats} />
+    </>
+  );
+}
 
 function pct(count: number, of: number): number {
   if (!of) return 0;
