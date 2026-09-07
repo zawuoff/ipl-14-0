@@ -1,5 +1,5 @@
 "use client";
-import type { ReactNode } from "react";
+import { Children, type ReactNode } from "react";
 
 /* Shared pieces of the scoreboard language: flap cells, team chips, the pick
    strip, stat strips, split score cards, and the button shapes. Everything
@@ -206,55 +206,49 @@ export function SlotStrip({
 
 /** The diagonal speed stripes the IPL uses across its own headers. Decorative
     only: it never carries meaning, so it is hidden from assistive tech. */
-/** The speed stripes, drawn to close off the top bar. They are part of the bar
-    rather than a slab of their own beneath it, so they are shallow: the slant
-    is redrawn for the height instead of squashing the taller artwork into it. */
-export function StripeRule({ tone = "accent" }: { tone?: "accent" | "trophy" }) {
+export function StripeBand({
+  height,
+  className = "",
+  tone = "accent",
+}: {
+  height?: number;
+  className?: string;
+  tone?: "accent" | "trophy";
+}) {
   const bright = tone === "trophy" ? "#E0A81C" : "#5AC2FF";
-  // (x, width) pairs along the top edge; every stripe leans the same way.
-  const phone: [number, number][] = [
-    [20, 46],
-    [86, 58],
-    [162, 26],
-    [206, 54],
-    [278, 30],
-    [326, 74],
-  ];
-  const wide: [number, number][] = [
-    [900, 62],
-    [1000, 74],
-    [1104, 30],
-    [1164, 66],
-    [1270, 32],
-    [1332, 120],
-  ];
-  const lean = (rows: [number, number][], dx: number, h: number) =>
-    rows.map(([x, w], i) => (
-      <polygon
-        key={x}
-        points={`${x},0 ${x + w},0 ${x + w - dx},${h} ${x - dx},${h}`}
-        fill={i % 2 ? bright : "#2E5BC4"}
-      />
-    ));
   return (
-    <>
+    <div
+      className={`relative overflow-hidden bg-band h-16 lg:h-14 ${className}`}
+      style={height ? { height } : undefined}
+      aria-hidden
+    >
+      {/* A phone gets the ring on the left with the stripes sweeping past it;
+          a wide screen gets the same stripes gathered over on the right, where
+          they run off the edge. Both are the drawn design, not one stretched. */}
       <svg
-        viewBox="0 0 390 22"
+        viewBox="0 0 390 64"
         preserveAspectRatio="xMinYMid slice"
         className="lg:hidden absolute inset-0 h-full w-full"
-        aria-hidden
       >
-        {lean(phone, 41, 22)}
+        <polygon points="150,0 210,0 90,64 30,64" fill="#2E5BC4" />
+        <polygon points="230,0 300,0 180,64 110,64" fill={bright} />
+        <polygon points="320,0 350,0 230,64 200,64" fill="#2E5BC4" />
+        <polygon points="370,0 430,0 310,64 250,64" fill={bright} />
+        <circle cx="60" cy="40" r="52" fill="#2E5BC4" />
+        <circle cx="60" cy="40" r="34" fill="#1B3A8F" />
       </svg>
       <svg
-        viewBox="0 0 1440 20"
+        viewBox="0 0 1440 56"
         preserveAspectRatio="xMaxYMid slice"
         className="hidden lg:block absolute inset-0 h-full w-full"
-        aria-hidden
       >
-        {lean(wide, 39, 20)}
+        <polygon points="900,0 960,0 850,56 790,56" fill="#2E5BC4" />
+        <polygon points="1000,0 1070,0 960,56 890,56" fill={bright} />
+        <polygon points="1100,0 1130,0 1020,56 990,56" fill="#2E5BC4" />
+        <polygon points="1180,0 1240,0 1130,56 1070,56" fill={bright} />
+        <polygon points="1300,0 1330,0 1220,56 1190,56" fill="#2E5BC4" />
       </svg>
-    </>
+    </div>
   );
 }
 
@@ -304,8 +298,18 @@ export function StatStrip({
   children: ReactNode;
   className?: string;
 }) {
+  /* Four cells will not sit in one row on a phone: a surname in Teko at this
+     size is wider than a quarter of the screen and used to run straight over
+     its neighbour. Four go two-up and drop into one row when there is width
+     for it; three still fit across. The dividers are hairline gaps showing
+     through from behind, so they come out right in either layout. */
+  const twoUp = Children.count(children) >= 4;
   return (
-    <div className={`flex bg-surface rounded-card overflow-hidden ${className}`}>{children}</div>
+    <div
+      className={`${twoUp ? "grid grid-cols-2 lg:flex" : "flex"} gap-px bg-hairline rounded-card overflow-hidden ${className}`}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -332,13 +336,16 @@ export function StatCell({
             : "text-white";
   return (
     <div
-      className={`flex flex-col items-center gap-0.5 flex-1 min-w-0 px-2 py-3.5 lg:py-4 border-r border-hairline last:border-r-0 ${className}`}
+      className={`@container flex flex-col items-center gap-0.5 flex-1 min-w-0 bg-surface px-2 py-3.5 lg:py-4 ${className}`}
     >
-      <span className="font-semibold text-[10px] lg:text-[11px] leading-[14px] tracking-[0.07em] uppercase text-muted whitespace-nowrap">
+      <span className="max-w-full truncate font-semibold text-[10px] lg:text-[11px] leading-[14px] tracking-[0.07em] uppercase text-muted">
         {label}
       </span>
       <span
-        className={`font-display font-bold text-[32px] leading-[32px] lg:text-[38px] lg:leading-[36px] pt-1 tabular whitespace-nowrap ${colour}`}
+        /* A number sits at full size; a surname in a narrow cell steps down to
+           fit rather than spilling over its neighbour or ending in an ellipsis.
+           The line box keeps its height either way, so rows stay level. */
+        className={`max-w-full truncate font-display font-bold text-[clamp(17px,29cqi,32px)] leading-[32px] lg:text-[clamp(17px,29cqi,38px)] lg:leading-[36px] pt-1 tabular ${colour}`}
       >
         {value}
       </span>

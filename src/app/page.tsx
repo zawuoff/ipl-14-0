@@ -17,7 +17,7 @@ import {
   SectionHead,
   StatCell,
   StatStrip,
-  StripeRule,
+  StripeBand,
   Wordmark,
   splitName,
   IconButton,
@@ -156,8 +156,8 @@ function TopBar({
      side, one action on the other. Three chips crowded down the right-hand end
      was never the shape of it. */
   return (
-    <header className="relative bg-band">
-      <div className="relative mx-auto w-full max-w-[1440px] px-3 lg:px-10 h-[54px] lg:h-[68px] flex items-center">
+    <header className="bg-band">
+      <div className="relative mx-auto w-full max-w-[1440px] px-3 lg:px-10 h-[56px] lg:h-[72px] flex items-center">
         <div className="flex items-center gap-1 lg:gap-7 min-w-0">
           <nav className="hidden lg:flex items-center gap-7">
             <button className={link} onClick={() => go("home")}>{t("nav.howItWorks")}</button>
@@ -225,15 +225,6 @@ function TopBar({
           )}
         </div>
       </div>
-      {/* The speed stripes close the bar off rather than forming a slab of
-          their own underneath it. Only on the home page: every other screen
-          opens with a page band that carries the same stripes, and two sets of
-          them stacked is the pile-up this was meant to undo. */}
-      {screen === "home" && (
-        <div className="relative h-[22px] lg:h-[20px] overflow-hidden">
-          <StripeRule />
-        </div>
-      )}
     </header>
   );
 }
@@ -276,6 +267,7 @@ function HomeScreen({
 
   return (
     <>
+      <StripeBand />
 
       {/* The board is the hero. On desktop it sits inside a night card. */}
       <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-6 lg:pt-8">
@@ -480,7 +472,7 @@ function StatCardGroup({
         <span className="head-display text-[26px] leading-[26px]">{title}</span>
         <span className="text-[13px] leading-4 text-muted">{note}</span>
       </div>
-      <div className="flex border-t border-hairline">{children}</div>
+      <div className="flex gap-px bg-hairline border-t border-hairline">{children}</div>
     </Card>
   );
 }
