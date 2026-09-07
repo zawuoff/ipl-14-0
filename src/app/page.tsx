@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
@@ -20,8 +20,13 @@ import {
   StripeBand,
   Wordmark,
   splitName,
+  IconButton,
+  SoundIcon,
+  RestartIcon,
 } from "@/components/ui";
 import { QuietBoundary } from "@/components/QuietBoundary";
+import { ChromeProvider, useChrome } from "@/components/Chrome";
+import { useMuted } from "@/lib/sound";
 import { useT, useLang, LangToggle, type T } from "@/lib/i18n";
 
 type Screen = "home" | "game" | "board";
@@ -82,6 +87,7 @@ export default function Home() {
   };
 
   return (
+    <ChromeProvider>
     <main className="min-h-screen bg-ground text-white flex flex-col">
       <TopBar
         screen={show}
@@ -115,6 +121,7 @@ export default function Home() {
 
       <SiteFooter />
     </main>
+    </ChromeProvider>
   );
 }
 
@@ -132,34 +139,92 @@ function TopBar({
   inGame: boolean;
 }) {
   const t = useT();
+  const { run } = useChrome();
+  const [muted, toggleMuted] = useMuted();
+  const [confirmRestart, setConfirmRestart] = useState(false);
   const link = "text-[15px] leading-5 font-medium text-white/80 hover:text-accent transition-colors";
+
+  // A restart throws the board away, and the control is now an icon, so it asks
+  // once. The question withdraws itself rather than sitting there armed.
+  useEffect(() => {
+    if (!confirmRestart) return;
+    const id = window.setTimeout(() => setConfirmRestart(false), 4000);
+    return () => window.clearTimeout(id);
+  }, [confirmRestart]);
+
+  // While a run is on, the strapline slot carries the run instead. A phone gets
+  // the run only: the re-spins in hand are already on the re-spin button.
+  const subtitle = run ? run.label : t("app.tagline");
+  const extra =
+    run && run.respins !== undefined ? t("draft.respinsLeft", { n: run.respins }) : null;
+
   return (
     <header className="bg-band">
       <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 h-[60px] lg:h-[72px] flex items-center gap-3 lg:gap-5">
-        <button onClick={() => !inGame && go("home")} className="flex items-baseline gap-3 min-w-0">
-          <Wordmark className="text-[30px] lg:text-[34px]" />
-          <span className="hidden sm:block text-[13px] lg:text-[14px] leading-[18px] text-white/70 truncate">
-            {t("app.tagline")}
+        <button
+          onClick={() => !inGame && go("home")}
+          className="flex items-baseline gap-2.5 lg:gap-3 min-w-0"
+        >
+          <Wordmark className="shrink-0 text-[30px] lg:text-[34px]" />
+          <span
+            className={`text-[13px] lg:text-[14px] leading-[18px] text-white/70 truncate ${
+              run ? "" : "hidden sm:block"
+            }`}
+          >
+            {subtitle}
+            {extra && <span className="hidden sm:inline"> · {extra}</span>}
           </span>
         </button>
         <span className="flex-1" />
-        <nav className="hidden lg:flex items-center gap-7">
-          <button className={link} onClick={() => go("home")}>{t("nav.howItWorks")}</button>
-          <button
-            className={`${link} ${screen === "board" ? "text-accent" : ""}`}
-            onClick={() => go("board")}
+        {!run && (
+          <nav className="hidden lg:flex items-center gap-7">
+            <button className={link} onClick={() => go("home")}>{t("nav.howItWorks")}</button>
+            <button
+              className={`${link} ${screen === "board" ? "text-accent" : ""}`}
+              onClick={() => go("board")}
+            >
+              {t("nav.leaderboard")}
+            </button>
+            <button className={link} onClick={() => goFriend()}>{t("nav.playAFriend")}</button>
+          </nav>
+        )}
+        <div className="shrink-0 flex items-center gap-2">
+          <IconButton
+            onClick={toggleMuted}
+            label={muted ? t("run.soundOff") : t("run.soundOn")}
+            className="w-9"
           >
-            {t("nav.leaderboard")}
-          </button>
-          <button className={link} onClick={() => goFriend()}>{t("nav.playAFriend")}</button>
-        </nav>
-        <button
-          onClick={() => go("board")}
-          className="lg:hidden text-[14px] font-semibold px-3.5 h-9 flex items-center rounded-full bg-white/12 hover:bg-white/20 transition-colors"
-        >
-          {t("nav.board")}
-        </button>
-        <LangToggle className="w-11 h-9 lg:w-[46px] lg:h-[34px] text-[14px]" />
+            <SoundIcon on={!muted} />
+          </IconButton>
+          <LangToggle className="w-10 h-9 text-[13px]" />
+          {run ? (
+            <IconButton
+              onClick={() => {
+                if (!confirmRestart) {
+                  setConfirmRestart(true);
+                  return;
+                }
+                setConfirmRestart(false);
+                run.onRestart();
+              }}
+              label={t("run.restart")}
+              active={confirmRestart}
+              className={confirmRestart ? "px-3.5" : "w-9"}
+            >
+              <RestartIcon />
+              {confirmRestart && (
+                <span className="text-[13px] font-semibold">{t("run.restartSure")}</span>
+              )}
+            </IconButton>
+          ) : (
+            <button
+              onClick={() => go("board")}
+              className="lg:hidden text-[14px] font-semibold px-3.5 h-9 flex items-center rounded-full bg-white/12 hover:bg-white/20 transition-colors"
+            >
+              {t("nav.board")}
+            </button>
+          )}
+        </div>
       </div>
     </header>
   );

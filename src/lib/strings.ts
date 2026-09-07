@@ -151,6 +151,7 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "run.restart": { en: "Restart run", hi: "रन दोबारा शुरू करें" },
   "run.soundOn": { en: "Sound on", hi: "आवाज़ चालू" },
   "run.soundOff": { en: "Sound off", hi: "आवाज़ बंद" },
+  "run.restartSure": { en: "Sure?", hi: "पक्का?" },
   "run.classic": { en: "Classic", hi: "क्लासिक" },
   "run.dailyWithDate": { en: "Today's challenge · {date}", hi: "आज की चुनौती · {date}" },
   "run.room": { en: "Room {code}", hi: "रूम {code}" },

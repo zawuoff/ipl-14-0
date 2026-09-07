@@ -502,6 +502,71 @@ export function WhatsAppIcon({ size = 22, fill = "#FFFFFF" }: { size?: number; f
 }
 
 /** A chevron for rows you can walk into. */
+/* The header's controls. Round, quiet, and the same size as each other. */
+export function IconButton({
+  onClick,
+  label,
+  active,
+  className = "",
+  children,
+}: {
+  onClick: () => void;
+  label: string;
+  active?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={`shrink-0 h-9 flex items-center justify-center gap-1.5 rounded-full transition-colors ${
+        active ? "bg-loss text-white" : "bg-white/12 text-white hover:bg-white/20"
+      } ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function SoundIcon({ on, size = 19 }: { on: boolean; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
+      <path d="M4 9.2v5.6h3.4L12 18.6V5.4L7.4 9.2H4Z" fill="currentColor" />
+      {on ? (
+        <>
+          <path d="M15.4 9.1a4 4 0 0 1 0 5.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M18.2 6.4a7.7 7.7 0 0 1 0 11.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </>
+      ) : (
+        <path d="M15.6 9.6 20.4 14.4M20.4 9.6l-4.8 4.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      )}
+    </svg>
+  );
+}
+
+export function RestartIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
+      <path
+        d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M19.5 3.8v4.4h-4.4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function Chevron({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden>
