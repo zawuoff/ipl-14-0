@@ -363,6 +363,7 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "pm.battedFirst": { en: "{overs} overs, batted first", hi: "{overs} ओवर, पहले बल्लेबाज़ी" },
   "pm.chasingOvers": { en: "{overs} overs, chasing {target}", hi: "{overs} ओवर, {target} का पीछा" },
   "pm.chasing": { en: "chasing {target}", hi: "{target} का पीछा" },
+  "pm.yetToBat": { en: "yet to bat", hi: "बल्लेबाज़ी बाकी" },
   "pm.neededOff": { en: "needed off {n} balls", hi: "चाहिए, {n} गेंद में" },
   "pm.neededOffOne": { en: "needed off 1 ball", hi: "चाहिए, 1 गेंद में" },
   "pm.chasedDown": { en: "Chased down.", hi: "लक्ष्य हासिल।" },

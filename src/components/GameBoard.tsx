@@ -1,4 +1,5 @@
 "use client";
+import { opponentStar } from "@/lib/game/opponents2026";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -1792,7 +1793,6 @@ function ShareBlock({
   );
 }
 
-const OPP_HEROES = ["Warner", "Buttler", "Bumrah", "Rashid", "Gayle", "Dhoni", "ABD", "Malinga", "Narine", "Pant", "SKY", "Head"];
 
 function shortName(full: string): string {
   const parts = full.split(" ");
@@ -1820,8 +1820,7 @@ function leagueHero(
           balls: star.bat.balls,
         });
   }
-  const h = OPP_HEROES[(g.opp.length + i) % OPP_HEROES.length];
-  return t("hero.opp", { name: h });
+  return t("hero.opp", { name: opponentStar(g.opp, i) });
 }
 
 function leagueRuns(games: GameResult[]): number {
