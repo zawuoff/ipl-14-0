@@ -17,7 +17,7 @@ import {
   SectionHead,
   StatCell,
   StatStrip,
-  StripeBand,
+  StripeRule,
   Wordmark,
   splitName,
   IconButton,
@@ -156,8 +156,8 @@ function TopBar({
      side, one action on the other. Three chips crowded down the right-hand end
      was never the shape of it. */
   return (
-    <header className="bg-band">
-      <div className="relative mx-auto w-full max-w-[1440px] px-3 lg:px-10 h-[56px] lg:h-[72px] flex items-center">
+    <header className="relative bg-band">
+      <div className="relative mx-auto w-full max-w-[1440px] px-3 lg:px-10 h-[54px] lg:h-[68px] flex items-center">
         <div className="flex items-center gap-1 lg:gap-7 min-w-0">
           <nav className="hidden lg:flex items-center gap-7">
             <button className={link} onClick={() => go("home")}>{t("nav.howItWorks")}</button>
@@ -225,6 +225,15 @@ function TopBar({
           )}
         </div>
       </div>
+      {/* The speed stripes close the bar off rather than forming a slab of
+          their own underneath it. Only on the home page: every other screen
+          opens with a page band that carries the same stripes, and two sets of
+          them stacked is the pile-up this was meant to undo. */}
+      {screen === "home" && (
+        <div className="relative h-[22px] lg:h-[20px] overflow-hidden">
+          <StripeRule />
+        </div>
+      )}
     </header>
   );
 }
@@ -267,7 +276,6 @@ function HomeScreen({
 
   return (
     <>
-      <StripeBand />
 
       {/* The board is the hero. On desktop it sits inside a night card. */}
       <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-6 lg:pt-8">
