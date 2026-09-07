@@ -1,5 +1,5 @@
 "use client";
-import type { ReactNode } from "react";
+import { Children, type ReactNode } from "react";
 
 /* Shared pieces of the scoreboard language: flap cells, team chips, the pick
    strip, stat strips, split score cards, and the button shapes. Everything
@@ -298,8 +298,18 @@ export function StatStrip({
   children: ReactNode;
   className?: string;
 }) {
+  /* Four cells will not sit in one row on a phone: a surname in Teko at this
+     size is wider than a quarter of the screen and used to run straight over
+     its neighbour. Four go two-up and drop into one row when there is width
+     for it; three still fit across. The dividers are hairline gaps showing
+     through from behind, so they come out right in either layout. */
+  const twoUp = Children.count(children) >= 4;
   return (
-    <div className={`flex bg-surface rounded-card overflow-hidden ${className}`}>{children}</div>
+    <div
+      className={`${twoUp ? "grid grid-cols-2 lg:flex" : "flex"} gap-px bg-hairline rounded-card overflow-hidden ${className}`}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -326,13 +336,16 @@ export function StatCell({
             : "text-white";
   return (
     <div
-      className={`flex flex-col items-center gap-0.5 flex-1 min-w-0 px-2 py-3.5 lg:py-4 border-r border-hairline last:border-r-0 ${className}`}
+      className={`@container flex flex-col items-center gap-0.5 flex-1 min-w-0 bg-surface px-2 py-3.5 lg:py-4 ${className}`}
     >
-      <span className="font-semibold text-[10px] lg:text-[11px] leading-[14px] tracking-[0.07em] uppercase text-muted whitespace-nowrap">
+      <span className="max-w-full truncate font-semibold text-[10px] lg:text-[11px] leading-[14px] tracking-[0.07em] uppercase text-muted">
         {label}
       </span>
       <span
-        className={`font-display font-bold text-[32px] leading-[32px] lg:text-[38px] lg:leading-[36px] pt-1 tabular whitespace-nowrap ${colour}`}
+        /* A number sits at full size; a surname in a narrow cell steps down to
+           fit rather than spilling over its neighbour or ending in an ellipsis.
+           The line box keeps its height either way, so rows stay level. */
+        className={`max-w-full truncate font-display font-bold text-[clamp(17px,29cqi,32px)] leading-[32px] lg:text-[clamp(17px,29cqi,38px)] lg:leading-[36px] pt-1 tabular ${colour}`}
       >
         {value}
       </span>

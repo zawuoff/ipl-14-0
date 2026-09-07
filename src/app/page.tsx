@@ -472,7 +472,7 @@ function StatCardGroup({
         <span className="head-display text-[26px] leading-[26px]">{title}</span>
         <span className="text-[13px] leading-4 text-muted">{note}</span>
       </div>
-      <div className="flex border-t border-hairline">{children}</div>
+      <div className="flex gap-px bg-hairline border-t border-hairline">{children}</div>
     </Card>
   );
 }
