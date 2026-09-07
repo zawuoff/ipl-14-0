@@ -120,3 +120,31 @@ export function fanfare(): void {
   blip(c, 1567.98, ring + 0.06, 0.9, "sine", 0.05); // G6 shimmer on top
   blip(c, 130.81, ring, 0.55, "sine", 0.22); // C3 under it
 }
+
+/** Lifting the cup: three rockets going up, each with a pop at the top. */
+export function fireworks(): void {
+  if (isMuted()) return;
+  const c = audio();
+  if (!c) return;
+  const t0 = c.currentTime + 0.03;
+  for (let i = 0; i < 3; i++) {
+    const launch = t0 + i * 0.42;
+    // the whistle up
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(320, launch);
+    o.frequency.exponentialRampToValueAtTime(1100, launch + 0.32);
+    g.gain.setValueAtTime(0.0001, launch);
+    g.gain.exponentialRampToValueAtTime(0.05, launch + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, launch + 0.34);
+    o.connect(g).connect(c.destination);
+    o.start(launch);
+    o.stop(launch + 0.36);
+    // the pop
+    const at = launch + 0.36;
+    blip(c, 90, at, 0.22, "sine", 0.28);
+    blip(c, 1800 + i * 300, at, 0.08, "triangle", 0.09);
+    blip(c, 2600 + i * 200, at + 0.02, 0.12, "sine", 0.04);
+  }
+}
