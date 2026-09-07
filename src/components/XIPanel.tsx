@@ -1,6 +1,6 @@
 "use client";
 import type { PlayerSeason, Role, XIConfig } from "@/lib/game/types";
-import { TeamChip } from "./ui";
+import { Flap, TeamChip } from "./ui";
 import { useT } from "@/lib/i18n";
 
 const ORDER: Role[] = ["Opener", "Middle", "WK", "AR", "Pace", "Spin"];
@@ -99,15 +99,18 @@ export function XIPanel({
       )}
 
       {power != null && filled.length > 0 && (
-        <div className="flex items-end gap-7 pt-4">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[13px] leading-[18px] text-muted">{t("xi.teamPower")}</span>
-            <span className="font-display font-bold text-[44px] leading-[38px] pt-1 tabular">
-              {hideRatings ? "?" : Math.round(power)}
-            </span>
-          </div>
+        <div className="flex items-end gap-5 lg:gap-7 pt-4">
+          {/* Team power reads off a plate, like every other number on the board. */}
+          <Flap
+            label={t("xi.teamPower")}
+            labelOnPlate={false}
+            value={hideRatings ? "?" : Math.round(power)}
+            wrapClassName="shrink-0"
+            className="w-[112px] h-[78px]"
+            valueClassName="text-[48px] leading-[44px]"
+          />
           {!hideRatings && bat != null && bowl != null && (
-            <div className="flex flex-col gap-1.5 pb-1">
+            <div className="flex flex-col gap-1.5 pb-2.5">
               <div className="flex items-baseline gap-2">
                 <span className="w-[62px] text-[14px] leading-5 text-muted">{t("xi.batting")}</span>
                 <span className="font-semibold text-[15px] leading-5">{t(`unit.${unitWord(bat)}`)}</span>

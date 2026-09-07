@@ -14,6 +14,7 @@ import type * as drafts from "../drafts.js";
 import type * as results from "../results.js";
 import type * as rooms from "../rooms.js";
 import type * as seed from "../seed.js";
+import type * as stats from "../stats.js";
 
 import type {
   ApiFromModules,
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   results: typeof results;
   rooms: typeof rooms;
   seed: typeof seed;
+  stats: typeof stats;
 }>;
 
 /**

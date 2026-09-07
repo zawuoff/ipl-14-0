@@ -1,6 +1,6 @@
 "use client";
-import type { Forecast, SeasonResult } from "@/lib/sim/engine";
-import { SectionHead } from "./ui";
+import { seasonForm, type Forecast, type SeasonResult } from "@/lib/sim/engine";
+import { Card, Eyebrow, SectionHead, StatCell, StatStrip } from "./ui";
 import { unitWord } from "./XIPanel";
 import { useT } from "@/lib/i18n";
 
@@ -26,6 +26,11 @@ export function SeasonReport({
   owners?: (player: string) => string[];
 }) {
   const t = useT();
+  // Judge the XI on the season it actually played. The ratings it was drafted
+  // on are what the bookies used; they are not what happened.
+  const played = seasonForm(result.games);
+  const batIdx = result.games.length ? played.bat : bat;
+  const bowlIdx = result.games.length ? played.bowl : bowl;
   // Checkpoint before the playoffs: where you finished, and how that compares.
   if (slim) {
     return (
@@ -44,78 +49,86 @@ export function SeasonReport({
           <h2 className="font-semibold text-[20px] leading-[26px] lg:text-[24px] lg:leading-8">
             {verdict(result, t)}
           </h2>
-          <p className="text-[15px] leading-6 text-muted max-w-[70ch]">{body(result, bat, bowl, t)}</p>
+          <p className="text-[15px] leading-6 text-muted max-w-[70ch]">{body(result, batIdx, bowlIdx, t)}</p>
         </div>
       )}
 
       <div className="flex flex-col lg:flex-row lg:gap-12 lg:items-start">
-        <section className="flex flex-col flex-1 min-w-0">
+        <section className="flex flex-col flex-1 min-w-0 gap-3">
           <SectionHead
             title={t("report.xiNumbers")}
             note={t("report.matches", { n: result.games.length + result.playoffs.length })}
           />
-          <div className="flex items-center gap-3 h-7 mt-1 text-[12px] leading-4 text-muted">
-            <span className="flex-1">{t("report.player")}</span>
-            <span className="w-[84px] shrink-0 hidden sm:block">{t("report.role")}</span>
-            <span className="w-14 shrink-0 text-right">{t("report.runs")}</span>
-            <span className="w-14 shrink-0 text-right">{t("report.wickets")}</span>
-            <span className="w-11 shrink-0 text-right">{t("report.rating")}</span>
-          </div>
-          {[...result.playerRuns]
-            .sort((a, b) => b.runs + b.wickets * 20 - (a.runs + a.wickets * 20))
-            .map((p, i, arr) => (
-              <div
-                key={p.player}
-                className={`flex items-center gap-3 h-10 border-t border-hairline ${
-                  i === arr.length - 1 ? "border-b" : ""
-                }`}
-              >
-                <span className="flex-1 min-w-0 font-medium text-[16px] leading-[22px] truncate">
-                  {p.player}
-                </span>
-                <span className="w-[84px] shrink-0 hidden sm:block text-[13px] leading-[18px] text-muted">
-                  {t(`role.${p.role}`)}
-                </span>
-                <Num value={p.runs} />
-                <Num value={p.wickets} />
-                <span className="w-11 shrink-0 text-right font-display font-bold text-[22px] leading-5 pt-[3px] tabular">
-                  {p.overall}
-                </span>
-              </div>
-            ))}
+          <Card className="px-4 lg:px-5 pb-1.5">
+            <div className="flex items-center gap-3 h-9 text-[12px] leading-4 text-muted">
+              <span className="flex-1">{t("report.player")}</span>
+              <span className="w-[84px] shrink-0 hidden sm:block">{t("report.role")}</span>
+              <span className="w-14 shrink-0 text-right">{t("report.runs")}</span>
+              <span className="w-14 shrink-0 text-right">{t("report.wickets")}</span>
+              <span className="w-11 shrink-0 text-right">{t("report.rating")}</span>
+            </div>
+            {[...result.playerRuns]
+              .sort((a, b) => b.runs + b.wickets * 20 - (a.runs + a.wickets * 20))
+              .map((p) => (
+                <div
+                  key={p.player}
+                  className="flex items-center gap-3 h-10 border-t border-hairline"
+                >
+                  <span className="flex-1 min-w-0 font-medium text-[16px] leading-[22px] truncate">
+                    {p.player}
+                  </span>
+                  <span className="w-[84px] shrink-0 hidden sm:block text-[13px] leading-[18px] text-muted">
+                    {t(`role.${p.role}`)}
+                  </span>
+                  <Num value={p.runs} />
+                  <Num value={p.wickets} />
+                  <span className="w-11 shrink-0 text-right font-display font-bold text-[22px] leading-5 pt-[3px] tabular">
+                    {p.overall}
+                  </span>
+                </div>
+              ))}
+          </Card>
         </section>
 
-        <section className="flex flex-col mt-8 lg:mt-0 lg:w-[400px] lg:shrink-0">
+        <section className="flex flex-col mt-8 lg:mt-0 lg:w-[400px] lg:shrink-0 gap-3">
           <SectionHead title={t("report.awards")} />
-          <Award
-            colour="#FF822A"
-            name={result.orangeCap.player}
-            note={t("report.orangeCap")}
-            value={result.orangeCap.runs}
-            owners={owners?.(result.orangeCap.player)}
-          />
-          <Award
-            colour="#6B3FA0"
-            name={result.purpleCap.player}
-            note={t("report.purpleCap")}
-            value={result.purpleCap.wickets}
-            owners={owners?.(result.purpleCap.player)}
-          />
-          <Award
-            colour="#E0A81C"
-            name={result.mvp.player}
-            note={t("report.mvp")}
-            value={result.mvp.points}
-            owners={owners?.(result.mvp.player)}
-            last
-          />
+          <div className="flex flex-col gap-2.5">
+            <Award
+              colour="#FF822A"
+              labelClass="text-cap-orange"
+              name={result.orangeCap.player}
+              note={t("report.orangeCap")}
+              value={result.orangeCap.runs}
+              owners={owners?.(result.orangeCap.player)}
+            />
+            <Award
+              colour="#A76BFF"
+              labelClass="text-cap-purple"
+              name={result.purpleCap.player}
+              note={t("report.purpleCap")}
+              value={result.purpleCap.wickets}
+              owners={owners?.(result.purpleCap.player)}
+            />
+            <Award
+              colour="#E0A81C"
+              labelClass="text-trophy"
+              name={result.mvp.player}
+              note={t("report.mvp")}
+              value={result.mvp.points}
+              owners={owners?.(result.mvp.player)}
+            />
+          </div>
 
           {!compact && (
-            <div className="flex flex-wrap gap-x-8 gap-y-3 pt-6">
-              <Stat value={t(`unit.${unitWord(bat)}`)} label={t("report.batting")} />
-              <Stat value={t(`unit.${unitWord(bowl)}`)} label={t("report.bowling")} />
-              <Stat value={`${result.nrr > 0 ? "+" : ""}${result.nrr}`} label={t("word.nrr")} />
-            </div>
+            <StatStrip className="mt-1">
+              <StatCell label={t("report.batting")} value={t(`unit.${unitWord(batIdx)}`)} />
+              <StatCell label={t("report.bowling")} value={t(`unit.${unitWord(bowlIdx)}`)} />
+              <StatCell
+                label={t("word.nrr")}
+                value={`${result.nrr > 0 ? "+" : ""}${result.nrr}`}
+                tone={result.nrr >= 0 ? "good" : "bad"}
+              />
+            </StatStrip>
           )}
         </section>
       </div>
@@ -144,45 +157,44 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
+/** One award: a surface row edged in the cap's own colour. */
 function Award({
   colour,
+  labelClass,
   name,
   note,
   value,
   owners,
-  last,
 }: {
   colour: string;
+  labelClass: string;
   name: string;
   note: string;
   value: number;
   owners?: string[];
-  last?: boolean;
 }) {
   return (
     <div
-      className={`flex items-center gap-3.5 min-h-[60px] py-2 border-t border-hairline ${
-        last ? "border-b" : ""
-      }`}
+      className="flex items-center gap-3.5 min-h-[68px] px-4 py-3 bg-surface rounded-card border-l-4"
+      style={{ borderLeftColor: colour }}
     >
-      <span className="w-2.5 h-[38px] shrink-0 rounded-[2px]" style={{ backgroundColor: colour }} />
       <span className="flex flex-col flex-1 min-w-0 gap-0.5">
+        <Eyebrow className={`truncate ${labelClass}`}>{note}</Eyebrow>
         <span className="flex items-center gap-2 min-w-0">
-          <span className="font-medium text-[16px] leading-[22px] truncate">{name}</span>
+          <span className="font-semibold text-[16px] leading-[22px] truncate">{name}</span>
           {owners?.map((o) => (
             <span
               key={o}
               className={`shrink-0 inline-flex items-center h-[19px] px-1.5 rounded-chip text-[12px] leading-none font-medium ${
-                o === "You" ? "bg-ink text-white" : "border border-ink text-ink"
+                o === "You" ? "bg-accent text-ground" : "border border-white/30 text-white"
               }`}
             >
               {o}
             </span>
           ))}
         </span>
-        <span className="text-[13px] leading-[18px] text-muted truncate">{note}</span>
       </span>
-      <span className="shrink-0 font-display font-semibold text-[28px] leading-[26px] pt-[3px] tabular">
+      <span className="shrink-0 font-display font-bold text-[30px] leading-7 pt-[3px] tabular">
         {value.toLocaleString("en-IN")}
       </span>
     </div>

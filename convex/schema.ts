@@ -59,15 +59,23 @@ export default defineSchema({
       v.literal("simulated")
     ),
     createdAt: v.number(),
+    // IST calendar day the draft was started, so "today" is one indexed read
+    // rather than a scan. Optional because rows written before this existed.
+    day: v.optional(v.string()),
   })
     .index("by_seed", ["seed"])
     .index("by_daily", ["dailyDate"])
-    .index("by_device", ["deviceId"]),
+    .index("by_device", ["deviceId"])
+    .index("by_day", ["day"]),
 
   simResults: defineTable({
     seed: v.string(),
     draftId: v.optional(v.id("drafts")),
     deviceId: v.string(),
+    // What this manager calls themselves on the board. Optional: rows written
+    // before names existed, and anyone who leaves it blank, fall back to a
+    // short device tag.
+    name: v.optional(v.string()),
     mode: v.union(v.literal("classic"), v.literal("daily")),
     dailyDate: v.optional(v.string()),
     difficulty: v.string(),
@@ -103,10 +111,13 @@ export default defineSchema({
     teamBowl: v.number(),
     power: v.number(),
     createdAt: v.number(),
+    // IST calendar day the season was played. See the note on drafts.day.
+    day: v.optional(v.string()),
   })
     .index("by_seed", ["seed"])
     .index("by_daily", ["dailyDate"])
-    .index("by_device", ["deviceId"]),
+    .index("by_device", ["deviceId"])
+    .index("by_day", ["day"]),
 
   dailyChallenges: defineTable({
     date: v.string(), // "2026-09-04" IST

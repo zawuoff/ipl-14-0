@@ -130,37 +130,44 @@ export function SlotSpin({ targetTeamId, targetName, targetColour, clubPool, spi
   const dim = !club && !locked;
 
   return (
-    <div className="bg-ink text-white px-5 lg:px-16 py-6 lg:py-7" onClick={start}>
-      <div className="mx-auto w-full max-w-[1440px] flex flex-col gap-4 lg:gap-5">
-        <div className="flex gap-3 lg:gap-3.5">
-          <div className="flex-1 min-w-0">
-            <Flap
-              label={t("draft.squad")}
-              value={<span className={dim ? "text-[#3A3A3A]" : ""}>{club || "···"}</span>}
-              tone={locked ? "team" : "plate"}
-              colour={targetColour}
-              className="h-[112px] lg:h-[116px]"
-              valueClassName="text-[56px] leading-[52px] sm:text-[64px] sm:leading-[58px] lg:text-[72px] lg:leading-[66px]"
-            />
+    <div className="text-white px-5 lg:px-0" onClick={start}>
+      <div className="flex flex-col gap-4 lg:gap-5">
+        {/* The board itself: two black plates on a night panel. */}
+        <div className="bg-surface rounded-card p-4 lg:p-5 flex flex-col gap-3.5">
+          <div className="flex gap-3 lg:gap-3.5">
+            <div className="flex-1 min-w-0">
+              <Flap
+                label={t("draft.squad")}
+                value={<span className={dim ? "text-[#3A3A3A]" : ""}>{club || "···"}</span>}
+                tone={locked ? "team" : "plate"}
+                colour={targetColour}
+                className="h-[112px] lg:h-[116px]"
+                valueClassName="text-[56px] leading-[52px] sm:text-[64px] sm:leading-[58px] lg:text-[72px] lg:leading-[66px]"
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <Flap
+                label={t("draft.season")}
+                value={<span className={dim ? "text-[#3A3A3A]" : ""}>{season || "····"}</span>}
+                className="h-[112px] lg:h-[116px]"
+                valueClassName="text-[56px] leading-[52px] sm:text-[64px] sm:leading-[58px] lg:text-[72px] lg:leading-[66px]"
+              />
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <Flap
-              label={t("draft.season")}
-              value={<span className={dim ? "text-[#3A3A3A]" : ""}>{season || "····"}</span>}
-              className="h-[112px] lg:h-[116px]"
-              valueClassName="text-[56px] leading-[52px] sm:text-[64px] sm:leading-[58px] lg:text-[72px] lg:leading-[66px]"
-            />
-          </div>
+
+          {locked && (
+            <p className="font-semibold text-[17px] leading-[22px] lg:text-[20px] lg:leading-[26px]">
+              {targetName}
+            </p>
+          )}
         </div>
 
-        {locked ? (
-          <p className="font-semibold text-[17px] leading-[22px]">{targetName}</p>
-        ) : (
+        {!locked && (
           <>
             <PrimaryButton className="w-full" disabled={cycling} onClick={start}>
               {cycling ? t("draft.spinning") : t("draft.spinBoard")}
             </PrimaryButton>
-            <p className="text-[13px] leading-[18px] text-muted-plate text-center">
+            <p className="text-[13px] leading-[18px] text-muted text-center">
               {t("draft.spinHint")}
             </p>
           </>

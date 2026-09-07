@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#000000",
+  themeColor: "#071238",
   width: "device-width",
   initialScale: 1,
 };
@@ -35,7 +35,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${teko.variable} ${hind.variable} h-full`}>
-      <body className="min-h-full flex flex-col bg-ground text-ink font-body">
+      <body className="min-h-full flex flex-col bg-ground text-white font-body">
         <LangProvider>
           <ConvexClientProvider>{children}</ConvexClientProvider>
         </LangProvider>

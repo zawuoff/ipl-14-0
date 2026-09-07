@@ -1,42 +1,60 @@
 @import "tailwindcss";
 
-/* 14-0 design system — "manual scoreboard at a day game".
-   White ground, black scoreboard plates, Teko numbers, Hind text.
-   Green is the only UI accent; red only for a loss, gold only for a title. */
+/* 14-0 design system — "a night game under the floodlights".
+   Navy ground, black scoreboard plates, one sky-blue accent, Teko numbers,
+   Hind text. Franchise colours are the only other colour on the page.
+   Green means a win, red a loss, gold a title. */
 @theme {
-  --color-ground: #ffffff;
-  --color-ink: #000000;
-  --color-plate: #141414;
+  /* grounds */
+  --color-ground: #071238; /* the page */
+  --color-surface: #10215c; /* every card */
+  --color-band: #1b3a8f; /* header bands */
+  --color-stripe: #2e5bc4; /* the diagonal speed stripes */
+  --color-panel: #10215c; /* alias kept for older call sites */
+
+  /* the scoreboard plate stays as black as it ever was */
+  --color-ink: #0a0a0a;
+  --color-plate: #0a0a0a;
   --color-plate-line: #2e2e2e;
   --color-plate-dash: #3a3a3a;
-  --color-muted: #5c5c5c;
+
+  /* text. rgba so one token reads correctly on ground and on surface */
+  --color-muted: rgba(255, 255, 255, 0.66);
+  --color-faint: rgba(255, 255, 255, 0.42);
+  --color-hairline: rgba(255, 255, 255, 0.14);
   --color-muted-plate: #9a9a9a;
   --color-body-plate: #bdbdbd;
-  --color-hairline: #e4e4e4;
-  --color-panel: #f2f2f2;
-  --color-faint: #a3a3a3;
+
+  /* the single interactive accent */
+  --color-accent: #5ac2ff;
+  --color-accent-deep: #35a9ee;
+
+  /* semantics */
   --color-turf: #1a8a3c;
   --color-turf-soft: #4fcb74;
-  --color-loss: #d8321f;
-  --color-loss-soft: #ff6152;
+  --color-loss: #ff5a47;
+  --color-loss-soft: #ff8577;
   --color-trophy: #e0a81c;
   --color-cap-orange: #ff822a;
-  --color-cap-purple: #6b3fa0;
+  --color-cap-purple: #a76bff;
 
   --font-display: var(--font-teko), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-hind), ui-sans-serif, system-ui, sans-serif;
 
   --radius-chip: 3px;
-  --radius-control: 6px;
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-plate: 6px;
 }
 
 html {
   -webkit-text-size-adjust: 100%;
+  background: var(--color-ground);
 }
 
 body {
   background: var(--color-ground);
-  color: var(--color-ink);
+  color: #ffffff;
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
 }
@@ -44,6 +62,14 @@ body {
 /* Teko sits high in its box; nudge numerals onto the baseline of the plate. */
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* Section headings are set in Teko, all caps, like a scoreboard header. */
+.head-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.005em;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -57,6 +83,11 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-turf);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-ground);
 }

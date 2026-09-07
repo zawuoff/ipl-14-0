@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { istDay } from "./stats";
 
 export const saveDraft = mutation({
   args: {
@@ -20,10 +21,15 @@ export const saveDraft = mutation({
       .first();
     const now = Date.now();
     if (existing) {
-      await ctx.db.patch(existing._id, { ...args, createdAt: existing.createdAt });
+      // Keep the day the run started on, not the day the last pick landed.
+      await ctx.db.patch(existing._id, {
+        ...args,
+        createdAt: existing.createdAt,
+        day: existing.day ?? istDay(existing.createdAt),
+      });
       return existing._id;
     }
-    return await ctx.db.insert("drafts", { ...args, createdAt: now });
+    return await ctx.db.insert("drafts", { ...args, createdAt: now, day: istDay(now) });
   },
 });
 

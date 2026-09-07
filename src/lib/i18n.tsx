@@ -86,7 +86,7 @@ export function LangToggle({ className = "" }: { className?: string }) {
       onClick={() => setLang(next)}
       aria-label={lang === "en" ? "हिंदी में पढ़ें" : "Read in English"}
       title={lang === "en" ? "हिंदी में पढ़ें" : "Read in English"}
-      className={`flex items-center justify-center shrink-0 rounded-control border border-ink font-semibold hover:bg-panel transition-colors ${className}`}
+      className={`flex items-center justify-center shrink-0 rounded-full bg-white/12 text-white font-semibold hover:bg-white/20 transition-colors ${className}`}
     >
       {lang === "en" ? "हिं" : "EN"}
     </button>

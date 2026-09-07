@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { istDay } from "./stats";
 
 const gameValidator = v.object({
   opp: v.string(),
@@ -14,6 +15,7 @@ export const saveResult = mutation({
   args: {
     seed: v.string(),
     deviceId: v.string(),
+    name: v.optional(v.string()),
     mode: v.union(v.literal("classic"), v.literal("daily")),
     dailyDate: v.optional(v.string()),
     difficulty: v.string(),
@@ -53,10 +55,12 @@ export const saveResult = mutation({
       .first();
     const draftId = draft?._id;
     if (draft) await ctx.db.patch(draft._id, { status: "simulated" });
+    const now = Date.now();
     return await ctx.db.insert("simResults", {
       ...args,
       draftId,
-      createdAt: Date.now(),
+      createdAt: now,
+      day: istDay(now),
     });
   },
 });
@@ -78,12 +82,20 @@ export const leaderboard = query({
   args: {
     mode: v.optional(v.union(v.literal("classic"), v.literal("daily"))),
     dailyDate: v.optional(v.string()),
+    // Every run played on one IST day, whichever mode it was. `dailyDate` is
+    // narrower: only runs of that day's shared challenge.
+    day: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const lim = Math.min(50, args.limit ?? 20);
     let rows;
-    if (args.dailyDate) {
+    if (args.day) {
+      rows = await ctx.db
+        .query("simResults")
+        .withIndex("by_day", (q) => q.eq("day", args.day))
+        .take(4000);
+    } else if (args.dailyDate) {
       rows = await ctx.db
         .query("simResults")
         .withIndex("by_daily", (q) => q.eq("dailyDate", args.dailyDate))
@@ -99,6 +111,7 @@ export const leaderboard = query({
     return filtered.slice(0, lim).map((r) => ({
       seed: r.seed,
       deviceId: r.deviceId.slice(0, 6),
+      name: r.name,
       mode: r.mode,
       difficulty: r.difficulty,
       wins: r.wins,
