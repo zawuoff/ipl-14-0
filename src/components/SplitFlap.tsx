@@ -6,10 +6,10 @@ import type { ReactNode } from "react";
    falls forward on the hinge, uncovering the new value printed underneath,
    then the new bottom leaf swings up to meet it.
 
-   Four layers do it. Two are the settled board — the new value's top half and
-   the old value's bottom half. Two are the moving leaves, both full-card boxes
-   turning about the card's centre, which is exactly where the hinge sits, so
-   each one pivots on the seam without any origin arithmetic. */
+   Four layers, all half-cards. Two sit still — the new value's top half and
+   the old value's bottom half. Two are the leaves, each pivoting on the edge
+   that touches the seam. Nothing here is ever the full card, so nothing a
+   leaf does can touch the half that is meant to be holding still. */
 
 interface Props {
   /** What the cell was showing. */
@@ -34,16 +34,22 @@ function Face({
   children,
   bg,
   valueClassName,
+  leaf,
+  style,
 }: {
   side: "top" | "bottom";
   children: ReactNode;
   bg: string;
   valueClassName: string;
+  leaf?: "fall" | "land";
+  style?: React.CSSProperties;
 }) {
   return (
     <div
-      className={`absolute inset-x-0 h-1/2 overflow-hidden ${side === "top" ? "top-0" : "bottom-0"}`}
-      style={{ backgroundColor: bg, backfaceVisibility: "hidden" }}
+      className={`absolute inset-x-0 h-1/2 overflow-hidden ${side === "top" ? "top-0" : "bottom-0"} ${
+        leaf ? `flap-leaf flap-${leaf}` : ""
+      }`}
+      style={{ backgroundColor: bg, ...style }}
     >
       {/* Twice the height of the half it shows, pinned to the outer edge, so
           the glyph lands dead centre of the whole card and each half crops its
@@ -72,7 +78,7 @@ export function SplitFlap({
   nextBg,
   bordered,
 }: Props) {
-  const half = Math.max(40, duration) / 2;
+  const half = Math.max(60, duration) / 2;
   const front = nextBg ?? bg;
   return (
     <div
@@ -80,7 +86,7 @@ export function SplitFlap({
       style={{
         backgroundColor: front,
         border: bordered ? "1px solid var(--color-plate-line)" : "none",
-        perspective: "460px",
+        perspective: "520px",
       }}
     >
       <Face side="top" bg={front} valueClassName={valueClassName}>
@@ -90,24 +96,26 @@ export function SplitFlap({
         {prev}
       </Face>
 
-      <div
+      <Face
         key={`fall-${playKey}`}
-        className="flap-leaf flap-fall absolute inset-0"
+        side="top"
+        leaf="fall"
+        bg={bg}
+        valueClassName={valueClassName}
         style={{ animationDuration: `${half}ms` }}
       >
-        <Face side="top" bg={bg} valueClassName={valueClassName}>
-          {prev}
-        </Face>
-      </div>
-      <div
+        {prev}
+      </Face>
+      <Face
         key={`land-${playKey}`}
-        className="flap-leaf flap-land absolute inset-0"
+        side="bottom"
+        leaf="land"
+        bg={front}
+        valueClassName={valueClassName}
         style={{ animationDuration: `${half}ms`, animationDelay: `${half}ms` }}
       >
-        <Face side="bottom" bg={front} valueClassName={valueClassName}>
-          {next}
-        </Face>
-      </div>
+        {next}
+      </Face>
 
       {/* The seam. Solid on the black plate, eased back on a franchise colour,
           matching every other flap on the board. */}
