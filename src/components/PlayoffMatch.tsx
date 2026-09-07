@@ -1,9 +1,11 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DetailedInnings, SuperOverInnings } from "@/lib/sim/engine";
 import { buildTeamSeasons } from "@/lib/game/data";
 import { PageBand, PrimaryButton, SplitScore } from "./ui";
 import { useT } from "@/lib/i18n";
+import { Confetti } from "./Confetti";
+import { fanfare } from "@/lib/sound";
 
 export interface PlayoffDetail {
   inn1: DetailedInnings;
@@ -64,6 +66,20 @@ export function PlayoffMatch({
   const live = phase === "inn1" ? detail.inn1 : detail.inn2;
   const done = phase === "over";
   const inSO = phase === "so1" || phase === "so2";
+
+  // The cup is won when the final ends, not when the trophy button is pressed.
+  // So the paper and the noise start here; lifting it gets its own show.
+  const won = detail.superOver
+    ? detail.superOver.winnerIsUser
+    : (detail.userFirst ? detail.inn1.runs : detail.inn2.runs) >
+      (detail.userFirst ? detail.inn2.runs : detail.inn1.runs);
+  const cupWon = done && !!fullMatch && won;
+  const cheered = useRef(false);
+  useEffect(() => {
+    if (!cupWon || cheered.current) return;
+    cheered.current = true;
+    fanfare();
+  }, [cupWon]);
 
   // close game? decided from the actual finish — theatre over a known result.
   const tense = useMemo(() => {
@@ -253,6 +269,7 @@ export function PlayoffMatch({
         )}
       </div>
 
+      {cupWon && <Confetti />}
       {done && <MatchResult detail={detail} userTag={userTag} nextLabel={nextLabel} onDone={onDone} />}
 
       {/* scorecards */}

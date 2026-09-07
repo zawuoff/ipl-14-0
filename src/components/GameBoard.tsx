@@ -25,7 +25,7 @@ import { forecastSeason, simSeason, teamStrength, type GameResult, type SeasonRe
 import { SlotSpin } from "./SlotSpin";
 import { Confetti } from "./Confetti";
 import { usePublishRun } from "./Chrome";
-import { fanfare } from "@/lib/sound";
+import { fireworks } from "@/lib/sound";
 import { SquadList } from "./SquadList";
 import { XIPanel, unitWord } from "./XIPanel";
 import {
@@ -164,6 +164,16 @@ export function GameBoard({
   const [streak, setStreak] = useState(0);
   const [lastPick, setLastPick] = useState<string | null>(null);
   const feedRef = useRef<HTMLDivElement>(null);
+
+  // Back to the board whenever it changes state: a new spin after a pick, or a
+  // spin landing. The pick list below can run long, and a spin that lands while
+  // you are still reading the bottom of the last one is a spin you did not
+  // see. This runs after the commit, so the browser's scroll anchoring cannot
+  // drag the page back down when the new list drops in underneath.
+  useEffect(() => {
+    if (!draft || draft.status !== "drafting") return;
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [phase, slotKey, draft]);
 
   // auto-scroll the fixed games feed as results land (38-0 style)
   useEffect(() => {
@@ -566,12 +576,12 @@ export function GameBoard({
       : null
   );
 
-  // The cup is worth a noise, once.
+  // The fanfare played when the final was won. Lifting the cup is the encore.
   const cheered = useRef(false);
   useEffect(() => {
     if (!wonIt || cheered.current) return;
     cheered.current = true;
-    fanfare();
+    fireworks();
   }, [wonIt]);
 
   return (
@@ -870,7 +880,8 @@ export function GameBoard({
                 </div>
               ) : (
                 <>
-                  <div className="-mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden bg-surface text-white px-5 py-5 lg:px-6 lg:py-6 flex flex-col gap-3.5">
+                  <div className="-mx-5 lg:mx-0 text-white px-5 lg:px-0">
+                  <div className="bg-surface rounded-card p-4 lg:p-5 flex flex-col gap-3.5">
                     <div className="flex gap-3 lg:gap-3.5">
                       <div className="flex-1 min-w-0">
                         <Flap
@@ -878,16 +889,16 @@ export function GameBoard({
                           value={spunTeam?.code ?? currentSpin.teamId}
                           tone="team"
                           colour={spunTeam?.colour}
-                          className="h-24 lg:h-[116px]"
-                          valueClassName="text-[56px] leading-[52px] lg:text-[72px] lg:leading-[66px]"
+                          className="h-[112px] lg:h-[116px]"
+                          valueClassName="text-[56px] leading-[52px] sm:text-[64px] sm:leading-[58px] lg:text-[72px] lg:leading-[66px]"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
                         <Flap
                           label={t("draft.season")}
                           value={spunTeam?.season ?? ""}
-                          className="h-24 lg:h-[116px]"
-                          valueClassName="text-[56px] leading-[52px] lg:text-[72px] lg:leading-[66px]"
+                          className="h-[112px] lg:h-[116px]"
+                          valueClassName="text-[56px] leading-[52px] sm:text-[64px] sm:leading-[58px] lg:text-[72px] lg:leading-[66px]"
                         />
                       </div>
                     </div>
@@ -913,6 +924,7 @@ export function GameBoard({
                         </PlateButton>
                       )}
                     </div>
+                  </div>
                   </div>
 
                   <div className="mt-5 flex flex-col gap-2.5">
@@ -1295,7 +1307,7 @@ export function GameBoard({
 
           {simPhase === "done" && (
             <div className="pb-12">
-              {result.champion && <Confetti />}
+              {result.champion && <Confetti variant="fireworks" />}
               <PageBand
                 eyebrow={modeLabel}
                 title={headline(result, t)}

@@ -26,7 +26,14 @@ interface Piece {
 const GRAVITY = 0.3;
 const TERMINAL = 7; // paper stops speeding up early, but still falls
 
-export function Confetti({ seconds = 5 }: { seconds?: number }) {
+export function Confetti({
+  seconds = 5,
+  variant = "cannons",
+}: {
+  seconds?: number;
+  /** Cannons for the win; fireworks for lifting the cup afterwards. */
+  variant?: "cannons" | "fireworks";
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -103,9 +110,26 @@ export function Confetti({ seconds = 5 }: { seconds?: number }) {
       }
     };
 
-    pop();
-    drop(60);
-    const showers = [250, 550, 900, 1300, 1700].map((ms) => window.setTimeout(() => drop(45), ms));
+    // A rocket: everything radiates from one point somewhere up the screen.
+    const burst = () => {
+      const cx = w * (0.15 + Math.random() * 0.7);
+      const cy = h * (0.12 + Math.random() * 0.4);
+      for (let i = 0; i < 48; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const v = 3.5 + Math.random() * 6.5;
+        pieces.push(make(cx, cy, Math.cos(a) * v, Math.sin(a) * v));
+      }
+    };
+
+    const showers: number[] = [];
+    if (variant === "fireworks") {
+      burst();
+      for (const ms of [380, 760, 1150, 1550, 1950]) showers.push(window.setTimeout(burst, ms));
+    } else {
+      pop();
+      drop(60);
+      for (const ms of [250, 550, 900, 1300, 1700]) showers.push(window.setTimeout(() => drop(45), ms));
+    }
 
     let raf = 0;
     const start = performance.now();
@@ -145,7 +169,7 @@ export function Confetti({ seconds = 5 }: { seconds?: number }) {
       for (const id of showers) window.clearTimeout(id);
       window.removeEventListener("resize", resize);
     };
-  }, [seconds]);
+  }, [seconds, variant]);
 
   return <canvas ref={ref} aria-hidden className="pointer-events-none fixed inset-0 z-50" />;
 }
