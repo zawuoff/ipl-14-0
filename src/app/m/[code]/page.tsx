@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { use, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -14,6 +15,7 @@ import {
   Wordmark,
   IconButton,
   SoundIcon,
+  Chevron,
 } from "@/components/ui";
 import { useMuted } from "@/lib/sound";
 import { useT, LangToggle } from "@/lib/i18n";
@@ -41,21 +43,31 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   return (
     <main className="min-h-screen bg-ground text-white flex flex-col">
       <header className="bg-band">
-        <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 h-[60px] lg:h-[72px] flex items-center gap-3">
-          <a href="/" className="flex items-baseline gap-3">
-            <Wordmark className="text-[30px]" />
-            <span className="text-[13px] leading-[18px] text-white/70">{t("nav.backToGame")}</span>
-          </a>
+        <div className="relative mx-auto w-full max-w-[1440px] px-3 lg:px-10 h-[56px] lg:h-[72px] flex items-center">
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 text-[14px] leading-5 font-medium text-white/80 hover:text-accent transition-colors"
+          >
+            <span className="rotate-180 flex"><Chevron size={16} /></span>
+            {t("nav.backToGame")}
+          </Link>
+          <Link
+            href="/"
+            aria-label="14-0"
+            className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2"
+          >
+            <Wordmark className="text-[30px] lg:text-[40px]" />
+          </Link>
           <span className="flex-1" />
-          <div className="shrink-0 flex items-center gap-2">
+          <div className="shrink-0 flex items-center gap-1 lg:gap-3">
             <IconButton
               onClick={toggleMuted}
               label={muted ? t("run.soundOff") : t("run.soundOn")}
-              className="w-9"
+              className="w-10"
             >
               <SoundIcon on={!muted} />
             </IconButton>
-            <LangToggle className="w-10 h-9 text-[13px]" />
+            <LangToggle plain className="w-10 h-9 lg:w-[46px] lg:h-[34px] text-[13px] lg:text-[14px]" />
           </div>
         </div>
       </header>

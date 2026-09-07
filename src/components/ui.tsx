@@ -207,7 +207,7 @@ export function SlotStrip({
 /** The diagonal speed stripes the IPL uses across its own headers. Decorative
     only: it never carries meaning, so it is hidden from assistive tech. */
 export function StripeBand({
-  height = 56,
+  height,
   className = "",
   tone = "accent",
 }: {
@@ -218,21 +218,35 @@ export function StripeBand({
   const bright = tone === "trophy" ? "#E0A81C" : "#5AC2FF";
   return (
     <div
-      className={`relative overflow-hidden bg-band ${className}`}
-      style={{ height }}
+      className={`relative overflow-hidden bg-band h-16 lg:h-14 ${className}`}
+      style={height ? { height } : undefined}
       aria-hidden
     >
+      {/* A phone gets the ring on the left with the stripes sweeping past it;
+          a wide screen gets the same stripes gathered over on the right, where
+          they run off the edge. Both are the drawn design, not one stretched. */}
       <svg
-        viewBox="0 0 400 56"
-        preserveAspectRatio="xMaxYMid slice"
-        className="absolute right-0 top-0 h-full w-[400px]"
+        viewBox="0 0 390 64"
+        preserveAspectRatio="xMinYMid slice"
+        className="lg:hidden absolute inset-0 h-full w-full"
       >
-        <polygon points="150,0 200,0 110,56 60,56" fill="#2E5BC4" />
-        <polygon points="225,0 285,0 195,56 135,56" fill={bright} />
-        <polygon points="310,0 335,0 245,56 220,56" fill="#2E5BC4" />
-        <polygon points="370,0 425,0 335,56 280,56" fill={bright} />
-        <circle cx="345" cy="40" r="46" fill="#2E5BC4" />
-        <circle cx="345" cy="40" r="29" fill="#1B3A8F" />
+        <polygon points="150,0 210,0 90,64 30,64" fill="#2E5BC4" />
+        <polygon points="230,0 300,0 180,64 110,64" fill={bright} />
+        <polygon points="320,0 350,0 230,64 200,64" fill="#2E5BC4" />
+        <polygon points="370,0 430,0 310,64 250,64" fill={bright} />
+        <circle cx="60" cy="40" r="52" fill="#2E5BC4" />
+        <circle cx="60" cy="40" r="34" fill="#1B3A8F" />
+      </svg>
+      <svg
+        viewBox="0 0 1440 56"
+        preserveAspectRatio="xMaxYMid slice"
+        className="hidden lg:block absolute inset-0 h-full w-full"
+      >
+        <polygon points="900,0 960,0 850,56 790,56" fill="#2E5BC4" />
+        <polygon points="1000,0 1070,0 960,56 890,56" fill={bright} />
+        <polygon points="1100,0 1130,0 1020,56 990,56" fill="#2E5BC4" />
+        <polygon points="1180,0 1240,0 1130,56 1070,56" fill={bright} />
+        <polygon points="1300,0 1330,0 1220,56 1190,56" fill="#2E5BC4" />
       </svg>
     </div>
   );
@@ -523,7 +537,9 @@ export function IconButton({
       aria-label={label}
       title={label}
       className={`shrink-0 h-9 flex items-center justify-center gap-1.5 rounded-full transition-colors ${
-        active ? "bg-loss text-white" : "bg-white/12 text-white hover:bg-white/20"
+        active
+          ? "bg-loss text-white"
+          : "text-white hover:bg-white/15 active:bg-white/20"
       } ${className}`}
     >
       {children}
@@ -543,6 +559,20 @@ export function SoundIcon({ on, size = 19 }: { on: boolean; size?: number }) {
       ) : (
         <path d="M15.6 9.6 20.4 14.4M20.4 9.6l-4.8 4.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
       )}
+    </svg>
+  );
+}
+
+export function TrophyIcon({ size = 21 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
+      <path
+        d="M8 21h8M12 17v4M6 4h12v5a6 6 0 0 1-12 0zM6 6H3v2a3 3 0 0 0 3 3M18 6h3v2a3 3 0 0 1-3 3"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

@@ -561,10 +561,6 @@ export function GameBoard({
     draft
       ? {
           label: `${modeLabel} · ${t(`difficulty.${draft.difficulty}`)}`,
-          respins:
-            draft.status === "drafting" && REROLLS[draft.difficulty] > 0
-              ? draft.rerollsLeft
-              : undefined,
           onRestart: restart,
         }
       : null
@@ -836,7 +832,11 @@ export function GameBoard({
               </h1>
               <span className="flex-1" />
               <span className="text-[14px] leading-5 text-muted">
-                {t("draft.slotsOpen", { n: slotsLeft })}
+                {REROLLS[draft.difficulty] === 0
+                  ? t("draft.slotsOpen", { n: slotsLeft })
+                  : draft.rerollsLeft === 1
+                    ? t("draft.respinLeftOne")
+                    : t("draft.respinsLeft", { n: draft.rerollsLeft })}
               </span>
             </div>
             <SlotStrip filled={picked} current={picked} />

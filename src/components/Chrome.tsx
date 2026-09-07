@@ -7,10 +7,9 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
    below it hands up the two or three things it wants shown there. */
 
 export interface RunChrome {
-  /** "Classic · Pro", or the room code. */
+  /** "Classic · Pro", or the room code. Kept for screens that want to name the
+      run; the bar itself shows the wordmark, as the design has it. */
   label: string;
-  /** Re-spins in hand, while there are still squads to draft. */
-  respins?: number;
   /** Must keep the same identity between renders. */
   onRestart: () => void;
 }
@@ -34,14 +33,13 @@ export function useChrome() {
 export function usePublishRun(run: RunChrome | null) {
   const { setRun } = useChrome();
   const label = run?.label ?? "";
-  const respins = run?.respins;
   const onRestart = run?.onRestart;
   useEffect(() => {
     // The header sits above this screen in the tree, so what it shows can only
     // travel upwards once this has rendered.
-    setRun(onRestart ? { label, respins, onRestart } : null);
+    setRun(onRestart ? { label, onRestart } : null);
     return () => {
       setRun(null);
     };
-  }, [label, respins, onRestart, setRun]);
+  }, [label, onRestart, setRun]);
 }
