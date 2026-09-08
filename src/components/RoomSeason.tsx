@@ -778,8 +778,12 @@ export function RoomSeason({ room }: { room: any }) {
 
   function nextPO(list: typeof myNonFinals, i: number, hasFinal: boolean): string {
     const won = list[i].winner === myIdx;
-    if (!won) return list[i].stage === "Qualifier 1" ? t("room.downToQ2") : t("po.seasonOver");
-    if (i + 1 < list.length) return t("po.next", { stage: t(`stage.${list[i + 1].stage}`) });
+    // A loss only ends the season when nothing is left to play: the top-two
+    // path drops you into Q2, so read the fixtures, not the result.
+    if (i + 1 < list.length) {
+      const stage = t(`stage.${list[i + 1].stage}`);
+      return won ? t("po.next", { stage }) : t("po.downTo", { stage });
+    }
     return hasFinal ? t("po.toFinal") : t("po.seasonOver");
   }
 
