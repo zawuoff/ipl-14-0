@@ -28,6 +28,7 @@ import {
   roomSeats,
   type RoomMember,
 } from "@/lib/game/room";
+import { SITE_URL } from "@/lib/site";
 
 export default function RoomPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
@@ -44,7 +45,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const meId = deviceId();
 
   const roomUrl =
-    typeof window !== "undefined" ? `${window.location.origin}/m/${upper}` : `https://14-0.app/m/${upper}`;
+    typeof window !== "undefined" ? `${window.location.origin}/m/${upper}` : `${SITE_URL}/m/${upper}`;
 
   return (
     <main className="min-h-screen bg-ground text-white flex flex-col">
