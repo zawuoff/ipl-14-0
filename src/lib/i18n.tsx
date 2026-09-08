@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { analytics } from "./analytics";
 import { STRINGS } from "./strings";
 
 export type Lang = "en" | "hi";
@@ -90,7 +91,10 @@ export function LangToggle({
   return (
     <button
       type="button"
-      onClick={() => setLang(next)}
+      onClick={() => {
+        setLang(next);
+        analytics.languageChanged(next);
+      }}
       aria-label={lang === "en" ? "हिंदी में पढ़ें" : "Read in English"}
       title={lang === "en" ? "हिंदी में पढ़ें" : "Read in English"}
       className={`flex items-center justify-center shrink-0 rounded-full text-white font-semibold transition-colors ${

@@ -28,6 +28,7 @@ import { QuietBoundary } from "@/components/QuietBoundary";
 import { ChromeProvider, useChrome } from "@/components/Chrome";
 import { useMuted } from "@/lib/sound";
 import { useT, useLang, LangToggle, type T } from "@/lib/i18n";
+import { useShareOpened } from "@/lib/share";
 
 type Screen = "home" | "game" | "board";
 
@@ -60,6 +61,10 @@ export default function Home() {
     const c = new URLSearchParams(window.location.search).get("room");
     return c ? c.toUpperCase() : undefined;
   }, []);
+
+  // A board someone was dared to beat: the same arrival as a shared result,
+  // one door further in.
+  useShareOpened(challengeSpins ? "challenge" : null);
 
   // deep links jump straight into the game
   const initialScreen: Screen = challengeSpins || roomCode ? "game" : "home";

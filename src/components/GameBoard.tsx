@@ -57,6 +57,7 @@ import {
   roomSeats,
 } from "@/lib/game/room";
 import { useT, localiseMargin, ordinal } from "@/lib/i18n";
+import { withVia, type ShareVia } from "@/lib/share";
 import { SITE_URL } from "@/lib/site";
 
 const ALL_TEAMS: TeamSeason[] = buildTeamSeasons();
@@ -248,7 +249,11 @@ export function GameBoard({
   }, []);
 
   const startDraft = useCallback(
-    (m: GameMode, config: XIConfig, opts?: { spins?: string[]; difficulty?: Difficulty }) => {
+    (
+      m: GameMode,
+      config: XIConfig,
+      opts?: { spins?: string[]; difficulty?: Difficulty; origin?: "setup" | "again" }
+    ) => {
       const spins =
         opts?.spins ??
         (initialSpins && initialSpins.length === 11
@@ -275,9 +280,14 @@ export function GameBoard({
       setLastPick(null);
       setPhase("slot");
       setSlotKey((k) => k + 1);
-      analytics.draftStarted(m, diff);
+      analytics.draftStarted(m, diff, {
+        origin: opts?.origin ?? "setup",
+        // Which door they came through. A draft off a challenge link is the
+        // whole return leg of a share.
+        entry: initialRoom ? "room" : initialSpins?.length === 11 ? "challenge" : "direct",
+      });
     },
-    [dailyQuery, difficulty, today, initialSpins]
+    [dailyQuery, difficulty, today, initialSpins, initialRoom]
   );
 
   // setup screen first — no auto-start (choose your style, then spin)
@@ -375,6 +385,7 @@ export function GameBoard({
       s.index === slot ? { ...s, teamId: target, rerolled: true } : s
     );
     setDraft({ ...draft, spins, rerollsLeft: draft.rerollsLeft - 1 });
+    analytics.rerollUsed(slot + 1, draft.difficulty, draft.rerollsLeft - 1);
     setPhase("slot");
     setSlotKey((k) => k + 1);
   }, [draft, slot, phase]);
@@ -512,9 +523,18 @@ export function GameBoard({
 
   const simSkip = useCallback(() => {
     if (!result || simPhase !== "league") return;
+    analytics.simSkipped(simIdx, "solo");
     setSimIdx(result.games.length);
     setSimPhase("leagueDone");
-  }, [result, simPhase]);
+  }, [result, simPhase, simIdx]);
+
+  // 1x → 2x → 4x → back. Both speed buttons run through here, so the choice is
+  // recorded once however the season is being watched.
+  const cycleSpeed = useCallback(() => {
+    const next = simSpeed === 1 ? 2 : simSpeed === 2 ? 4 : 1;
+    setSimSpeed(next);
+    analytics.simSpeedChanged(next, "solo");
+  }, [simSpeed]);
 
   // playoff sequencing: non-final games auto-chain, final needs its gate
   const nonFinals = useMemo(
@@ -554,17 +574,24 @@ export function GameBoard({
     return { games, playoffs, wins, losses, nrr };
   }, [result, simIdx]);
 
-  const shareText = useMemo(() => {
-    if (!draft || !result) return "";
-    const boxes = result.games.map((g) => (g.result === "W" ? "🟩" : "🟥")).join("");
-    const head = result.perfect14
-      ? "🏆 14-0 PERFECT SEASON. IMMORTAL."
-      : result.champion
-        ? `🏆 CHAMPIONS ${result.wins}-${result.losses}`
-        : `${result.wins}-${result.losses} SEASON`;
-    const tag = draft.mode === "daily" ? ` Daily ${today}` : "";
-    return `14-0 IPL Draft${tag} — ${head}\n${boxes}\n${draft.difficulty} · ${typeof window !== "undefined" ? window.location.origin : SITE_URL}/r/${draft.seed}\nCan you go 14-0?`;
-  }, [draft, result, today]);
+  // Built per channel rather than once: the board link carries how it was sent,
+  // so a friend opening it is not just another visitor from nowhere.
+  const shareText = useCallback(
+    (via: ShareVia) => {
+      if (!draft || !result) return "";
+      const boxes = result.games.map((g) => (g.result === "W" ? "🟩" : "🟥")).join("");
+      const head = result.perfect14
+        ? "🏆 14-0 PERFECT SEASON. IMMORTAL."
+        : result.champion
+          ? `🏆 CHAMPIONS ${result.wins}-${result.losses}`
+          : `${result.wins}-${result.losses} SEASON`;
+      const tag = draft.mode === "daily" ? ` Daily ${today}` : "";
+      const origin = typeof window !== "undefined" ? window.location.origin : SITE_URL;
+      const url = withVia(`${origin}/r/${draft.seed}`, via);
+      return `14-0 IPL Draft${tag} — ${head}\n${boxes}\n${draft.difficulty} · ${url}\nCan you go 14-0?`;
+    },
+    [draft, result, today]
+  );
 
   const slotsLeft = draft ? 11 - pickedXI.length : 11;
   const spunTeam = currentSpin ? TEAM_MAP.get(currentSpin.teamId) : undefined;
@@ -702,7 +729,10 @@ export function GameBoard({
                     {(["classic", "daily"] as GameMode[]).map((m) => (
                       <button
                         key={m}
-                        onClick={() => setMode(m)}
+                        onClick={() => {
+                          setMode(m);
+                          analytics.setupChanged("mode", m);
+                        }}
                         className={`flex flex-col gap-0.5 p-4 rounded-card text-left transition-colors ${
                           mode === m ? "bg-surface border-2 border-accent" : "bg-surface border-2 border-transparent hover:bg-white/8"
                         }`}
@@ -738,7 +768,10 @@ export function GameBoard({
                       // narrow phone, four across.
                       <button
                         key={n}
-                        onClick={() => setSeatCount(n)}
+                        onClick={() => {
+                          setSeatCount(n);
+                          analytics.setupChanged("seats", n);
+                        }}
                         aria-label={t("setup.playersOf", { n })}
                         className={`flex items-center justify-center h-[62px] rounded-card bg-surface transition-colors ${
                           seatCount === n
@@ -762,7 +795,10 @@ export function GameBoard({
                   return (
                     <button
                       key={tpl.name}
-                      onClick={() => setStyleIdx(i)}
+                      onClick={() => {
+                        setStyleIdx(i);
+                        analytics.setupChanged("style", tpl.name);
+                      }}
                       className={`flex items-center gap-3 p-4 rounded-card bg-surface text-left transition-colors ${
                         on ? "border-2 border-accent" : "border-2 border-transparent hover:bg-white/8"
                       }`}
@@ -811,7 +847,10 @@ export function GameBoard({
                     ).map(({ d, sub }) => (
                       <button
                         key={d}
-                        onClick={() => setDifficulty(d)}
+                        onClick={() => {
+                          setDifficulty(d);
+                          analytics.setupChanged("difficulty", d);
+                        }}
                         className={`flex flex-col gap-0.5 p-3.5 rounded-card text-left transition-colors ${
                           difficulty === d ? "bg-surface border-2 border-accent" : "bg-surface border-2 border-transparent hover:bg-white/8"
                         }`}
@@ -1122,6 +1161,7 @@ export function GameBoard({
                         picks: (pickedXI as PlayerSeason[]).map((p) => p.id),
                         seed: draft.seed,
                       });
+                      analytics.roomXILocked(roomSeats(roomQ), roomMembers(roomQ).length);
                       setRoomSubmitted(true);
                     } catch {}
                     setRoomBusy(false);
@@ -1203,10 +1243,7 @@ export function GameBoard({
                 </div>
 
                 <div className="flex gap-2.5 lg:shrink-0 lg:pb-2">
-                  <PlateButton
-                    className="h-11 flex-1 lg:flex-none"
-                    onClick={() => setSimSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}
-                  >
+                  <PlateButton className="h-11 flex-1 lg:flex-none" onClick={cycleSpeed}>
                     {t("league.speed", { n: simSpeed })}
                   </PlateButton>
                   {simPhase === "league" && (
@@ -1292,9 +1329,7 @@ export function GameBoard({
                         shareText={shareText}
                         seed={draft.seed}
                         spins={draft.spins.map((s) => s.teamId)}
-                        mode={mode}
-                        draftConfig={draft.config}
-                        startDraft={startDraft}
+                        onPlayAgain={() => startDraft(mode, draft.config, { origin: "again" })}
                         copied={copied}
                         setCopied={setCopied}
                         challengeCopied={challengeCopied}
@@ -1317,9 +1352,7 @@ export function GameBoard({
                   {t("po.via", { rank: result.rank, w: result.wins, l: result.losses })}
                 </span>
                 <span className="flex-1" />
-                <PlateButton onClick={() => setSimSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}>
-                  {t("league.speed", { n: simSpeed })}
-                </PlateButton>
+                <PlateButton onClick={cycleSpeed}>{t("league.speed", { n: simSpeed })}</PlateButton>
               </div>
               {nonFinals.slice(0, poIdx).map((p, i) => (
                 <PlayoffSummary key={i} stage={t(`stage.${p.stage}`)} gf={p.gf} ga={p.ga} win={p.result === "W"} margin={p.margin} />
@@ -1463,7 +1496,7 @@ export function GameBoard({
                   <div className="mt-8 lg:mt-0 flex-1 flex flex-col gap-3">
                     <PrimaryButton
                       className="w-full"
-                      onClick={() => startDraft(mode, draft.config)}
+                      onClick={() => startDraft(mode, draft.config, { origin: "again" })}
                     >
                       {t("end.playAnother")}
                     </PrimaryButton>
@@ -1775,7 +1808,7 @@ function ShareButtons({
   setChallengeCopied,
   onPlate,
 }: {
-  shareText: string;
+  shareText: (via: ShareVia) => string;
   seed: string;
   spins: string[];
   copied: boolean;
@@ -1785,13 +1818,16 @@ function ShareButtons({
   onPlate?: boolean;
 }) {
   const t = useT();
+  // The same three buttons sit under the season report and on the plate beside
+  // the final score. Which one gets used is worth knowing.
+  const surface = onPlate ? "plate" : "report";
   return (
     <>
       <a
-        href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
+        href={`https://wa.me/?text=${encodeURIComponent(shareText("wa"))}`}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={() => analytics.seasonShared("whatsapp")}
+        onClick={() => analytics.seasonShared("whatsapp", surface)}
         className="flex items-center justify-center gap-2.5 h-14 px-6 rounded-full bg-turf text-white font-semibold text-[17px] whitespace-nowrap hover:bg-[#15702f] active:bg-[#125f28] transition-colors"
       >
         <WhatsAppIcon />
@@ -1800,8 +1836,8 @@ function ShareButtons({
       <OutlineButton
         onPlate={onPlate}
         onClick={async () => {
-          if (await copyText(shareText)) {
-            analytics.seasonShared("copy");
+          if (await copyText(shareText("copy"))) {
+            analytics.seasonShared("copy", surface);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
           }
@@ -1812,9 +1848,9 @@ function ShareButtons({
       <OutlineButton
         onPlate={onPlate}
         onClick={async () => {
-          const url = `${window.location.origin}/?challenge=${spins.join(",")}`;
+          const url = withVia(`${window.location.origin}/?challenge=${spins.join(",")}`, "copy");
           if (await copyText(t("share.beatMyBoard", { url }))) {
-            analytics.seasonShared("challenge");
+            analytics.seasonShared("challenge", surface);
             setChallengeCopied(true);
             setTimeout(() => setChallengeCopied(false), 2000);
           }
@@ -1833,20 +1869,16 @@ function ShareBlock({
   shareText,
   seed,
   spins,
-  mode,
-  draftConfig,
-  startDraft,
+  onPlayAgain,
   copied,
   setCopied,
   challengeCopied,
   setChallengeCopied,
 }: {
-  shareText: string;
+  shareText: (via: ShareVia) => string;
   seed: string;
   spins: string[];
-  mode: GameMode;
-  draftConfig: XIConfig;
-  startDraft: (m: GameMode, c: XIConfig) => void;
+  onPlayAgain: () => void;
   copied: boolean;
   setCopied: (v: boolean) => void;
   challengeCopied: boolean;
@@ -1864,7 +1896,7 @@ function ShareBlock({
         challengeCopied={challengeCopied}
         setChallengeCopied={setChallengeCopied}
       />
-      <PrimaryButton className="w-full mt-1" onClick={() => startDraft(mode, draftConfig)}>
+      <PrimaryButton className="w-full mt-1" onClick={onPlayAgain}>
         {t("end.playAnother")}
       </PrimaryButton>
     </div>
