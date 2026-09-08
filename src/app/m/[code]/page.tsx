@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { use, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { RoomSeason, deviceId } from "@/components/RoomSeason";
@@ -18,7 +18,9 @@ import {
   Chevron,
 } from "@/components/ui";
 import { useMuted } from "@/lib/sound";
+import { analytics } from "@/lib/analytics";
 import { useT, LangToggle } from "@/lib/i18n";
+import { useShareOpened, withVia, type ShareVia } from "@/lib/share";
 import {
   hasLockedXI,
   isHost,
@@ -35,6 +37,8 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const upper = code.toUpperCase();
   const t = useT();
   const [muted, toggleMuted] = useMuted();
+  // Nobody types a room code in from nothing — this page is the end of an invite.
+  useShareOpened("room");
   const room = useQuery((api as any).rooms?.get, { code: upper });
   // Every XI locked: the league is on, so the lobby chrome gets out of the way.
   const started = roomReady(room);
@@ -154,11 +158,24 @@ function RoomLobby({
     setJoining(true);
     try {
       await joinRoom({ code: room.code, name: name.trim(), deviceId: meId });
+      analytics.roomJoined(seats);
     } catch {}
     setJoining(false);
   };
 
-  const invite = t("mroom.inviteText", { code, url: roomUrl });
+  // The address stays readable in the message; only the link inside carries
+  // the marker, and only for the channel it actually went out on.
+  const inviteVia = (via: ShareVia) => t("mroom.inviteText", { code, url: withVia(roomUrl, via) });
+
+  // The last seat filling is the lobby's own conversion. Only the host reports
+  // it, or a five-manager room would count it five times.
+  const filledReported = useRef(false);
+  useEffect(() => {
+    if (!full || filledReported.current || !isHost(room, meId)) return;
+    filledReported.current = true;
+    analytics.roomFilled(seats);
+  }, [full, room, meId, seats]);
+
 
   if (allReady) {
     return (
@@ -235,9 +252,10 @@ function RoomLobby({
         {!full && (
           <>
             <a
-              href={`https://wa.me/?text=${encodeURIComponent(invite)}`}
+              href={`https://wa.me/?text=${encodeURIComponent(inviteVia("wa"))}`}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => analytics.roomShared("whatsapp", "lobby")}
               className="flex items-center justify-center gap-2.5 h-14 rounded-full bg-turf text-white font-semibold text-[17px] hover:bg-[#15702f] active:bg-[#125f28] transition-colors"
             >
               <WhatsAppIcon />
@@ -245,7 +263,8 @@ function RoomLobby({
             </a>
             <button
               onClick={async () => {
-                if (await copyText(roomUrl)) {
+                if (await copyText(withVia(roomUrl, "copy"))) {
+                  analytics.roomShared("copy", "lobby");
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }
@@ -263,6 +282,7 @@ function RoomLobby({
                   setClosing(true);
                   try {
                     await closeSeats({ code: room.code, deviceId: meId });
+                    analytics.roomSeatsClosed(seats, members.length);
                   } catch {}
                   setClosing(false);
                 }}

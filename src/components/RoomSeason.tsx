@@ -35,7 +35,9 @@ import {
 } from "./ui";
 import { Confetti } from "./Confetti";
 import { fireworks } from "@/lib/sound";
+import { analytics } from "@/lib/analytics";
 import { useT, localiseMargin, ordinal } from "@/lib/i18n";
+import { withVia, type ShareVia } from "@/lib/share";
 import { SITE_URL } from "@/lib/site";
 
 function stageWords(stage: string | undefined, t: (k: string) => string): string {
@@ -291,6 +293,13 @@ export function RoomSeason({ room }: { room: any }) {
   useEffect(() => {
     if (phase !== "done" || reportedDone.current) return;
     reportedDone.current = true;
+    if (report) {
+      analytics.roomSeasonFinished(members.length, {
+        wins: report.wins,
+        losses: report.losses,
+        champion: report.champion,
+      });
+    }
     (async () => {
       try {
         await finishRoom({ code: room.code, deviceId: meId });
@@ -300,7 +309,16 @@ export function RoomSeason({ room }: { room: any }) {
         setGateSupported(false);
       }
     })();
-  }, [phase, finishRoom, room.code, meId]);
+  }, [phase, finishRoom, room.code, meId, report, members.length]);
+
+  // Everyone locked in and the league is running. One per manager watching, so
+  // it lines up with the solo season_simulated rather than with the room.
+  const startReported = useRef(false);
+  useEffect(() => {
+    if (!league || startReported.current) return;
+    startReported.current = true;
+    analytics.roomSeasonStarted(members.length);
+  }, [league, members.length]);
 
   // An award can land on a player two or three managers all drafted, so each
   // one keeps its own set of names and the award says whose XI it came from.
@@ -336,13 +354,17 @@ export function RoomSeason({ room }: { room: any }) {
   const stillWatching = rivals.filter((m) => !m.finishedAt);
   const holdForMate = gateSupported === true && !myFinal && stillWatching.length > 0;
 
-  const share = t("room.shareText", {
-    name: myName,
-    w: report.wins,
-    l: report.losses,
-    won: report.champion ? t("room.andWonIt") : "",
-    url: `${typeof window !== "undefined" ? window.location.origin : SITE_URL}/m/${room.code}`,
-  });
+  const share = (via: ShareVia) =>
+    t("room.shareText", {
+      name: myName,
+      w: report.wins,
+      l: report.losses,
+      won: report.champion ? t("room.andWonIt") : "",
+      url: withVia(
+        `${typeof window !== "undefined" ? window.location.origin : SITE_URL}/m/${room.code}`,
+        via
+      ),
+    });
 
   // The final itself played the fanfare. Lifting the cup is the encore.
   const wonIt = phase === "done" && !holdForMate && report.champion;
@@ -383,12 +405,19 @@ export function RoomSeason({ room }: { room: any }) {
                 {t("room.youAre", { name: myName })}
               </span>
               <span className="flex-1" />
-              <PlateButton onClick={() => setSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}>
+              <PlateButton
+                onClick={() => {
+                  const next = speed === 1 ? 2 : speed === 2 ? 4 : 1;
+                  setSpeed(next);
+                  analytics.simSpeedChanged(next, "room");
+                }}
+              >
                 {t("league.speed", { n: speed })}
               </PlateButton>
               {phase === "league" && (
                 <PlateButton
                   onClick={() => {
+                    analytics.simSkipped(simIdx, "room");
                     setSimIdx(myFixtures.length);
                     setPhase("leagueDone");
                   }}
@@ -922,7 +951,17 @@ function RoomTable({
   );
 }
 
-function RoomShare({ share, copied, setCopied, code }: { share: string; copied: boolean; setCopied: (v: boolean) => void; code: string }) {
+function RoomShare({
+  share,
+  copied,
+  setCopied,
+  code,
+}: {
+  share: (via: ShareVia) => string;
+  copied: boolean;
+  setCopied: (v: boolean) => void;
+  code: string;
+}) {
   const t = useT();
   return (
     <div className="mt-6 flex flex-col gap-2.5 max-w-[420px]">
@@ -940,9 +979,10 @@ function RoomShare({ share, copied, setCopied, code }: { share: string; copied: 
         ))}
       </div>
       <a
-        href={`https://wa.me/?text=${encodeURIComponent(share)}`}
+        href={`https://wa.me/?text=${encodeURIComponent(share("wa"))}`}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => analytics.roomShared("whatsapp", "result")}
         className="flex items-center justify-center gap-2.5 h-14 px-8 rounded-full bg-turf text-white font-semibold text-[17px] whitespace-nowrap hover:bg-[#15702f] active:bg-[#125f28] transition-colors mt-1"
       >
         <WhatsAppIcon />
@@ -950,7 +990,8 @@ function RoomShare({ share, copied, setCopied, code }: { share: string; copied: 
       </a>
       <OutlineButton
         onClick={async () => {
-          if (await copyText(share)) {
+          if (await copyText(share("copy"))) {
+            analytics.roomShared("copy", "result");
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
           }

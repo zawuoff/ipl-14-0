@@ -2,7 +2,9 @@
 import posthog from "posthog-js";
 
 import type { Difficulty, GameMode } from "@/lib/game/types";
+import type { Lang } from "@/lib/i18n";
 import type { SeasonResult } from "@/lib/sim/engine";
+import type { ShareKind, ShareVia } from "@/lib/share";
 
 type Props = Record<string, unknown>;
 
@@ -15,8 +17,29 @@ function track(event: string, props?: Props) {
 }
 
 export const analytics = {
-  draftStarted(mode: GameMode, difficulty: Difficulty) {
-    track("draft_started", { mode, difficulty });
+  // A link opened. The rest of the visit belongs to this arrival, so the marker
+  // is registered for the session: the draft it leads to carries it too, and
+  // the loop reads end to end — shared, opened, played.
+  shareOpened(kind: ShareKind, via: ShareVia | "unknown") {
+    try {
+      posthog.register_for_session({ share_kind: kind, share_via: via });
+    } catch {}
+    track("share_opened", { kind, via });
+  },
+
+  // `origin` separates a first run from a rematch, `entry` says which door they
+  // came through — a challenge link is the whole point of sharing one.
+  draftStarted(
+    mode: GameMode,
+    difficulty: Difficulty,
+    opts: { origin: "setup" | "again"; entry: "direct" | "challenge" | "room" }
+  ) {
+    track("draft_started", {
+      mode,
+      difficulty,
+      origin: opts.origin,
+      entry: opts.entry,
+    });
   },
 
   // Pick number is the whole point: it says where people put the phone down.
@@ -27,6 +50,16 @@ export const analytics = {
       last_resort: opts.lastResort,
       rerolls_left: opts.rerollsLeft,
     });
+  },
+
+  // Does a respin rescue a stalling draft, or is it the last thing they do?
+  rerollUsed(n: number, difficulty: Difficulty, rerollsLeft: number) {
+    track("reroll_used", { pick_number: n, difficulty, rerolls_left: rerollsLeft });
+  },
+
+  // What they chose on the way in, against what they actually finished.
+  setupChanged(field: "mode" | "seats" | "style" | "difficulty", value: string | number) {
+    track("setup_changed", { field, value });
   },
 
   seasonSimulated(r: SeasonResult, mode: GameMode, difficulty: Difficulty) {
@@ -43,8 +76,23 @@ export const analytics = {
     });
   },
 
-  seasonShared(channel: "whatsapp" | "copy" | "challenge" | "plate") {
-    track("season_shared", { channel });
+  // Whether the season is watched or skipped decides what the animation is worth.
+  simSpeedChanged(speed: number, context: "solo" | "room") {
+    track("sim_speed_changed", { speed, context });
+  },
+
+  simSkipped(atMatch: number, context: "solo" | "room") {
+    track("sim_skipped", { at_match: atMatch, context });
+  },
+
+  // `surface` is the block it was sent from: the season report, or the plate
+  // beside the final score.
+  seasonShared(channel: "whatsapp" | "copy" | "challenge", surface: "report" | "plate") {
+    track("season_shared", { channel, surface });
+  },
+
+  roomShared(channel: "whatsapp" | "copy", stage: "lobby" | "result") {
+    track("room_shared", { channel, stage });
   },
 
   roomCreated(seats: number) {
@@ -53,5 +101,39 @@ export const analytics = {
 
   roomJoined(seats: number) {
     track("room_joined", { seats });
+  },
+
+  // The lobby's own funnel: seats fill, XIs lock, the league runs.
+  roomXILocked(seats: number, filled: number) {
+    track("room_xi_locked", { seats, filled });
+  },
+
+  roomFilled(seats: number) {
+    track("room_filled", { seats });
+  },
+
+  roomSeatsClosed(seats: number, filled: number) {
+    track("room_seats_closed", { seats, filled });
+  },
+
+  roomSeasonStarted(players: number) {
+    track("room_season_started", { players });
+  },
+
+  roomSeasonFinished(players: number, r: { wins: number; losses: number; champion: boolean }) {
+    track("room_season_finished", {
+      players,
+      wins: r.wins,
+      losses: r.losses,
+      champion: r.champion,
+    });
+  },
+
+  languageChanged(to: Lang) {
+    track("language_changed", { to });
+  },
+
+  soundToggled(muted: boolean) {
+    track("sound_toggled", { muted });
   },
 };

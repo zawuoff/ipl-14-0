@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useSyncExternalStore } from "react";
 
+import { analytics } from "./analytics";
+
 /* Every sound in the game is synthesised — no files to download on a phone
    connection. One shared context, one shared mute switch, so the toggle in the
    header and the noises made deep inside the draft always agree. */
@@ -43,7 +45,13 @@ export function useMuted(): [boolean, () => void] {
     isMuted,
     () => false
   );
-  const toggle = useCallback(() => setMuted(!isMuted()), []);
+  // Reported from the toggle rather than from setMuted: this is the switch a
+  // manager actually reaches for, in all three headers.
+  const toggle = useCallback(() => {
+    const next = !isMuted();
+    setMuted(next);
+    analytics.soundToggled(next);
+  }, []);
   return [muted, toggle];
 }
 

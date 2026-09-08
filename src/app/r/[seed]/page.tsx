@@ -17,6 +17,7 @@ import {
 } from "@/components/ui";
 import { useMuted } from "@/lib/sound";
 import { useT, LangToggle, localiseMargin } from "@/lib/i18n";
+import { useShareOpened } from "@/lib/share";
 
 const CODE_COLOUR: Record<string, string> = {
   MI: "#004BA0",
@@ -44,6 +45,9 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
   const { seed } = use(params);
   const t = useT();
   const [muted, toggleMuted] = useMuted();
+  // The far end of a shared board: this page only ever exists because someone
+  // sent it, so the arrival is worth as much as the send.
+  useShareOpened("result");
   const data = useQuery((api as any).results?.getBySeed, { seed });
   const r = data?.result;
 
