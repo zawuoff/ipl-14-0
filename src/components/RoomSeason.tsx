@@ -65,42 +65,18 @@ function shortName(full: string): string {
   return `${parts[0][0]} ${parts[parts.length - 1]}`;
 }
 
-// Neutral shared detail → my PlayoffDetail view.
-function adaptDetail(
-  d: SharedFixture["detail"] | SharedPlayoff["detail"],
-  homeIdx: number,
-  awayIdx: number,
-  meIdx: number,
-  myName: string,
-  oppName: string
-): PlayoffDetail | null {
-  if (!d) return null;
-  const iAmHome = homeIdx === meIdx;
-  const userFirst = (d.firstIsHome && iAmHome) || (!d.firstIsHome && !iAmHome);
-  const norm = (n: string) => (n === "YOU" ? myName : n === "OPP" ? oppName : n);
-  return {
-    inn1: d.inn1,
-    inn2: d.inn2,
-    userFirst,
-    opp: oppName,
-    superOver: d.superOver
-      ? {
-          inn1: { ...d.superOver.inn1, side: norm(d.superOver.inn1.side) },
-          inn2: { ...d.superOver.inn2, side: norm(d.superOver.inn2.side) },
-          winnerIsUser:
-            (d.superOver.inn1.side === myName || (d.superOver.inn1.side === "YOU" && iAmHome) || (d.superOver.inn1.side === "HOME" && iAmHome)) &&
-            true,
-          scoreline: "",
-        }
-      : undefined,
-  };
+/* Who in an XI made the runs is settled per TEAM, not per viewer, so the caps
+   and the hero lines read identically on every manager's screen. */
+function starSalt(roomSeed: number, teamIdx: number, fixtureIdx: number): number {
+  return (roomSeed + 7000 + teamIdx * 1009 + fixtureIdx * 31) >>> 0;
 }
 
 export function RoomSeason({ room }: { room: any }) {
   const meId = deviceId();
   const members: any[] = room.members ?? [];
   const me = members.find((m) => m.deviceId === meId) ?? members[0];
-  const mate = members.find((m) => m.deviceId !== (me?.deviceId ?? meId)) ?? members[1];
+  // Everyone else in the room. Two managers is the common case, five is the most.
+  const rivals: any[] = members.filter((m) => m.deviceId !== (me?.deviceId ?? meId));
 
   const league: SharedLeague | null = useMemo(() => {
     try {
@@ -195,7 +171,7 @@ export function RoomSeason({ room }: { room: any }) {
       if (won) w++;
       rf += mr;
       ra += iAmHome ? f.ar : f.hr;
-      const rng = mulberry32((room.roomSeed + 7000 + fi * 31) >>> 0);
+      const rng = mulberry32(starSalt(room.roomSeed, myIdx, fi));
       const star = distributeMatch(xi, mr, mw, ow, rng);
       stars.push(star);
       for (const b of star.batAll) bump(agg, b.player, b.runs, b.balls, 0);
@@ -234,15 +210,8 @@ export function RoomSeason({ room }: { room: any }) {
       if (!agg.has(p.player)) playerRuns.push({ player: p.player, role: p.role, overall: p.overall, runs: 0, wickets: 0 });
     }
     playerRuns.sort((a, b) => b.runs - a.runs || b.wickets - a.wickets);
-    // league-wide caps across BOTH managers (same league → same awards on both screens)
-    const mateIdx = league.teams.findIndex((t, i) => t.human && i !== myIdx);
-    const mateXi: PlayerSeason[] =
-      mateIdx >= 0
-        ? (members.find((m) => m.deviceId === league.teams[mateIdx].deviceId)?.picks
-            ?.map((id: string) => BY_ID.get(id))
-            .filter(Boolean) as PlayerSeason[]) ?? []
-        : [];
-    const mateFx = mateIdx >= 0 ? league.fixtures.filter((f) => f.home === mateIdx || f.away === mateIdx) : [];
+    // League-wide caps across EVERY manager in the room, so one league hands
+    // out one set of awards no matter whose screen is reading it.
     const combined = new Map<string, { runs: number; wkts: number }>();
     const fold = (mp: Map<string, { runs: number; balls: number; wkts: number }>) => {
       for (const [player, e] of mp) {
@@ -253,20 +222,26 @@ export function RoomSeason({ room }: { room: any }) {
       }
     };
     fold(agg);
-    if (mateXi.length === 11) {
-      const mateAgg = new Map<string, { runs: number; balls: number; wkts: number }>();
-      mateFx.forEach((f, fi) => {
-        const mateHome = f.home === mateIdx;
-        const mS = mateHome ? f.hs : f.as;
-        const oS = mateHome ? f.as : f.hs;
-        const [mr, mw] = parseScore(mS);
-        const [, ow] = parseScore(oS);
-        const star = distributeMatch(mateXi, mr, mw, ow, mulberry32((room.roomSeed + 9000 + fi * 31) >>> 0));
-        for (const b of star.batAll) bump(mateAgg, b.player, b.runs, b.balls, 0);
-        for (const ww of star.bowlAll) bump(mateAgg, ww.player, 0, 0, ww.wickets);
-      });
-      fold(mateAgg);
-    }
+    league.teams.forEach((tm, ti) => {
+      if (!tm.human || ti === myIdx) return;
+      const theirXi =
+        ((members.find((m) => m.deviceId === tm.deviceId)?.picks
+          ?.map((id: string) => BY_ID.get(id))
+          .filter(Boolean) as PlayerSeason[]) ?? []);
+      if (theirXi.length !== 11) return;
+      const theirAgg = new Map<string, { runs: number; balls: number; wkts: number }>();
+      league.fixtures
+        .filter((f) => f.home === ti || f.away === ti)
+        .forEach((f, fi) => {
+          const theirHome = f.home === ti;
+          const [mr, mw] = parseScore(theirHome ? f.hs : f.as);
+          const [, ow] = parseScore(theirHome ? f.as : f.hs);
+          const star = distributeMatch(theirXi, mr, mw, ow, mulberry32(starSalt(room.roomSeed, ti, fi)));
+          for (const b of star.batAll) bump(theirAgg, b.player, b.runs, b.balls, 0);
+          for (const ww of star.bowlAll) bump(theirAgg, ww.player, 0, 0, ww.wickets);
+        });
+      fold(theirAgg);
+    });
     const capRows = [...combined.entries()].map(([player, e]) => ({ player, runs: e.runs, wickets: e.wkts }));
     const orange = capRows.reduce((a, b) => (b.runs > a.runs ? b : a), capRows[0]);
     const purple = [...capRows].sort((a, b) => b.wickets - a.wickets || b.runs - a.runs)[0];
@@ -326,21 +301,20 @@ export function RoomSeason({ room }: { room: any }) {
     })();
   }, [phase, finishRoom, room.code, meId]);
 
-  const ownerSets = useMemo(() => {
-    const mineNames = new Set<string>();
-    const mateNames = new Set<string>();
-    const mineM = members.find((m) => m.deviceId === (me?.deviceId ?? meId));
-    const mateM = members.find((m) => m.deviceId !== (me?.deviceId ?? meId));
-    for (const id of mineM?.picks ?? []) {
-      const p = BY_ID.get(id);
-      if (p) mineNames.add(p.player);
-    }
-    for (const id of mateM?.picks ?? []) {
-      const p = BY_ID.get(id);
-      if (p) mateNames.add(p.player);
-    }
-    return { mineNames, mateNames };
-  }, [members, me, meId]);
+  // An award can land on a player two or three managers all drafted, so each
+  // one keeps its own set of names and the award says whose XI it came from.
+  const ownerSets = useMemo(
+    () =>
+      members.map((m) => {
+        const names = new Set<string>();
+        for (const id of m.picks ?? []) {
+          const p = BY_ID.get(id);
+          if (p) names.add(p.player);
+        }
+        return { deviceId: m.deviceId, name: m.name as string, names };
+      }),
+    [members]
+  );
 
   if (!league || myIdx < 0 || !report) {
     return <p className="text-[15px] text-muted py-4">{t("room.computing")}</p>;
@@ -352,15 +326,14 @@ export function RoomSeason({ room }: { room: any }) {
   const myFinal = finalPO && (finalPO.t1 === myIdx || finalPO.t2 === myIdx) ? finalPO : null;
 
   const championName = finalPO ? league.teams[finalPO.winner].name : undefined;
-  const ownersOf = (player: string) => {
-    const out: string[] = [];
-    if (ownerSets.mineNames.has(player)) out.push("You");
-    if (mate && ownerSets.mateNames.has(player)) out.push(mate.name);
-    return out;
-  };
-  // If you went out before the final, hold the room result until the manager
-  // still playing has watched theirs. Only possible once the backend tracks it.
-  const holdForMate = gateSupported === true && !myFinal && !!mate && !mate.finishedAt;
+  const ownersOf = (player: string) =>
+    ownerSets
+      .filter((o) => o.names.has(player))
+      .map((o) => (o.deviceId === (me?.deviceId ?? meId) ? t("room.you2") : o.name));
+  // If you went out before the final, hold the room result until everyone still
+  // playing has watched theirs. Only possible once the backend tracks it.
+  const stillWatching = rivals.filter((m) => !m.finishedAt);
+  const holdForMate = gateSupported === true && !myFinal && stillWatching.length > 0;
 
   const share = t("room.shareText", {
     name: myName,
@@ -389,7 +362,13 @@ export function RoomSeason({ room }: { room: any }) {
             code: room.code,
             difficulty: t(`difficulty.${room.difficulty}`),
           })}
-          title={mate ? t("room.finalVersus", { me: myName, opp: mate.name }) : t("home.friend.title")}
+          title={
+            rivals.length === 1
+              ? t("room.finalVersus", { me: myName, opp: rivals[0].name })
+              : rivals.length > 1
+                ? t("room.roomOf", { n: members.length })
+                : t("home.friend.title")
+          }
           tone={phase === "done" && !holdForMate && report.champion ? "trophy" : "accent"}
           className="-mx-5 lg:mx-0 lg:rounded-card"
         />
@@ -694,7 +673,9 @@ export function RoomSeason({ room }: { room: any }) {
               {t("room.noSpoilers")}
             </span>
             <span className="text-[15px] leading-[22px] lg:text-[17px] lg:leading-[26px] text-muted max-w-[52ch]">
-              {t("room.stillWatching", { name: mate!.name })}
+              {stillWatching.length === 1
+                ? t("room.stillWatching", { name: stillWatching[0].name })
+                : t("room.stillWatchingMany", { n: stillWatching.length })}
             </span>
           </div>
           <div className="flex flex-col gap-1">
@@ -753,7 +734,12 @@ export function RoomSeason({ room }: { room: any }) {
             compact
             owners={ownersOf}
           />
-          <RoomTable rows={report.table} me={myName} mate={mate?.name} champion={championName} />
+          <RoomTable
+            rows={report.table}
+            me={myName}
+            mates={rivals.map((m) => m.name as string)}
+            champion={championName}
+          />
           <RoomShare share={share} copied={copied} setCopied={setCopied} code={room.code} />
         </div>
       )}
@@ -847,8 +833,19 @@ function PlayoffSummary({ p, myIdx, teams }: { p: SharedPlayoff; myIdx: number; 
   );
 }
 
-function RoomTable({ rows, me, mate, champion }: { rows: TableRow[]; me: string; mate?: string; champion?: string }) {
+function RoomTable({
+  rows,
+  me,
+  mates,
+  champion,
+}: {
+  rows: TableRow[];
+  me: string;
+  mates?: string[];
+  champion?: string;
+}) {
   const t = useT();
+  const rivalNames = new Set(mates ?? []);
   return (
     <section className="flex flex-col mt-6">
       <SectionHead title={t("room.sharedTable")} note={t("table.topFour")} />
@@ -863,7 +860,7 @@ function RoomTable({ rows, me, mate, champion }: { rows: TableRow[]; me: string;
       </div>
       {rows.map((r, i) => {
         const isMe = r.team === me;
-        const isMate = r.team === mate;
+        const isMate = rivalNames.has(r.team);
         const faded = !isMe && !isMate && i > 3;
         return (
           <div key={r.team}>

@@ -1,4 +1,5 @@
 import { opponentSquad } from "../game/opponents2026";
+import { MAX_ROOM_PLAYERS } from "../game/room";
 import { mulberry32, type PlayerSeason, type Difficulty, type XIConfig, ROLE_QUOTA } from "../game/types";
 
 // ---- Team strength ----
@@ -655,8 +656,13 @@ export interface DetailedInnings {
   events: BallEvent[];
 }
 
-function ballOutcome(batAtt: number, bowlDef: number, rng: () => number): { runs: number; wicket: boolean } {
-  const wProb = clamp(0.052 + (bowlDef - batAtt) * 0.0012, 0.028, 0.085);
+function ballOutcome(
+  batAtt: number,
+  bowlDef: number,
+  rng: () => number,
+  wktScale = 1
+): { runs: number; wicket: boolean } {
+  const wProb = clamp(0.052 + (bowlDef - batAtt) * 0.0012, 0.028, 0.085) * wktScale;
   if (rng() < wProb) return { runs: 0, wicket: true };
   const boost = clamp((batAtt - bowlDef) * 0.005, -0.05, 0.05);
   const p0 = Math.max(0.1, 0.32 - boost);
@@ -675,13 +681,207 @@ function ballOutcome(batAtt: number, bowlDef: number, rng: () => number): { runs
   return { runs: 6, wicket: false };
 }
 
+/* ---- Knockout chases ----
+
+   A playoff night is meant to feel like one. Left alone the ball model settles
+   most chases with three or four overs in hand, which is honest arithmetic and
+   flat theatre — you watch a scoreboard finish rather than a game.
+
+   So a knockout chase is STEERED, not faked. The plan decides up front whether
+   this one goes the distance; if it does, the batting is nudged over the first
+   nineteen overs toward arriving at the last over still alive and still needing
+   something. Every ball is still a real ball off the same model.
+
+   The last over is then drawn against a win rate for the size of the ask, so
+   the big ones come off at the rate the game wants them to: a chase needing
+   more than 25 gets there about a quarter of the time, one needing 30 or more
+   about one time in five. Under that, the six balls are generated and checked —
+   if the model cannot produce the scripted ending it is the balls that stand,
+   not the script. */
+
+// How often a knockout chase is steered at the last over. The rest are left to
+// the model, which sends roughly one in six there on its own; the two together
+// land on the 3.5-in-6 the game is tuned for.
+const KO_STEER_P = 0.26;
+// Balls in the innings before the final over is called.
+const BEFORE_LAST_OVER = 114;
+// Past this the last over is not a last over, it is a formality, and the win
+// rates below would be a lie about it. Those overs play out honestly.
+const MAX_SCRIPTED_ASK = 36;
+
+/** Runs a steered chase should still need when the final over is called. */
+function drawAsk(rng: () => number): number {
+  const r = rng();
+  if (r < 0.66) return 3 + Math.floor(rng() * 12); // 3-14: the ordinary finish
+  if (r < 0.90) return 15 + Math.floor(rng() * 11); // 15-25: a proper ask
+  return 26 + Math.floor(rng() * rng() * 11); // 26-36: the one they talk about
+}
+
+/** How often a chase needing this much off the last over actually gets it. */
+export function lastOverWinRate(need: number): number {
+  if (need <= 3) return 0.9;
+  if (need <= 6) return 0.8;
+  if (need <= 9) return 0.66;
+  if (need <= 12) return 0.52;
+  if (need <= 15) return 0.42;
+  if (need <= 18) return 0.36;
+  if (need <= 21) return 0.32;
+  if (need <= 25) return 0.32;
+  if (need <= 29) return 0.3;
+  // Nudged above the 1-in-5 the game is tuned for: the biggest asks are the
+  // ones the six balls cannot always be made to produce, and what comes out
+  // the far end of that is the one in five.
+  return 0.25;
+}
+
+export interface ChasePlan {
+  /** Steer this chase to reach the final over alive. */
+  toTheLastOver: boolean;
+  /** Runs it should still need when it gets there. */
+  ask: number;
+  /** Ratings still count: a stronger side tilts the last-over win rate. */
+  edge: number;
+}
+
+/** How much the chasing side's rating tilts a last-over win rate. */
+export function chaseEdge(chaseBat: number, defendBowl: number): number {
+  return clamp((chaseBat - defendBowl) * 0.009, -0.2, 0.2);
+}
+
+export function drawChasePlan(rng: () => number, edge: number): ChasePlan {
+  return { toTheLastOver: rng() < KO_STEER_P, ask: drawAsk(rng), edge };
+}
+
+/* Three gears a side chasing can be in: shutting up shop, knocking it about,
+   and coming after everything. Every steered ball is a blend of the two nearest
+   gears, picked so the mean of the blend is the rate the chase actually needs.
+   Means: 0.34, 0.85 and 3.29 a ball. Without the bottom gear a side that got
+   ahead of the script could not slow down, and kept winning it in the 18th. */
+const HOLD = { p0: 0.72, p1: 0.24, p2: 0.03, p3: 0.002, p4: 0.008, p6: 0 };
+const BLOCK = { p0: 0.48, p1: 0.36, p2: 0.09, p3: 0.005, p4: 0.05, p6: 0.015 };
+const SWING = { p0: 0.18, p1: 0.16, p2: 0.07, p3: 0.01, p4: 0.26, p6: 0.32 };
+const HOLD_RPB = 0.338;
+const BLOCK_RPB = 0.845;
+const SWING_RPB = 3.29;
+
+/* One ball bowled at a chase that needs `want` an over-ball. Unlike the plain
+   model this has the authority to actually follow a rate — it is what lets a
+   knockout chase arrive at the last over still needing something. */
+function paceOutcome(
+  want: number,
+  batAtt: number,
+  bowlDef: number,
+  rng: () => number,
+  wktScale = 1
+): { runs: number; wicket: boolean } {
+  const up = want >= BLOCK_RPB;
+  const lo = up ? BLOCK : HOLD;
+  const hi = up ? SWING : BLOCK;
+  const loRpb = up ? BLOCK_RPB : HOLD_RPB;
+  const hiRpb = up ? SWING_RPB : BLOCK_RPB;
+  let t = clamp((want - loRpb) / (hiRpb - loRpb), 0, 1);
+  t = clamp(t + (batAtt - bowlDef) * 0.004, 0, 1);
+  // Only the top gear costs wickets; a side shutting up shop is not getting out.
+  const risk = up ? t : 0;
+  const wProb = clamp((0.03 + risk * 0.075) * wktScale - (batAtt - bowlDef) * 0.0004, 0.008, 0.2);
+  if (rng() < wProb) return { runs: 0, wicket: true };
+  const mix = (a: number, b: number) => a + t * (b - a);
+  const p0 = mix(lo.p0, hi.p0);
+  const p1 = mix(lo.p1, hi.p1);
+  const p2 = mix(lo.p2, hi.p2);
+  const p3 = mix(lo.p3, hi.p3);
+  const p4 = mix(lo.p4, hi.p4);
+  const p6 = mix(lo.p6, hi.p6);
+  const r = rng() * (p0 + p1 + p2 + p3 + p4 + p6);
+  if (r < p0) return { runs: 0, wicket: false };
+  if (r < p0 + p1) return { runs: 1, wicket: false };
+  if (r < p0 + p1 + p2) return { runs: 2, wicket: false };
+  if (r < p0 + p1 + p2 + p3) return { runs: 3, wicket: false };
+  if (r < p0 + p1 + p2 + p3 + p4) return { runs: 4, wicket: false };
+  return { runs: 6, wicket: false };
+}
+
+/* One ball of a last over, with the batter swinging as hard as the ask makes
+   him. `hot` is whether this is the night it comes off. */
+function swingOutcome(
+  left: number,
+  ballsLeft: number,
+  hot: boolean,
+  batAtt: number,
+  bowlDef: number,
+  rng: () => number
+): { runs: number; wicket: boolean } {
+  const rpb = left / Math.max(1, ballsLeft);
+  let heat = clamp((rpb - 1.2) / 4, 0, 1);
+  if (!hot) heat *= 0.55;
+  const wProb = clamp(0.05 + heat * 0.1 - (batAtt - bowlDef) * 0.0012, 0.02, 0.2);
+  if (rng() < wProb) return { runs: 0, wicket: true };
+  let p0 = Math.max(0.05, 0.3 - heat * 0.22);
+  let p1 = Math.max(0.04, 0.34 - heat * 0.28);
+  const p2 = Math.max(0.04, 0.12 - heat * 0.06);
+  const p3 = 0.01;
+  let p4 = 0.14 + heat * 0.16;
+  let p6 = 0.09 + heat * 0.55;
+  if (!hot) {
+    p6 *= 0.5;
+    p4 *= 0.75;
+    p0 += 0.1;
+    p1 += 0.06;
+  }
+  const tot = p0 + p1 + p2 + p3 + p4 + p6;
+  const r = rng() * tot;
+  if (r < p0) return { runs: 0, wicket: false };
+  if (r < p0 + p1) return { runs: 1, wicket: false };
+  if (r < p0 + p1 + p2) return { runs: 2, wicket: false };
+  if (r < p0 + p1 + p2 + p3) return { runs: 3, wicket: false };
+  if (r < p0 + p1 + p2 + p3 + p4) return { runs: 4, wicket: false };
+  return { runs: 6, wicket: false };
+}
+
+/* Six balls that finish the way the ask says they should. Generated and
+   checked, never composed: if 240 tries cannot produce the scripted ending,
+   the caller falls back to the ordinary model and the balls decide it. */
+function planFinalOver(
+  need: number,
+  wktsLeft: number,
+  batAtt: number,
+  bowlDef: number,
+  edge: number,
+  rng: () => number
+): { runs: number; wicket: boolean }[] | null {
+  const wantWin = rng() < clamp(lastOverWinRate(need) + edge, 0.03, 0.95);
+  for (let attempt = 0; attempt < 240; attempt++) {
+    const balls: { runs: number; wicket: boolean }[] = [];
+    let got = 0;
+    let down = 0;
+    let chased = false;
+    for (let i = 0; i < 6; i++) {
+      const o = swingOutcome(need - got, 6 - i, wantWin, batAtt, bowlDef, rng);
+      balls.push(o);
+      if (o.wicket) {
+        down++;
+        if (down >= wktsLeft) break;
+      } else {
+        got += o.runs;
+        if (got >= need) {
+          chased = true;
+          break;
+        }
+      }
+    }
+    if (chased === wantWin) return balls;
+  }
+  return null;
+}
+
 export function simDetailedInnings(
   batSide: { name: string; w: number }[],
   bowlSide: { name: string; w: number }[],
   batAtt: number,
   bowlDef: number,
   rng: () => number,
-  target?: number
+  target?: number,
+  plan?: ChasePlan
 ): DetailedInnings {
   const order = batSide.slice(0, 7);
   const attack = bowlSide.slice(0, 5);
@@ -713,6 +913,16 @@ export function simDetailedInnings(
   const events: BallEvent[] = [];
   const exp = clamp(168 + (batAtt - bowlDef) * 0.5, 145, 205);
 
+  // Steering is only ever on for a knockout chase, and only while there is a
+  // target worth arriving at with something left to do.
+  const steer =
+    !!plan?.toTheLastOver && target !== undefined && target - plan.ask > 30;
+  // The score to be on when the last over is called.
+  const parFinish = steer ? target! - plan!.ask : 0;
+  // The last over, once it has been written. Null until ball 114, and null for
+  // good if the model could not produce the ending the ask asked for.
+  let finalOver: { runs: number; wicket: boolean }[] | null = null;
+
   for (let b = 0; b < 120 && wkts < 10; b++) {
     // bowler rotation, max 4 overs (24 balls) each
     let guard = 0;
@@ -725,7 +935,17 @@ export function simDetailedInnings(
     // chase pressure shifts (mirrors simInnings)
     let batA = (sW + batAtt) / 2;
     let bowlD = (bowler.w + bowlDef) / 2;
-    if (target !== undefined) {
+    let wktScale = 1;
+    let want = -1;
+    if (steer && b < BEFORE_LAST_OVER) {
+      // Bat at the rate that arrives at the scripted finish, not at the target:
+      // behind the curve he has a go, ahead of it he takes his time.
+      want = clamp((parFinish - runs) / Math.max(1, BEFORE_LAST_OVER - b), 0, 3.4);
+      // A chase cannot go to the last over if it is all out in the seventeenth,
+      // so the tail digs in the way a tail chasing something does.
+      if (wkts >= 8) wktScale = 0.3;
+      else if (wkts >= 6) wktScale = 0.6;
+    } else if (target !== undefined) {
       const ballsLeft = 120 - b;
       const reqRpb = (target - runs) / Math.max(1, ballsLeft);
       const parRpb = exp / 120;
@@ -737,7 +957,18 @@ export function simDetailedInnings(
         bowlD += 2;
       }
     }
-    const { runs: add, wicket } = ballOutcome(batA, bowlD, rng);
+    // The last over of any knockout chase that is still alive is written as a
+    // whole, so it can be held to the win rate its ask deserves. Steered or
+    // not — a chase that got here on its own deserves the same last over.
+    if (plan && b === BEFORE_LAST_OVER && runs < target! && target! - runs <= MAX_SCRIPTED_ASK) {
+      finalOver = planFinalOver(target! - runs, 10 - wkts, batA, bowlD, plan.edge, rng);
+    }
+    const scripted = finalOver ? finalOver[b - BEFORE_LAST_OVER] : undefined;
+    const { runs: add, wicket } =
+      scripted ??
+      (want >= 0
+        ? paceOutcome(want, batA, bowlD, rng, wktScale)
+        : ballOutcome(batA, bowlD, rng, wktScale));
     const bc = bcard(bowler.name);
     bc.balls++;
     const sc = card(sName);
@@ -838,13 +1069,18 @@ export function simDetailedMatch(
   let inn1: DetailedInnings;
   let inn2: DetailedInnings;
   let userFirst: boolean;
+  // Every match on this path is a knockout, so the chase gets the last-over
+  // treatment. Ratings still count for something: the better side of the two
+  // takes a little more of the close ones.
   if (batFirst) {
     inn1 = simDetailedInnings(userBat, oppBowl, bat, oBowl, rng);
-    inn2 = simDetailedInnings(oppBat, userBowl, oBat, bowl, rng, inn1.runs + 1);
+    const plan = drawChasePlan(rng, chaseEdge(oBat, bowl));
+    inn2 = simDetailedInnings(oppBat, userBowl, oBat, bowl, rng, inn1.runs + 1, plan);
     userFirst = true;
   } else {
     inn1 = simDetailedInnings(oppBat, userBowl, oBat, bowl, rng);
-    inn2 = simDetailedInnings(userBat, oppBowl, bat, oBowl, rng, inn1.runs + 1);
+    const plan = drawChasePlan(rng, chaseEdge(bat, oBowl));
+    inn2 = simDetailedInnings(userBat, oppBowl, bat, oBowl, rng, inn1.runs + 1, plan);
     userFirst = false;
   }
   const gf = userFirst ? inn1.score : inn2.score;
@@ -1026,9 +1262,11 @@ export function superOverNamed(
     const second = userFirst
       ? simSuperOverInnings(tagSecond, o3, uBest, oBat, bowl, rng, first.runs + 1)
       : simSuperOverInnings(tagFirst, u3, oBest, bat, oBowl, rng, first.runs + 1);
-    // fix sides labels
-    const inn1 = { ...first, side: tagFirst };
-    const inn2 = { ...second, side: tagSecond };
+    // Each innings already carries the side that batted it. When the user is
+    // chasing, the FIRST super over innings is the opponent's — relabelling it
+    // with the first tag put the wrong name on the wrong six balls.
+    const inn1 = first;
+    const inn2 = second;
     if (first.runs !== second.runs) {
       return { inn1, inn2, winnerIsUser: (first.runs > second.runs) === userFirst };
     }
@@ -1098,10 +1336,15 @@ export interface SharedLeague {
 }
 
 const LEAGUE_AI = ["MI", "CSK", "RCB", "KKR", "DC", "SRH", "RR", "PBKS"];
+// The room league is always a ten-team table. Managers take seats off the top,
+// franchises fill the rest — two managers leaves eight AI sides, five leaves five.
+export const LEAGUE_SIZE = 10;
 
-function aiStrengths(seedU32: number): { bat: number; bowl: number }[] {
+function aiStrengths(seedU32: number, n: number): { bat: number; bowl: number }[] {
   const rng = mulberry32((seedU32 ^ 0x77aa) >>> 0);
-  return LEAGUE_AI.map(() => ({
+  // Drawn in order, so adding managers only takes AI sides off the end — the
+  // franchises a room already had keep the exact strengths its seed gave them.
+  return Array.from({ length: n }, () => ({
     bat: round1(74 + rng() * 14),
     bowl: round1(74 + rng() * 14),
   }));
@@ -1162,7 +1405,8 @@ function simH2H(
   nameA: string,
   batA: number,
   bowlA: number,
-  rng: () => number
+  rng: () => number,
+  knockout = false
 ): {
   hs: string; as: string; hr: number; ar: number;
   winner: "H" | "A"; margin: string; superOverNote?: string;
@@ -1175,10 +1419,12 @@ function simH2H(
   let inn2: DetailedInnings;
   if (homeFirst) {
     inn1 = simDetailedInnings(H.bat, A.bowl, batH, bowlA, rng);
-    inn2 = simDetailedInnings(A.bat, H.bowl, batA, bowlH, rng, inn1.runs + 1);
+    const plan = knockout ? drawChasePlan(rng, chaseEdge(batA, bowlH)) : undefined;
+    inn2 = simDetailedInnings(A.bat, H.bowl, batA, bowlH, rng, inn1.runs + 1, plan);
   } else {
     inn1 = simDetailedInnings(A.bat, H.bowl, batA, bowlH, rng);
-    inn2 = simDetailedInnings(H.bat, A.bowl, batH, bowlA, rng, inn1.runs + 1);
+    const plan = knockout ? drawChasePlan(rng, chaseEdge(batH, bowlA)) : undefined;
+    inn2 = simDetailedInnings(H.bat, A.bowl, batH, bowlA, rng, inn1.runs + 1, plan);
   }
   const hr = homeFirst ? inn1.runs : inn2.runs;
   const ar = homeFirst ? inn2.runs : inn1.runs;
@@ -1229,20 +1475,22 @@ export function simSharedLeague(
   roomSeed: number,
   diff: Difficulty
 ): SharedLeague {
-  const ai = aiStrengths(roomSeed);
+  const seated = humans.slice(0, Math.min(MAX_ROOM_PLAYERS, LEAGUE_SIZE - 2));
+  const aiNames = LEAGUE_AI.slice(0, Math.max(0, LEAGUE_SIZE - seated.length));
+  const ai = aiStrengths(roomSeed, aiNames.length);
   const teams: SharedTeam[] = [
-    ...humans.map((h) => ({ name: h.name, human: true as const, deviceId: h.deviceId })),
-    ...LEAGUE_AI.map((name) => ({ name, human: false as const })),
+    ...seated.map((h) => ({ name: h.name, human: true as const, deviceId: h.deviceId })),
+    ...aiNames.map((name) => ({ name, human: false as const })),
   ];
   const strengths = [
-    ...humans.map((h) => {
+    ...seated.map((h) => {
       const st = teamStrength(h.xi);
       return { bat: st.bat, bowl: st.bowl };
     }),
     ...ai,
   ];
   const xis = new Map<number, PlayerSeason[]>();
-  humans.forEach((h, i) => xis.set(i, h.xi));
+  seated.forEach((h, i) => xis.set(i, h.xi));
 
   const rounds = doubleRoundRobin();
   const fixtures: SharedFixture[] = [];
@@ -1293,7 +1541,7 @@ export function simSharedLeague(
     const aH = xis.has(iA);
     const bH = xis.has(iB);
     if (aH && bH) {
-      const m = simH2H(xis.get(iA)!, nA, strengths[iA].bat, strengths[iA].bowl, xis.get(iB)!, nB, strengths[iB].bat, strengths[iB].bowl, rng);
+      const m = simH2H(xis.get(iA)!, nA, strengths[iA].bat, strengths[iA].bowl, xis.get(iB)!, nB, strengths[iB].bat, strengths[iB].bowl, rng, true);
       const winner = m.winner === "H" ? iA : iB;
       playoffs.push({ stage, t1: iA, t2: iB, s1: m.hs, s2: m.as, winner, margin: m.margin, superOverNote: m.superOverNote, detail: m.detail });
       return winner;

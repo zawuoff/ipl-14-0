@@ -19,6 +19,15 @@ import {
 } from "@/components/ui";
 import { useMuted } from "@/lib/sound";
 import { useT, LangToggle } from "@/lib/i18n";
+import {
+  hasLockedXI,
+  isHost,
+  roomFull,
+  roomMembers,
+  roomReady,
+  roomSeats,
+  type RoomMember,
+} from "@/lib/game/room";
 
 export default function RoomPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
@@ -26,11 +35,8 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const t = useT();
   const [muted, toggleMuted] = useMuted();
   const room = useQuery((api as any).rooms?.get, { code: upper });
-  // Both XIs locked: the league is on, so the lobby chrome gets out of the way.
-  const started =
-    !!room &&
-    (room.members?.length ?? 0) === 2 &&
-    room.members.every((m: any) => m.picks?.length === 11);
+  // Every XI locked: the league is on, so the lobby chrome gets out of the way.
+  const started = roomReady(room);
   const joinRoom = useMutation((api as any).rooms?.join);
   const [name, setName] = useState("");
   const [joining, setJoining] = useState(false);
@@ -131,11 +137,16 @@ function RoomLobby({
   setCopied: (v: boolean) => void;
 }) {
   const t = useT();
-  const members: any[] = room.members ?? [];
+  const closeSeats = useMutation((api as any).rooms?.closeSeats);
+  const [closing, setClosing] = useState(false);
+  const members: RoomMember[] = roomMembers(room);
+  const seats = roomSeats(room);
   const me = members.find((m) => m.deviceId === meId);
-  const mate = members.find((m) => m.deviceId !== meId);
-  const bothIn = members.length >= 2;
-  const bothReady = members.length === 2 && members.every((m) => m.picks?.length === 11);
+  const rivals = members.filter((m) => m.deviceId !== meId);
+  const full = roomFull(room);
+  const open = Math.max(0, seats - members.length);
+  const allReady = roomReady(room);
+  const waitingOn = members.filter((m) => m.deviceId !== meId && !hasLockedXI(m));
 
   const doJoin = async () => {
     if (!name.trim() || joining) return;
@@ -148,7 +159,7 @@ function RoomLobby({
 
   const invite = t("mroom.inviteText", { code, url: roomUrl });
 
-  if (bothReady) {
+  if (allReady) {
     return (
       <RoomSeason room={room} />
     );
@@ -162,7 +173,13 @@ function RoomLobby({
           <span className="flex-1" />
           <span className="text-[13px] leading-[18px] text-muted text-right">
             {t(`difficulty.${room.difficulty}`)} ·{" "}
-            {bothIn ? t("mroom.bothSeats") : t("mroom.oneSeat")}
+            {full
+              ? seats === 2
+                ? t("mroom.bothSeats")
+                : t("mroom.allSeats", { n: seats })
+              : open === 1
+                ? t("mroom.oneSeat")
+                : t("mroom.seatsOpen", { n: open })}
           </span>
         </div>
 
@@ -179,13 +196,14 @@ function RoomLobby({
           ))}
         </div>
 
-        <div className="flex gap-2.5">
-          {[0, 1].map((i) => {
+        {/* One tile per seat. Two managers still sit side by side, as before. */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          {Array.from({ length: seats }, (_, i) => {
             const m = members[i];
             return (
               <div
                 key={i}
-                className={`flex flex-col gap-0.5 flex-1 min-w-0 p-3.5 rounded-plate ${
+                className={`flex flex-col gap-0.5 min-w-0 p-3.5 rounded-plate ${
                   m ? "bg-plate border border-plate-line" : "border border-dashed border-white/25"
                 }`}
               >
@@ -199,11 +217,11 @@ function RoomLobby({
                 </span>
                 <span
                   className={`text-[13px] leading-[18px] ${
-                    m?.picks?.length === 11 ? "text-turf-soft" : m ? "text-muted-plate" : "text-muted"
+                    hasLockedXI(m) ? "text-turf-soft" : m ? "text-muted-plate" : "text-muted"
                   }`}
                 >
                   {m
-                    ? m.picks?.length === 11
+                    ? hasLockedXI(m)
                       ? t("mroom.xiLocked")
                       : t("mroom.drafting")
                     : t("mroom.waitingFriend")}
@@ -213,7 +231,7 @@ function RoomLobby({
           })}
         </div>
 
-        {!bothIn && (
+        {!full && (
           <>
             <a
               href={`https://wa.me/?text=${encodeURIComponent(invite)}`}
@@ -235,11 +253,28 @@ function RoomLobby({
             >
               {copied ? t("share.linkCopied") : t("mroom.orCopy", { url: roomUrl })}
             </button>
+            {/* Nobody should be stuck waiting on a seat that is never coming. */}
+            {isHost(room, meId) && members.length >= 2 && (
+              <button
+                disabled={closing}
+                onClick={async () => {
+                  if (closing) return;
+                  setClosing(true);
+                  try {
+                    await closeSeats({ code: room.code, deviceId: meId });
+                  } catch {}
+                  setClosing(false);
+                }}
+                className="min-h-11 flex items-center justify-center text-[13px] leading-[18px] text-accent text-center hover:text-white transition-colors"
+              >
+                {t("mroom.closeSeats", { n: members.length })}
+              </button>
+            )}
           </>
         )}
       </div>
 
-      {!me && !bothIn && (
+      {!me && !full && (
         <div className="mt-6 flex flex-col gap-2.5">
           <SectionHead title={t("mroom.takeSeat")} />
           <div className="flex gap-2">
@@ -258,44 +293,54 @@ function RoomLobby({
         </div>
       )}
 
-      {!me && bothIn && (
+      {!me && full && (
         <p className="mt-6 text-[15px] leading-[22px] text-muted bg-surface rounded-card p-4">
           {t("mroom.full")}
         </p>
       )}
 
-      {me && me.picks?.length !== 11 && (
+      {me && !hasLockedXI(me) && (
         <div className="mt-6">
           <PrimaryButton
             className="w-full sm:w-auto sm:px-10"
             onClick={() => (window.location.href = `/?room=${room.code}`)}
           >
-            {mate ? t("mroom.draftAgainst", { name: mate.name }) : t("mroom.startDraft")}
+            {rivals.length === 1
+              ? t("mroom.draftAgainst", { name: rivals[0].name })
+              : rivals.length > 1
+                ? t("mroom.draftAgainstRoom")
+                : t("mroom.startDraft")}
           </PrimaryButton>
         </div>
       )}
 
-      {me && me.picks?.length === 11 && !bothReady && (
+      {me && hasLockedXI(me) && (
         <p className="mt-6 text-[15px] leading-[22px] bg-surface rounded-card p-4">
-          {t("mroom.waitingFor", { name: mate ? mate.name : t("mroom.opponent") })}
+          {!full
+            ? t("mroom.waitingSeats", { n: open })
+            : waitingOn.length === 1
+              ? t("mroom.waitingFor", { name: waitingOn[0].name })
+              : t("mroom.waitingForMany", { n: waitingOn.length })}
         </p>
       )}
 
-      {!bothReady && (
-        <div className="mt-8 flex flex-col gap-3">
-          <SectionHead title={t("mroom.howTitle")} />
-          <div className="bg-surface rounded-card p-4 lg:p-6 flex flex-col">
-            {[t("mroom.how1"), t("mroom.how2"), t("mroom.how3")].map((line, i) => (
-              <div key={i} className="flex gap-3.5 py-3 border-t border-hairline first:border-t-0">
-                <span className="flex items-center justify-center w-9 h-9 shrink-0 rounded-plate bg-plate border border-plate-line font-display font-bold text-[22px] leading-none pt-1.5">
-                  {i + 1}
-                </span>
-                <p className="flex-1 min-w-0 text-[15px] leading-[22px] text-muted pt-1">{line}</p>
-              </div>
-            ))}
-          </div>
+      <div className="mt-8 flex flex-col gap-3">
+        <SectionHead title={t("mroom.howTitle")} />
+        <div className="bg-surface rounded-card p-4 lg:p-6 flex flex-col">
+          {[
+            t("mroom.how1"),
+            t("mroom.how2", { n: seats }),
+            t("mroom.how3"),
+          ].map((line, i) => (
+            <div key={i} className="flex gap-3.5 py-3 border-t border-hairline first:border-t-0">
+              <span className="flex items-center justify-center w-9 h-9 shrink-0 rounded-plate bg-plate border border-plate-line font-display font-bold text-[22px] leading-none pt-1.5">
+                {i + 1}
+              </span>
+              <p className="flex-1 min-w-0 text-[15px] leading-[22px] text-muted pt-1">{line}</p>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
     </>
   );
 }

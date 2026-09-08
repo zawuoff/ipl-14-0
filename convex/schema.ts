@@ -152,13 +152,16 @@ export default defineSchema({
     ),
     createdAt: v.number(),
   }).index("by_code", ["code"]),
-  // Shared-league multiplayer rooms: both managers + names in ONE table.
-  // The season sim is deterministic from roomSeed + both XIs, so every
+  // Shared-league multiplayer rooms: every manager + name in ONE table.
+  // The season sim is deterministic from roomSeed + the XIs, so every
   // client computes the identical league — no result conflicts, ever.
   rooms: defineTable({
     code: v.string(),
     roomSeed: v.number(),
     difficulty: v.string(),
+    // Seats in the room, 2-5, chosen by the host. Optional because rooms
+    // written before rooms could hold more than two people are all 1v1s.
+    maxPlayers: v.optional(v.number()),
     members: v.array(
       v.object({
         deviceId: v.string(),
