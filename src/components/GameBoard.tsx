@@ -2,6 +2,7 @@
 import { opponentStar } from "@/lib/game/opponents2026";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { analytics } from "@/lib/analytics";
 import { api } from "../../convex/_generated/api";
 import {
   MAX_OVERSEAS,
@@ -273,6 +274,7 @@ export function GameBoard({
       setLastPick(null);
       setPhase("slot");
       setSlotKey((k) => k + 1);
+      analytics.draftStarted(m, diff);
     },
     [dailyQuery, difficulty, today, initialSpins]
   );
@@ -391,6 +393,10 @@ export function GameBoard({
       picks[slot] = p;
       const done = picks.every(Boolean);
       setDraft({ ...draft, picks, status: done ? "complete" : "drafting" });
+      analytics.pickMade(slot + 1, draft.mode, {
+        lastResort: lastResort,
+        rerollsLeft: draft.rerollsLeft,
+      });
       setLastPick(p.id);
       if (!done) {
         setPhase("slot");
@@ -407,6 +413,7 @@ export function GameBoard({
     const r = simSeason(xi, u32, draft.difficulty);
     const st0 = teamStrength(xi, draft.config);
     setResult(r);
+    analytics.seasonSimulated(r, draft.mode, draft.difficulty);
     setSimPower(st0.power);
     setSimIdx(0);
     setSimPhase("league");
@@ -665,6 +672,7 @@ export function GameBoard({
                     setRoomBusy(true);
                     try {
                       await joinRoom({ code: roomQ.code, name: roomName.trim(), deviceId: deviceId() });
+                      analytics.roomJoined(roomQ.maxPlayers ?? seatCount);
                     } catch {}
                     setRoomBusy(false);
                   }}
@@ -853,7 +861,10 @@ export function GameBoard({
                           deviceId: deviceId(),
                           maxPlayers: seatCount,
                         })) as unknown as { code: string } | null;
-                        if (r?.code) window.location.href = `/m/${r.code}`;
+                        if (r?.code) {
+                          analytics.roomCreated(seatCount);
+                          window.location.href = `/m/${r.code}`;
+                        }
                       } catch {}
                       setRoomBusy(false);
                     }}
@@ -1779,6 +1790,7 @@ function ShareButtons({
         href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => analytics.seasonShared("whatsapp")}
         className="flex items-center justify-center gap-2.5 h-14 px-6 rounded-full bg-turf text-white font-semibold text-[17px] whitespace-nowrap hover:bg-[#15702f] active:bg-[#125f28] transition-colors"
       >
         <WhatsAppIcon />
@@ -1788,6 +1800,7 @@ function ShareButtons({
         onPlate={onPlate}
         onClick={async () => {
           if (await copyText(shareText)) {
+            analytics.seasonShared("copy");
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
           }
@@ -1800,6 +1813,7 @@ function ShareButtons({
         onClick={async () => {
           const url = `${window.location.origin}/?challenge=${spins.join(",")}`;
           if (await copyText(t("share.beatMyBoard", { url }))) {
+            analytics.seasonShared("challenge");
             setChallengeCopied(true);
             setTimeout(() => setChallengeCopied(false), 2000);
           }
