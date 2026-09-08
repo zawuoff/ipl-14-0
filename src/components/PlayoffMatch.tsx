@@ -117,13 +117,15 @@ export function PlayoffMatch({
       setPhase("over");
       return;
     }
-    const ballsLeft = evts.length - cursor;
-    const lastOver = ballsLeft <= 6;
+    const queued = evts.length - cursor;
+    const toBowl = 120 - cursor; // balls the innings still has, not balls on tape
     let step: number;
     let wait: number;
-    if (tense && lastOver) {
-      step = 1; // last over of a close game — one ball at a time
-      wait = 750;
+    if (phase === "inn2" && queued <= 6) {
+      // However the chase ends, it ends one ball at a time. The twentieth over
+      // of a live chase is the slowest thing in the game, because it should be.
+      step = 1;
+      wait = toBowl <= 6 ? 1100 : 800;
     } else if (tense) {
       step = 6;
       wait = 600;
@@ -140,32 +142,37 @@ export function PlayoffMatch({
   const cur = shown.length ? shown[shown.length - 1] : null;
   const score = cur ? cur.score : "0/0";
   const balls = shown.length;
-  const oversStr = `${Math.floor(balls / 6)}.${balls % 6}`;
+  const oversStr = oversOf(balls);
   const [runs] = parseScoreStr(score);
-  const ballsLeft = live.events.length - balls;
+  // Balls still to be bowled in the innings — not balls left in the recording.
+  // A chase that finished in the 17th over must never read "off 6 balls", or
+  // the scorecard underneath it looks like it belongs to another match.
+  const ballsLeft = Math.max(0, 120 - balls);
   const need = target !== undefined ? target - runs : null;
   const battingYou = (phase === "inn1") === detail.userFirst;
   const recent = live.events.slice(Math.max(0, cursor - (balls % 6 === 0 ? 6 : balls % 6)), cursor);
   const overSlots = balls % 6 === 0 && balls > 0 ? 6 : balls % 6;
 
-  const inn1Score = phase === "inn1" && !done ? score : detail.inn1.score;
-  const inn1Overs =
-    phase === "inn1" && !done
-      ? oversStr
-      : `${Math.floor(detail.inn1.balls / 6)}.${detail.inn1.balls % 6}`;
+  // Once an innings is off the clock its own figures speak for it. Reading the
+  // live cursor instead left the chase showing 0/0 off 0.0 overs the moment a
+  // super over reset it.
+  const inn1Live = phase === "inn1" && !done;
+  const inn2Live = phase === "inn2" && !done;
+  const inn1Score = inn1Live ? score : detail.inn1.score;
+  const inn1Overs = inn1Live ? oversStr : oversOf(detail.inn1.balls);
+  const inn2Started = phase !== "inn1";
+  const inn2Score = inn2Live ? score : inn2Started ? detail.inn2.score : "—";
+  const inn2Overs = inn2Live ? oversStr : oversOf(detail.inn2.balls);
 
   // The same two innings, read as one match card: your side on the plate,
   // theirs on their colour.
   const firstNote = t("pm.battedFirst", { overs: inn1Overs });
   // No target on the card until the first innings is actually over — it would
   // give away the total while the runs are still being scored.
-  const secondNote =
-    phase === "inn2" || done
-      ? t("pm.chasingOvers", { overs: oversStr, target: detail.inn1.runs + 1 })
-      : inSO
-        ? t("pm.chasing", { target: detail.inn1.runs + 1 })
-        : t("pm.yetToBat");
-  const secondScore = phase === "inn2" || done ? score : "—";
+  const secondNote = inn2Started
+    ? t("pm.chasingOvers", { overs: inn2Overs, target: detail.inn1.runs + 1 })
+    : t("pm.yetToBat");
+  const secondScore = inn2Score;
   const status = done
     ? t("pm.complete")
     : inSO
@@ -340,9 +347,11 @@ function MatchResult({
   const t = useT();
   const userRuns = detail.userFirst ? detail.inn1.runs : detail.inn2.runs;
   const oppRuns = detail.userFirst ? detail.inn2.runs : detail.inn1.runs;
-  const won = userRuns > oppRuns;
   const chase = detail.inn2;
   const so = detail.superOver;
+  // A super over exists precisely because the two innings finished level, so
+  // the totals can never decide it — the six balls after them do.
+  const won = so ? so.winnerIsUser : userRuns > oppRuns;
   const soU = so ? (so.inn1.side === userTag ? so.inn1 : so.inn2) : null;
   const soO = so && soU ? (soU === so.inn1 ? so.inn2 : so.inn1) : null;
   const soLine = so && soU && soO ? `${soU.score} to ${soO.score}` : (so as any)?.scoreline ?? "";
@@ -450,6 +459,10 @@ function SuperOverLive({
       </div>
     </div>
   );
+}
+
+function oversOf(balls: number): string {
+  return `${Math.floor(balls / 6)}.${balls % 6}`;
 }
 
 function parseScoreStr(s: string): [number, number] {

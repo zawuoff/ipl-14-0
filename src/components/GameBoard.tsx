@@ -47,6 +47,14 @@ import { PlayoffMatch } from "./PlayoffMatch";
 import { SeasonReport } from "./SeasonReport";
 import { copyText } from "@/lib/clipboard";
 import { MAX_NAME, playerName, setPlayerName } from "@/lib/player";
+import {
+  MAX_ROOM_PLAYERS,
+  MIN_ROOM_PLAYERS,
+  roomFull,
+  roomMembers,
+  roomReady,
+  roomSeats,
+} from "@/lib/game/room";
 import { useT, localiseMargin, ordinal } from "@/lib/i18n";
 
 const ALL_TEAMS: TeamSeason[] = buildTeamSeasons();
@@ -69,17 +77,31 @@ export function getSquad(teamId: string): PlayerSeason[] {
   // fallback: same-franchise players (shouldn't happen — all 156 have squads)
   const t = TEAM_MAP.get(teamId);
   const out = [...exact];
-  const seen = new Set(out.map((p) => p.id));
+  // by NAME, not by id: the same man across eighteen seasons is eighteen rows
+  const seen = new Set(out.map((p) => p.player));
   if (t) {
     for (const p of ALL_PLAYERS) {
       if (out.length >= 12) break;
-      if (p.franchise === t.franchise && !seen.has(p.id)) {
-        seen.add(p.id);
+      if (p.franchise === t.franchise && !seen.has(p.player)) {
+        seen.add(p.player);
         out.push(p);
       }
     }
   }
   return out.sort((a, b) => b.overall - a.overall);
+}
+
+/* A franchise has eighteen seasons behind it, so "everyone who ever played for
+   DC" is Sehwag five times over. Any list built out of the whole pool rather
+   than one squad has to be read as players, not player-seasons: one row each,
+   his best season. */
+function oneRowPerPlayer(pool: PlayerSeason[]): PlayerSeason[] {
+  const best = new Map<string, PlayerSeason>();
+  for (const p of pool) {
+    const seen = best.get(p.player);
+    if (!seen || p.overall > seen.overall) best.set(p.player, p);
+  }
+  return [...best.values()].sort((a, b) => b.overall - a.overall);
 }
 
 function hashStr(s: string): number {
@@ -206,6 +228,8 @@ export function GameBoard({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (saved) setRoomName((n) => n || saved);
   }, []);
+  // How many managers the host wants in the league they are about to open.
+  const [seatCount, setSeatCount] = useState<number>(MIN_ROOM_PLAYERS);
   const [roomSubmitted, setRoomSubmitted] = useState(false);
   const [roomBusy, setRoomBusy] = useState(false);
   const roomQ = useQuery(
@@ -270,11 +294,9 @@ export function GameBoard({
     if (squad.length === 0) {
       // every squad member already drafted — pull franchise mates (rare)
       const spun = TEAM_MAP.get(currentSpin.teamId);
-      squad = ALL_PLAYERS.filter(
-        (p) => p.franchise === spun?.franchise && !pickedNames.has(p.player)
-      )
-        .sort((a, b) => b.overall - a.overall)
-        .slice(0, 12);
+      squad = oneRowPerPlayer(
+        ALL_PLAYERS.filter((p) => p.franchise === spun?.franchise && !pickedNames.has(p.player))
+      ).slice(0, 12);
     }
     return squad;
   }, [currentSpin, pickedNames]);
@@ -317,13 +339,11 @@ export function GameBoard({
       !pickedNames.has(p.player) &&
       (roleCounts[p.role] ?? 0) < (draft.config[p.role] ?? 0) &&
       (!p.overseas || overseas < MAX_OVERSEAS);
-    const same = ALL_PLAYERS.filter((p) => p.franchise === spun?.franchise && fits(p)).sort(
-      (a, b) => b.overall - a.overall
+    const same = oneRowPerPlayer(
+      ALL_PLAYERS.filter((p) => p.franchise === spun?.franchise && fits(p))
     );
     if (same.length > 0) return same.slice(0, 12);
-    return ALL_PLAYERS.filter(fits)
-      .sort((a, b) => b.overall - a.overall)
-      .slice(0, 12);
+    return oneRowPerPlayer(ALL_PLAYERS.filter(fits)).slice(0, 12);
   }, [draft, deadSpin, currentSpin, pickedNames, roleCounts, overseas]);
   const lastResort = deadSpin && standIns.length === 0; // ~impossible; only then anyone goes
   const shownOptions = deadSpin && standIns.length > 0 ? standIns : options;
@@ -546,10 +566,7 @@ export function GameBoard({
     return meta ? { code: meta.code, season: meta.season, colour: meta.colour } : undefined;
   };
   const picked = pickedXI.length;
-  const roomBothReady =
-    !!roomQ &&
-    (roomQ.members?.length ?? 0) === 2 &&
-    roomQ.members.every((m: any) => m.picks?.length === 11);
+  const roomAllReady = roomReady(roomQ);
   const modeLabel = initialRoom
     ? t("run.room", { code: initialRoom.toUpperCase() })
     : draft?.mode === "daily"
@@ -619,8 +636,16 @@ export function GameBoard({
             <div className="bg-surface rounded-card p-5 flex flex-col gap-3">
               <Eyebrow>{t("setup.inviteTitle")}</Eyebrow>
               <span className="head-display text-[26px] leading-[26px] lg:text-[30px] lg:leading-[28px]">
-                {roomQ.members?.map((m: any) => m.name).join("  vs  ") || "1v1"}
-                {roomQ.members?.length < 2 ? " · one seat open" : ""}
+                {roomMembers(roomQ).map((m) => m.name).join("  ·  ") || t("home.friend.title")}
+              </span>
+              <span className="text-[13px] leading-[18px] text-muted">
+                {roomFull(roomQ)
+                  ? roomSeats(roomQ) === 2
+                    ? t("mroom.bothSeats")
+                    : t("mroom.allSeats", { n: roomSeats(roomQ) })
+                  : roomSeats(roomQ) - roomMembers(roomQ).length === 1
+                    ? t("mroom.oneSeat")
+                    : t("mroom.seatsOpen", { n: roomSeats(roomQ) - roomMembers(roomQ).length })}
               </span>
               <span className="text-[15px] leading-[22px] text-muted">
                 {t("setup.inviteRules", { difficulty: t(`difficulty.${roomQ.difficulty}`) })}
@@ -682,6 +707,38 @@ export function GameBoard({
                           }`}
                         >
                           {m === "daily" ? t("setup.dailySub") : t("setup.classicSub")}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Opening a room: how many managers share the league. Sits where
+                  the mode choice sits on a solo run, so the page keeps its rhythm. */}
+              {friendFlow && (
+                <div className="mt-7 flex flex-col gap-3">
+                  <SectionHead title={t("setup.players")} note={t("setup.playersNote")} />
+                  <div className="grid grid-cols-4 gap-2.5">
+                    {Array.from(
+                      { length: MAX_ROOM_PLAYERS - MIN_ROOM_PLAYERS + 1 },
+                      (_, i) => MIN_ROOM_PLAYERS + i
+                    ).map((n) => (
+                      // A numeric scale, so the tiles carry the number and the
+                      // heading above carries the word. Nothing to overflow on a
+                      // narrow phone, four across.
+                      <button
+                        key={n}
+                        onClick={() => setSeatCount(n)}
+                        aria-label={t("setup.playersOf", { n })}
+                        className={`flex items-center justify-center h-[62px] rounded-card bg-surface transition-colors ${
+                          seatCount === n
+                            ? "border-2 border-accent"
+                            : "border-2 border-transparent hover:bg-white/8"
+                        }`}
+                      >
+                        <span className="font-display font-bold text-[32px] leading-none pt-1.5 tabular">
+                          {n}
                         </span>
                       </button>
                     ))}
@@ -769,7 +826,7 @@ export function GameBoard({
                   <>
                     <SectionHead title={t("setup.nameHead")} />
                     <p className="text-[14px] leading-5 text-muted">
-                      {friendFlow ? t("setup.friendBlurb") : t("setup.nameNote")}
+                      {friendFlow ? t("setup.friendBlurb", { n: seatCount }) : t("setup.nameNote")}
                     </p>
                     <input
                       value={roomName}
@@ -794,13 +851,14 @@ export function GameBoard({
                           name: roomName.trim(),
                           difficulty,
                           deviceId: deviceId(),
+                          maxPlayers: seatCount,
                         })) as unknown as { code: string } | null;
                         if (r?.code) window.location.href = `/m/${r.code}`;
                       } catch {}
                       setRoomBusy(false);
                     }}
                   >
-                    {roomBusy ? "…" : t("setup.createRoom")}
+                    {roomBusy ? "…" : t("setup.createRoomFor", { n: seatCount })}
                   </PrimaryButton>
                 ) : (
                   <>
@@ -1030,12 +1088,12 @@ export function GameBoard({
                 <a
                   href={`/m/${initialRoom!.toUpperCase()}`}
                   className={`flex items-center justify-center h-14 w-full rounded-full font-semibold text-[17px] transition-colors ${
-                    roomBothReady
+                    roomAllReady
                       ? "bg-accent text-ground hover:bg-accent-deep"
                       : "bg-white/10 text-white hover:bg-white/18"
                   }`}
                 >
-                  {roomBothReady ? t("xi.startLeague") : t("xi.waitingOpponent")}
+                  {roomAllReady ? t("xi.startLeague") : t("xi.waitingOpponent")}
                 </a>
               ) : (
                 <PrimaryButton
