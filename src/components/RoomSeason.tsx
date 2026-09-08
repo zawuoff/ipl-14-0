@@ -36,6 +36,7 @@ import {
 import { Confetti } from "./Confetti";
 import { fireworks } from "@/lib/sound";
 import { useT, localiseMargin, ordinal } from "@/lib/i18n";
+import { SITE_URL } from "@/lib/site";
 
 function stageWords(stage: string | undefined, t: (k: string) => string): string {
   return t(stage ? `stage.${stage}` : "stage.playoffs");
@@ -340,7 +341,7 @@ export function RoomSeason({ room }: { room: any }) {
     w: report.wins,
     l: report.losses,
     won: report.champion ? t("room.andWonIt") : "",
-    url: `${typeof window !== "undefined" ? window.location.origin : "https://14-0.app"}/m/${room.code}`,
+    url: `${typeof window !== "undefined" ? window.location.origin : SITE_URL}/m/${room.code}`,
   });
 
   // The final itself played the fanfare. Lifting the cup is the encore.

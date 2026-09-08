@@ -3,6 +3,7 @@ import { Teko, Hind } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "@/components/ConvexProvider";
 import { LangProvider } from "@/lib/i18n";
+import { SITE_URL } from "@/lib/site";
 
 // Teko carries every number on the scoreboard; Hind carries everything you read.
 // Both ship Devanagari, so a Hindi toggle later costs nothing.
@@ -21,6 +22,7 @@ const hind = Hind({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "14-0 · Draft an all-time IPL XI",
   description:
     "Spin real IPL squads from 2008 to 2025, take one player from each, and play a full season. Nobody has gone 14-0 yet.",

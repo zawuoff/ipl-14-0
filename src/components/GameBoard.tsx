@@ -57,6 +57,7 @@ import {
   roomSeats,
 } from "@/lib/game/room";
 import { useT, localiseMargin, ordinal } from "@/lib/i18n";
+import { SITE_URL } from "@/lib/site";
 
 const ALL_TEAMS: TeamSeason[] = buildTeamSeasons();
 const ALL_PLAYERS: PlayerSeason[] = buildPlayerSeasons();
@@ -562,7 +563,7 @@ export function GameBoard({
         ? `🏆 CHAMPIONS ${result.wins}-${result.losses}`
         : `${result.wins}-${result.losses} SEASON`;
     const tag = draft.mode === "daily" ? ` Daily ${today}` : "";
-    return `14-0 IPL Draft${tag} — ${head}\n${boxes}\n${draft.difficulty} · ${typeof window !== "undefined" ? window.location.origin : "14-0.app"}/r/${draft.seed}\nCan you go 14-0?`;
+    return `14-0 IPL Draft${tag} — ${head}\n${boxes}\n${draft.difficulty} · ${typeof window !== "undefined" ? window.location.origin : SITE_URL}/r/${draft.seed}\nCan you go 14-0?`;
   }, [draft, result, today]);
 
   const slotsLeft = draft ? 11 - pickedXI.length : 11;
