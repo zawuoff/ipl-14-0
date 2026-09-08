@@ -119,6 +119,10 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
     hi: "आज {date} है। बोर्ड आधी रात (IST) पर रीसेट होता है।",
   },
   "board.seedNote": { en: "Every run is verifiable from its seed.", hi: "हर रन उसकी सीड से जाँचा जा सकता है।" },
+  "board.ranking": {
+    en: "A perfect 14–0 tops the board on any setting. Under that the trophy comes first, and between two champions the harder setting wins.",
+    hi: "परफ़ेक्ट 14–0 किसी भी सेटिंग पर सबसे ऊपर। उसके नीचे पहले ट्रॉफ़ी, और दो चैंपियनों में मुश्किल सेटिंग वाला ऊपर।",
+  },
   "board.manager": { en: "Manager {id}", hi: "मैनेजर {id}" },
   "board.perfect": { en: "PERFECT", hi: "परफ़ेक्ट" },
   "board.rowMeta": {

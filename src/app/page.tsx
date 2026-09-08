@@ -658,7 +658,9 @@ function Leaderboard({
             empty={tab === "daily" ? t("board.empty.daily") : t("board.empty.allTime")}
           />
         </div>
-        <p className="text-[13px] leading-5 text-muted pt-3">
+        {/* The order is not just wins any more, so the board says what it is. */}
+        <p className="text-[13px] leading-5 text-muted pt-3">{t("board.ranking")}</p>
+        <p className="text-[13px] leading-5 text-muted pt-1.5">
           {tab === "daily" ? t("board.todayNote", { date: today }) : t("board.seedNote")}
         </p>
       </div>
