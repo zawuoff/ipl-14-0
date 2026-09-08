@@ -1370,11 +1370,13 @@ export function GameBoard({
                   userTag="YOU"
                   speed={simSpeed}
                   nextLabel={
-                    nonFinals[poIdx].result === "W"
-                      ? poIdx + 1 < nonFinals.length
-                        ? t("po.next", { stage: t(`stage.${nonFinals[poIdx + 1].stage}`) })
-                        : t("po.toFinal")
-                      : t("po.seasonOver")
+                    poIdx + 1 < nonFinals.length
+                      ? t(nonFinals[poIdx].result === "W" ? "po.next" : "po.downTo", {
+                          stage: t(`stage.${nonFinals[poIdx + 1].stage}`),
+                        })
+                      : finalGame
+                        ? t("po.toFinal")
+                        : t("po.seasonOver")
                   }
                   onDone={onPlayoffDone}
                 />
