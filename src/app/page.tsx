@@ -674,6 +674,9 @@ function outcomeKey(r: Row): string {
   return "outcome.missedPlayoffs";
 }
 
+/* Gold, silver, bronze for the podium; everyone else keeps the black plate. */
+const PODIUM = ["bg-trophy text-ground", "bg-silver text-ground", "bg-bronze text-ground"];
+
 function BoardRows({ rows, empty }: { rows: Row[] | undefined; empty: string }) {
   const t = useT();
   if (rows === undefined) return <p className="text-[15px] text-muted py-4">{t("board.loading")}</p>;
@@ -690,7 +693,7 @@ function BoardRows({ rows, empty }: { rows: Row[] | undefined; empty: string }) 
         >
           <span
             className={`flex items-center justify-center w-9 h-9 shrink-0 rounded-plate font-display font-bold text-[22px] leading-none pt-1 tabular ${
-              i === 0 ? "bg-trophy text-ground" : "bg-plate border border-plate-line text-white"
+              PODIUM[i] ?? "bg-plate border border-plate-line text-white"
             }`}
           >
             {i + 1}
