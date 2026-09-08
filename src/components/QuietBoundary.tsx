@@ -17,7 +17,7 @@ export class QuietBoundary extends Component<
 
   componentDidCatch(error: unknown) {
     // Worth seeing in the console, not worth showing a reader.
-    console.warn("[14-0] optional section unavailable:", error);
+    console.warn("[BuildXI] optional section unavailable:", error);
   }
 
   render() {

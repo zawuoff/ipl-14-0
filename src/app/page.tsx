@@ -11,6 +11,7 @@ import {
   Chevron,
   Eyebrow,
   Flap,
+  Logo,
   PageBand,
   PlayerBurstCard,
   PrimaryButton,
@@ -18,7 +19,6 @@ import {
   StatCell,
   StatStrip,
   StripeBand,
-  Wordmark,
   splitName,
   IconButton,
   SoundIcon,
@@ -191,10 +191,10 @@ function TopBar({
 
         <button
           onClick={() => !inGame && go("home")}
-          aria-label="14-0"
+          aria-label="BuildXI"
           className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2"
         >
-          <Wordmark className="text-[30px] lg:text-[40px]" />
+          <Logo className="text-[30px] lg:text-[40px]" />
         </button>
 
         <span className="flex-1" />

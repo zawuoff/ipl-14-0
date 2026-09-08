@@ -84,8 +84,8 @@ export const getBySeed = query({
    difficulties, so a Rookie side that won 13 sat above a Legend side that won
    the whole thing. What the game actually asks of you is, in order:
 
-   1. A perfect 14-0. That is the name on the door, so it tops the board on any
-      setting — Rookie included.
+   1. A perfect 14-0. That is the whole point of the game, so it tops the board
+      on any setting — Rookie included.
    2. The trophy. Between two champions the harder setting wins, whatever the
       records say: winning it on Legend is a bigger night than winning it on
       Rookie with three more league wins.

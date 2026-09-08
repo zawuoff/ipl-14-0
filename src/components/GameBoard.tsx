@@ -127,6 +127,8 @@ function mulberry(a: number) {
 
 function dailySpinsLocal(date: string): string[] {
   const pool = ALL_TEAMS.map((t) => t.teamId).sort();
+  // The "14-0" seed prefix is frozen: it must match convex/daily.ts exactly,
+  // and changing it would deal a different squad for a date people already played.
   const rng = mulberry(hashStr("14-0:" + date));
   const copy = [...pool];
   const out: string[] = [];
@@ -150,6 +152,9 @@ function randomSpins(): string[] {
 
 function deviceId(): string {
   if (typeof window === "undefined") return "server";
+  // Storage keys keep the old name deliberately. They are how a returning
+  // player is recognised on the leaderboard; renaming them orphans every
+  // existing device and wipes streaks, so the rename to BuildXI stops here.
   let d = localStorage.getItem("14-0-device");
   if (!d) {
     d = Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -588,7 +593,7 @@ export function GameBoard({
       const tag = draft.mode === "daily" ? ` Daily ${today}` : "";
       const origin = typeof window !== "undefined" ? window.location.origin : SITE_URL;
       const url = withVia(`${origin}/r/${draft.seed}`, via);
-      return `14-0 IPL Draft${tag} — ${head}\n${boxes}\n${draft.difficulty} · ${url}\nCan you go 14-0?`;
+      return `BuildXI · IPL Draft${tag} — ${head}\n${boxes}\n${draft.difficulty} · ${url}\nCan you go 14-0?`;
     },
     [draft, result, today]
   );
