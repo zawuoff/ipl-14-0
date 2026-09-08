@@ -3,7 +3,8 @@
 /* 14-0 design system — "a night game under the floodlights".
    Navy ground, black scoreboard plates, one sky-blue accent, Teko numbers,
    Hind text. Franchise colours are the only other colour on the page.
-   Green means a win, red a loss, gold a title. */
+   Green means a win, red a loss, gold a title, and the three metals are the
+   podium on the board. */
 @theme {
   /* grounds */
   --color-ground: #071238; /* the page */
@@ -35,6 +36,10 @@
   --color-loss: #ff5a47;
   --color-loss-soft: #ff8577;
   --color-trophy: #e0a81c;
+  /* Second and third on the board. Both are pitched light enough to take the
+     navy ink the gold plate takes, so the three read as one set. */
+  --color-silver: #c9cfda;
+  --color-bronze: #cd8c4a;
   --color-cap-orange: #ff822a;
   --color-cap-purple: #a76bff;
 
