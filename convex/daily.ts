@@ -40,6 +40,7 @@ export const getToday = query({
     const teams = await ctx.db.query("teamSeasons").collect();
     const pool =
       teams.length >= 11 ? teams.map((t) => t.teamId).sort() : FALLBACK_POOL;
+    // Frozen seed prefix — see GameBoard.tsx. Must not change with the rename.
     const rng = mulberry(hashStr("14-0:" + args.date));
     const picked: string[] = [];
     const copy = [...pool];

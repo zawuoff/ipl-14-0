@@ -1,4 +1,4 @@
-// 14-0 game-loop types — spin -> draft x11 -> sim 14 + playoffs
+// BuildXI game-loop types — spin -> draft x11 -> sim 14 + playoffs
 // Roles: 2 Opener, 3 Middle, 1 WK/Finisher, 2 AR, 2 Pace, 1 Spin. Max 4 overseas.
 
 export type Role = "Opener" | "Middle" | "WK" | "AR" | "Pace" | "Spin";

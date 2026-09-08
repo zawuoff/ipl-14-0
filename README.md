@@ -1,4 +1,4 @@
-# 14-0 · IPL Draft — chase the perfect season
+# BuildXI · IPL Draft — chase the perfect season
 
 38-0.app loop, rebuilt for IPL cricket. Spin a wheel across **real franchise-seasons
 (IPL 2008–2025, 156 team-seasons incl. Deccan, Kochi, Pune Warriors, GL, RPS)**,

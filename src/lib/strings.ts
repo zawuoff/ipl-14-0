@@ -12,8 +12,8 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "nav.board": { en: "Board", hi: "बोर्ड" },
   "nav.backToGame": { en: "Back to the game", hi: "गेम पर वापस" },
   "footer.legal": {
-    en: "14–0 is a fan-made game and is not affiliated with the IPL or BCCI. Player names and season ratings are used for description only, and ratings are derived from public season statistics.",
-    hi: "14–0 एक फ़ैन-मेड गेम है और इसका IPL या BCCI से कोई संबंध नहीं है। खिलाड़ियों के नाम और सीज़न रेटिंग सिर्फ़ जानकारी के लिए हैं, और रेटिंग सार्वजनिक सीज़न आँकड़ों से निकाली गई हैं।",
+    en: "BuildXI is a fan-made game and is not affiliated with the IPL or BCCI. Player names and season ratings are used for description only, and ratings are derived from public season statistics.",
+    hi: "BuildXI एक फ़ैन-मेड गेम है और इसका IPL या BCCI से कोई संबंध नहीं है। खिलाड़ियों के नाम और सीज़न रेटिंग सिर्फ़ जानकारी के लिए हैं, और रेटिंग सार्वजनिक सीज़न आँकड़ों से निकाली गई हैं।",
   },
   "footer.links": {
     en: "Leaderboard · How ratings work · Contact",
@@ -484,7 +484,7 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "mroom.how2": { en: "Once every XI is locked, one 18-game league plays out — {n} of you plus the franchises. You meet each other twice.", hi: "सारी XI लॉक होते ही 18 मैच की एक लीग चलती है — आप {n} लोग और बाकी फ़्रैंचाइज़ी। आप एक-दूसरे से दो बार भिड़ते हैं।" },
   "mroom.how3": { en: "Whoever finishes highest wins the room. The playoffs settle the rest.", hi: "जो सबसे ऊपर रहेगा वही रूम जीतेगा। बाकी फ़ैसला प्लेऑफ़ करेंगे।" },
   "mroom.headerMeta": { en: "Room {code} · {difficulty} · one 18-game table", hi: "रूम {code} · {difficulty} · एक 18-मैच की तालिका" },
-  "mroom.inviteText": { en: "Play me at 14-0, the IPL draft game. Room {code}: {url}", hi: "मुझसे 14-0 खेलो, IPL ड्राफ़्ट गेम। रूम {code}: {url}" },
+  "mroom.inviteText": { en: "Play me at BuildXI, the IPL draft game. Room {code}: {url}", hi: "मुझसे BuildXI खेलो, IPL ड्राफ़्ट गेम। रूम {code}: {url}" },
   /* ------------------------------------------------------------- ordinals */
   "ord.1": { en: "1st", hi: "पहले" },
   "ord.2": { en: "2nd", hi: "दूसरे" },

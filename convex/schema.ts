@@ -1,7 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-// 14-0 IPL draft game — MVP schema, no auth (anonymous deviceId)
+// BuildXI IPL draft game — MVP schema, no auth (anonymous deviceId)
 export default defineSchema({
   playerSeasons: defineTable({
     player: v.string(), // "Virat Kohli"

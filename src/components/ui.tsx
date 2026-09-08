@@ -651,11 +651,36 @@ export function SectionHead({
   );
 }
 
-/** Wordmark. The dash is an en dash so it reads as a scoreline. */
-export function Wordmark({ className = "" }: { className?: string }) {
+/** The mark alone: two crossed bats make the X, a stump with its bail and
+    ground line makes the I. Sized in em so whatever font-size the caller sets
+    drives the drawing and the lettering together. */
+export function LogoMark({ className = "" }: { className?: string }) {
   return (
-    <span className={`font-display font-bold leading-none tracking-[0.01em] ${className}`}>
-      14–0
+    <svg viewBox="0 0 150 120" className={className} aria-hidden focusable="false">
+      <g transform="translate(52 60) rotate(-34)">
+        <rect x="-4" y="-58" width="8" height="34" rx="3" fill="#FFFFFF" />
+        <path d="M-12 -24 H12 V38 Q12 56 0 58 Q-12 56 -12 38 Z" fill="#FFFFFF" />
+      </g>
+      <g transform="translate(52 60) rotate(34)">
+        <rect x="-4" y="-58" width="8" height="34" rx="3" fill="#FFFFFF" />
+        <path d="M-12 -24 H12 V38 Q12 56 0 58 Q-12 56 -12 38 Z" fill="#FFFFFF" />
+      </g>
+      <rect x="120" y="14" width="12" height="104" rx="2" fill="var(--color-accent)" />
+      <rect x="112" y="4" width="28" height="6" rx="3" fill="var(--color-accent)" />
+      <rect x="104" y="118" width="44" height="2" fill="var(--color-accent)" />
+    </svg>
+  );
+}
+
+/** The logo: mark plus BUILDXI, set in Teko like everything else on the board. */
+export function Logo({ className = "" }: { className?: string }) {
+  return (
+    <span className={`inline-flex items-center gap-[0.267em] ${className}`}>
+      <LogoMark className="w-[1.333em] h-[1.067em] shrink-0" />
+      <span className="font-display font-bold leading-[0.867em] tracking-[0.01em] pt-[0.133em]">
+        <span className="text-white">BUILD</span>
+        <span className="text-accent">XI</span>
+      </span>
     </span>
   );
 }
