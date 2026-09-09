@@ -178,8 +178,13 @@ export function mulberry32(a: number) {
   };
 }
 
-// Daily key: IST date string YYYY-MM-DD
+// Daily key: IST date string YYYY-MM-DD.
+// getTime() is already an absolute instant and toISOString() already reads it
+// in UTC, so the shift to IST is +5:30 and nothing else. Adding the viewer's
+// own offset on top of that double-counted it: only a UTC browser landed on
+// the right day, an IST one read the UTC date and so spent every midnight-to-
+// 5:30am on the previous day's board and previous day's challenge. This has to
+// agree with istDay() in convex/stats.ts, which tags the rows.
 export function istDateKey(d = new Date()): string {
-  const ist = new Date(d.getTime() + (330 + d.getTimezoneOffset()) * 60000);
-  return ist.toISOString().slice(0, 10);
+  return new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 10);
 }
