@@ -407,6 +407,27 @@ export function simSeason(
       }
     }
     void alive;
+    // Knockouts are part of the season, so their cards feed the same aggregate
+    // the caps and the XI table read from. The ball-by-ball path names players
+    // short ("V Kohli"), so map back to the full name the league rows use.
+    // Super Over runs stay out, as they do in the real thing.
+    const fullName = new Map(xi.map((p) => [shortName(p.player), p.player]));
+    for (const po of playoffs) {
+      if (!po.detail) continue;
+      const batting = po.detail.userFirst ? po.detail.inn1 : po.detail.inn2;
+      const bowling = po.detail.userFirst ? po.detail.inn2 : po.detail.inn1;
+      // Two XI players can share a card name ("R Sharma" is both Rohit and
+      // Rahul); the innings then lists one merged card in both slots. Fold each
+      // card once so a collision cannot double the season total.
+      for (const b of new Set(batting.batsmen)) {
+        const full = fullName.get(b.name);
+        if (full) bump(agg, full, b.runs, b.balls, 0);
+      }
+      for (const w of new Set(bowling.bowlers)) {
+        const full = fullName.get(w.name);
+        if (full) bump(agg, full, 0, 0, w.wickets);
+      }
+    }
   }
   return {
     wins,
@@ -1121,7 +1142,7 @@ export function simDetailedMatch(
   return { opp, oppPower: oPow, gf, ga, result, margin, userRuns, oppRuns, inn1, inn2, userFirst, superOver };
 }
 
-function shortName(full: string): string {
+export function shortName(full: string): string {
   const parts = full.split(" ");
   if (parts.length === 1) return full.slice(0, 8);
   return `${parts[0][0]} ${parts[parts.length - 1]}`.slice(0, 12);

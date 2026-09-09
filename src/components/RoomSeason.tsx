@@ -4,6 +4,9 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import {
   distributeMatch,
+  // the file's own shortName is for display; the cards were named by the
+  // engine's, truncation and all, so match on that one
+  shortName as cardName,
   simSharedLeague,
   teamStrength,
   type GameResult,
@@ -199,6 +202,33 @@ export function RoomSeason({ room }: { room: any }) {
         superOver: f.superOverNote ? `SO ${f.superOverNote.replace("SO ", "")}` : undefined,
       });
     });
+    // The knockouts count towards the season like any other match. Their cards
+    // carry short names ("V Kohli"), so map them back onto the league rows.
+    const foldPlayoffs = (
+      target: Map<string, { runs: number; balls: number; wkts: number }>,
+      teamIdx: number,
+      teamXi: PlayerSeason[]
+    ) => {
+      const fullName = new Map(teamXi.map((p) => [cardName(p.player), p.player]));
+      for (const po of league.playoffs) {
+        if (!po.detail || (po.t1 !== teamIdx && po.t2 !== teamIdx)) continue;
+        const iAmHome = po.t1 === teamIdx;
+        const iBattedFirst = po.detail.firstIsHome === iAmHome;
+        const batting = iBattedFirst ? po.detail.inn1 : po.detail.inn2;
+        const bowling = iBattedFirst ? po.detail.inn2 : po.detail.inn1;
+        // one card per player: a shared card name ("R Sharma") is listed in
+        // both slots as the same merged card, and must count once
+        for (const b of new Set(batting.batsmen)) {
+          const full = fullName.get(b.name);
+          if (full) bump(target, full, b.runs, b.balls, 0);
+        }
+        for (const wk of new Set(bowling.bowlers)) {
+          const full = fullName.get(wk.name);
+          if (full) bump(target, full, 0, 0, wk.wickets);
+        }
+      }
+    };
+    foldPlayoffs(agg, myIdx, xi);
     const nrr = Math.round(((rf - ra) / (myFixtures.length * 20)) * 100) / 100;
     const rank = league.table.findIndex((r) => r.team === myName) + 1;
     const info = new Map(xi.map((p) => [p.player, p]));
@@ -243,6 +273,7 @@ export function RoomSeason({ room }: { room: any }) {
           for (const b of star.batAll) bump(theirAgg, b.player, b.runs, b.balls, 0);
           for (const ww of star.bowlAll) bump(theirAgg, ww.player, 0, 0, ww.wickets);
         });
+      foldPlayoffs(theirAgg, ti, theirXi);
       fold(theirAgg);
     });
     const capRows = [...combined.entries()].map(([player, e]) => ({ player, runs: e.runs, wickets: e.wkts }));
