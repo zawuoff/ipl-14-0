@@ -16,6 +16,7 @@ import {
   PageBand,
   PlayerBurstCard,
   PrimaryButton,
+  OutlineButton,
   SectionHead,
   StatCell,
   StatStrip,
@@ -307,10 +308,13 @@ function HomeScreen({
             <p className="text-[15px] leading-[22px] lg:text-[18px] lg:leading-7 text-muted lg:max-w-[540px]">
               {t("home.sub")}
             </p>
-            <div className="hidden lg:flex items-center gap-5 pt-2">
-              <PrimaryButton className="h-14 px-9 text-[17px]" onClick={() => play("classic")}>
+            <div className="hidden lg:flex items-center gap-4 pt-2">
+              <PrimaryButton className="h-14 px-10 text-[17px]" onClick={() => play("classic")}>
                 {t("home.cta")}
               </PrimaryButton>
+              <OutlineButton className="h-14 px-7 text-[17px]" onClick={() => play("classic", "friend")}>
+                {t("home.multiplayer")}
+              </OutlineButton>
               <span className="text-[15px] leading-[22px] text-muted whitespace-nowrap">
                 {t("home.ctaNote")}
               </span>
@@ -344,9 +348,14 @@ function HomeScreen({
 
       {/* Mobile keeps the action directly under the board. */}
       <section className="lg:hidden px-5 pt-5 pb-1 flex flex-col gap-2.5">
-        <PrimaryButton className="w-full" onClick={() => play("classic")}>
-          {t("home.cta")}
-        </PrimaryButton>
+        <div className="flex gap-2.5">
+          <PrimaryButton className="flex-1" onClick={() => play("classic")}>
+            {t("home.cta")}
+          </PrimaryButton>
+          <OutlineButton className="flex-1" onClick={() => play("classic", "friend")}>
+            {t("home.multiplayer")}
+          </OutlineButton>
+        </div>
         <p className="text-[13px] leading-[18px] text-muted text-center">{t("home.ctaNote")}</p>
       </section>
 
