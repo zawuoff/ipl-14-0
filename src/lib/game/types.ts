@@ -22,7 +22,17 @@ export interface PlayerSeason {
   teamId: string;
   franchise: string;
   season: number;
+  // The role this player is being drafted into. On a squad row it is the role
+  // they are filed under; on a pick it is the slot the manager chose.
   role: Role;
+  // Roles the player is coded as somewhere in the 156 squads. The honest record,
+  // and the base every off-role cost is measured from.
+  native: Role[];
+  // Every slot this row may be drafted into — see roles.ts.
+  eligible: Role[];
+  // Set when `role` is not the filed one, so the XI can say so.
+  offRole?: boolean;
+  filedRole?: Role;
   runs: number;
   sr: number;
   avg: number;

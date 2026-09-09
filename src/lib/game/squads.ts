@@ -1,3 +1,4 @@
+import { eligibleRoles } from "./roles";
 import type { PlayerSeason, Role } from "./types";
 import SA from "./squads-a.json";
 import SB from "./squads-b.json";
@@ -45,8 +46,24 @@ function synthStats(role: Role, rating: number) {
   return { runs, sr, avg, wickets: 0, econ: 0 };
 }
 
+// Layer 1 of eligibility: role is stored per season, so a player who opened in
+// one year and batted three in another already tells us both. Collect that union
+// once, before any row is built, and every season gets the whole career.
+function careerRoles(): Map<string, Set<Role>> {
+  const m = new Map<string, Set<Role>>();
+  for (const sq of ALL_SQUADS) {
+    for (const [player, , roleRaw] of sq.s) {
+      const set = m.get(player) ?? new Set<Role>();
+      set.add(roleRaw as Role);
+      m.set(player, set);
+    }
+  }
+  return m;
+}
+
 export function buildSquadPlayers(): PlayerSeason[] {
   const out: PlayerSeason[] = [];
+  const career = careerRoles();
   for (const sq of ALL_SQUADS) {
     const dash = sq.t.lastIndexOf("-");
     const code = sq.t.slice(0, dash);
@@ -76,6 +93,8 @@ export function buildSquadPlayers(): PlayerSeason[] {
         franchise,
         season,
         role,
+        native: [...(career.get(player) ?? new Set<Role>([role]))],
+        eligible: eligibleRoles(player, role, career.get(player) ?? new Set<Role>([role])),
         runs: st.runs,
         sr: st.sr,
         avg: st.avg,
