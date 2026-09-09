@@ -8,6 +8,9 @@ import { useEffect, useRef } from "react";
    asked for less motion gets none of it. */
 
 const COLOURS = ["#E0A81C", "#5AC2FF", "#FFFFFF", "#4FCB74", "#FF822A", "#A76BFF"];
+/* Lifting the cup after an unbeaten season is a gold occasion, so the paper
+   drops the rest of the palette and comes down slowly enough to watch. */
+const GOLD = ["#E0A81C", "#F2C94C", "#FFE9A8", "#FFFFFF", "#C98F12"];
 
 interface Piece {
   x: number;
@@ -31,8 +34,9 @@ export function Confetti({
   variant = "cannons",
 }: {
   seconds?: number;
-  /** Cannons for the win; fireworks for lifting the cup afterwards. */
-  variant?: "cannons" | "fireworks";
+  /** Cannons for the win, fireworks for lifting the cup afterwards, gold for
+      the season nobody has lost a game in. */
+  variant?: "cannons" | "fireworks" | "gold";
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
@@ -42,6 +46,10 @@ export function Confetti({
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    const palette = variant === "gold" ? GOLD : COLOURS;
+    const gravity = variant === "gold" ? GRAVITY * 0.42 : GRAVITY;
+    const terminal = variant === "gold" ? TERMINAL * 0.5 : TERMINAL;
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     let w = 0;
@@ -70,14 +78,14 @@ export function Confetti({
       spin: (Math.random() - 0.5) * 0.35,
       sway: 0.4 + Math.random() * 1.4,
       phase: Math.random() * Math.PI * 2,
-      colour: COLOURS[Math.floor(Math.random() * COLOURS.length)],
+      colour: palette[Math.floor(Math.random() * palette.length)],
     });
 
     // The pop: up and inward, hard enough to clear most of the screen, and
     // spread wide enough that the two sides meet in the middle.
     const pop = () => {
-      const up = Math.sqrt(2 * GRAVITY * h * 0.8);
-      const across = w / (up / GRAVITY);
+      const up = Math.sqrt(2 * gravity * h * 0.8);
+      const across = w / (up / gravity);
       const sides: [number, number][] = [
         [-6, 1],
         [w + 6, -1],
@@ -122,7 +130,14 @@ export function Confetti({
     };
 
     const showers: number[] = [];
-    if (variant === "fireworks") {
+    if (variant === "gold") {
+      // No bang. It just starts falling, and keeps falling for as long as the
+      // celebration is on screen.
+      drop(34);
+      for (let ms = 320; ms < seconds * 1000 - 900; ms += 320) {
+        showers.push(window.setTimeout(() => drop(16), ms));
+      }
+    } else if (variant === "fireworks") {
       burst();
       for (const ms of [380, 760, 1150, 1550, 1950]) showers.push(window.setTimeout(burst, ms));
     } else {
@@ -144,7 +159,7 @@ export function Confetti({
       ctx.clearRect(0, 0, w, h);
       const fade = life > total - 900 ? Math.max(0, (total - life) / 900) : 1;
       for (const p of pieces) {
-        p.vy = Math.min(p.vy + GRAVITY * dt, TERMINAL);
+        p.vy = Math.min(p.vy + gravity * dt, terminal);
         p.vx *= Math.pow(0.985, dt);
         p.phase += 0.08 * dt;
         p.x += (p.vx + Math.sin(p.phase) * p.sway) * dt;
