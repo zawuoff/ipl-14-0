@@ -109,10 +109,15 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
     en: "Best seasons by anyone, anywhere. Tap a row to replay the exact run.",
     hi: "कहीं के भी, किसी के भी सबसे अच्छे सीज़न। किसी लाइन पर टैप करके वही रन दोबारा देखिए।",
   },
-  "board.tab.daily": { en: "Today's challenge", hi: "आज की चुनौती" },
+  "board.tab.today": { en: "Today", hi: "आज" },
+  "board.tab.challenge": { en: "Challenge", hi: "चुनौती" },
   "board.tab.allTime": { en: "All time", hi: "ऑल टाइम" },
   "board.loading": { en: "Loading the board…", hi: "बोर्ड आ रहा है…" },
-  "board.empty.daily": { en: "No runs logged yet today. Be the first.", hi: "आज अभी तक कोई रन दर्ज नहीं। पहले आप होइए।" },
+  "board.empty.today": { en: "No runs logged yet today. Be the first.", hi: "आज अभी तक कोई रन दर्ज नहीं। पहले आप होइए।" },
+  "board.empty.challenge": {
+    en: "Nobody has played today's challenge yet. Be the first.",
+    hi: "आज की चुनौती अभी किसी ने नहीं खेली। पहले आप होइए।",
+  },
   "board.empty.allTime": { en: "No seasons logged yet.", hi: "अभी तक कोई सीज़न दर्ज नहीं।" },
   "board.todayNote": {
     en: "Today is {date}. The board resets at midnight IST.",

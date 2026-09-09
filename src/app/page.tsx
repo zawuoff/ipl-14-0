@@ -4,7 +4,8 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import { GameBoard } from "@/components/GameBoard";
-import { istDateKey, type PlayerSeason, type TeamSeason } from "@/lib/game/types";
+import { type PlayerSeason, type TeamSeason } from "@/lib/game/types";
+import { useIstDay } from "@/lib/day";
 import { buildPlayerSeasons, buildTeamSeasons } from "@/lib/game/data";
 import {
   Card,
@@ -31,6 +32,8 @@ import { useT, useLang, LangToggle, type T } from "@/lib/i18n";
 import { useShareOpened } from "@/lib/share";
 
 type Screen = "home" | "game" | "board";
+// Today is every run of the IST day; challenge is only that day's shared squads.
+type BoardTab = "today" | "daily" | "all";
 
 /* The player and squad tables already ship to the client for the draft, so the
    home page resolves the day's pick counts locally instead of asking the
@@ -43,20 +46,11 @@ type TodayStats = FunctionReturnType<typeof api.stats.homeToday>;
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("home");
-  const [boardTab, setBoardTab] = useState<"daily" | "all">("daily");
+  const [boardTab, setBoardTab] = useState<BoardTab>("today");
   const [mode, setMode] = useState<"classic" | "daily">("classic");
   const [intent, setIntent] = useState<"solo" | "friend">("solo");
   const [gameKey, setGameKey] = useState(0);
-  // The boards are a calendar day in IST, so a page left open across midnight
-  // has to roll onto the new day by itself rather than sit on yesterday's.
-  const [today, setToday] = useState(istDateKey);
-  useEffect(() => {
-    const id = setInterval(() => {
-      const now = istDateKey();
-      setToday((prev) => (prev === now ? prev : now));
-    }, 60000);
-    return () => clearInterval(id);
-  }, []);
+  const today = useIstDay();
 
   const challengeSpins = useMemo(() => {
     if (typeof window === "undefined") return undefined;
@@ -84,11 +78,17 @@ export default function Home() {
   // shows the whole day, so it lines up with the day's numbers beside it.
   const dailyBoard = useQuery(
     api.results.leaderboard,
-    show === "board" ? { dailyDate: today, limit: 20 } : "skip"
+    show === "board" ? { dailyDate: today, limit: 100 } : "skip"
   );
+  // The same day-scoped board both places: ten of it beside the day's numbers,
+  // all hundred once you open it.
   const todayBoard = useQuery(
     api.results.leaderboard,
-    show === "home" ? { day: today, limit: 10 } : "skip"
+    show === "home"
+      ? { day: today, limit: 10 }
+      : show === "board"
+        ? { day: today, limit: 100 }
+        : "skip"
   );
   // All time goes a hundred deep; a young board simply stops where it runs out.
   const allTimeBoard = useQuery(
@@ -101,7 +101,7 @@ export default function Home() {
     setGameKey((k) => k + 1);
     setScreen("game");
   };
-  const goBoard = (tab: "daily" | "all" = "daily") => {
+  const goBoard = (tab: BoardTab = "today") => {
     setBoardTab(tab);
     setScreen("board");
   };
@@ -111,7 +111,7 @@ export default function Home() {
     <main className="min-h-screen bg-ground text-white flex flex-col">
       <TopBar
         screen={show}
-        go={(s) => (s === "board" ? goBoard("daily") : setScreen(s))}
+        go={(s) => (s === "board" ? goBoard("today") : setScreen(s))}
         goFriend={() => play("classic", "friend")}
         inGame={entered === "game"}
       />
@@ -136,7 +136,13 @@ export default function Home() {
       )}
 
       {show === "board" && (
-        <Leaderboard today={today} daily={dailyBoard as Row[] | undefined} allTime={allTimeBoard as Row[] | undefined} initialTab={boardTab} />
+        <Leaderboard
+          today={today}
+          todayRows={todayBoard as Row[] | undefined}
+          daily={dailyBoard as Row[] | undefined}
+          allTime={allTimeBoard as Row[] | undefined}
+          initialTab={boardTab}
+        />
       )}
 
       <SiteFooter />
@@ -276,7 +282,7 @@ function HomeScreen({
   today: string;
   play: (m: "classic" | "daily", how?: "solo" | "friend") => void;
   rows: Row[] | undefined;
-  goBoard: (tab?: "daily" | "all") => void;
+  goBoard: (tab?: BoardTab) => void;
 }) {
   const t = useT();
   const { lang } = useLang();
@@ -370,13 +376,13 @@ function HomeScreen({
           title={t("home.bestRuns")}
           note={
             <>
-              <button onClick={() => goBoard("daily")} className="text-accent font-semibold hover:underline">{t("home.seeFullBoard")}</button>
+              <button onClick={() => goBoard("today")} className="text-accent font-semibold hover:underline">{t("home.seeFullBoard")}</button>
               <span className="text-faint"> · </span>
               <button onClick={() => goBoard("all")} className="text-accent font-semibold hover:underline">{t("board.tab.allTime")}</button>
             </>
           }
         />
-        <BoardRows rows={rows} empty={t("board.empty.daily")} />
+        <BoardRows rows={rows} empty={t("board.empty.today")} />
       </section>
 
       {/* How a run works */}
@@ -396,7 +402,7 @@ function HomeScreen({
 
 /** Reads the day's numbers. Lives below QuietBoundary so a backend without
     this query yet costs these two sections and nothing else. */
-function TodaySections({ today, goBoard }: { today: string; goBoard: (tab?: "daily" | "all") => void }) {
+function TodaySections({ today, goBoard }: { today: string; goBoard: (tab?: BoardTab) => void }) {
   const stats = useQuery(api.stats.homeToday, { date: today });
   return (
     <>
@@ -412,7 +418,7 @@ function pct(count: number, of: number): number {
 }
 
 /** The day's numbers, read straight out of what people actually played. */
-function TodayNumbers({ stats, goBoard }: { stats: TodayStats | undefined; goBoard: (tab?: "daily" | "all") => void }) {
+function TodayNumbers({ stats, goBoard }: { stats: TodayStats | undefined; goBoard: (tab?: BoardTab) => void }) {
   const t = useT();
 
   const mostPicked = stats?.topPicks[0];
@@ -432,7 +438,7 @@ function TodayNumbers({ stats, goBoard }: { stats: TodayStats | undefined; goBoa
       <SectionHead
         title={t("home.todayNumbers")}
         note={
-          <button onClick={() => goBoard("daily")} className="text-accent font-semibold hover:underline">
+          <button onClick={() => goBoard("today")} className="text-accent font-semibold hover:underline">
             {t("nav.leaderboard")}
           </button>
         }
@@ -635,48 +641,53 @@ type Row = {
   name?: string | null;
 };
 
+const TABS: { key: BoardTab; label: string; empty: string }[] = [
+  { key: "today", label: "board.tab.today", empty: "board.empty.today" },
+  { key: "daily", label: "board.tab.challenge", empty: "board.empty.challenge" },
+  { key: "all", label: "board.tab.allTime", empty: "board.empty.allTime" },
+];
+
 function Leaderboard({
   today,
+  todayRows,
   daily,
   allTime,
   initialTab,
 }: {
   today: string;
+  todayRows: Row[] | undefined;
   daily: Row[] | undefined;
   allTime: Row[] | undefined;
-  initialTab: "daily" | "all";
+  initialTab: BoardTab;
 }) {
   const t = useT();
-  const [tab, setTab] = useState<"daily" | "all">(initialTab);
-  const rows = tab === "daily" ? daily : allTime;
+  const [tab, setTab] = useState<BoardTab>(initialTab);
+  const rows = tab === "today" ? todayRows : tab === "daily" ? daily : allTime;
   return (
     <>
       <PageBand eyebrow={t("board.sub")} title={t("board.title")} />
       <div className="mx-auto w-full max-w-[900px] px-5 lg:px-16 pt-5 lg:pt-8 pb-10">
         <div className="flex gap-1 p-1 rounded-full bg-surface">
-          {(["daily", "all"] as const).map((tabKey) => (
+          {TABS.map(({ key, label }) => (
             <button
-              key={tabKey}
-              onClick={() => setTab(tabKey)}
-              className={`flex-1 h-10 rounded-full font-semibold text-[15px] transition-colors ${
-                tab === tabKey ? "bg-accent text-ground" : "text-white hover:bg-white/8"
+              key={key}
+              onClick={() => setTab(key)}
+              className={`flex-1 h-10 px-2 rounded-full font-semibold text-[14px] sm:text-[15px] transition-colors ${
+                tab === key ? "bg-accent text-ground" : "text-white hover:bg-white/8"
               }`}
             >
-              {tabKey === "daily" ? t("board.tab.daily") : t("board.tab.allTime")}
+              {t(label)}
             </button>
           ))}
         </div>
 
         <div className="mt-4">
-          <BoardRows
-            rows={rows}
-            empty={tab === "daily" ? t("board.empty.daily") : t("board.empty.allTime")}
-          />
+          <BoardRows rows={rows} empty={t(TABS.find((x) => x.key === tab)!.empty)} />
         </div>
         {/* The order is not just wins any more, so the board says what it is. */}
         <p className="text-[13px] leading-5 text-muted pt-3">{t("board.ranking")}</p>
         <p className="text-[13px] leading-5 text-muted pt-1.5">
-          {tab === "daily" ? t("board.todayNote", { date: today }) : t("board.seedNote")}
+          {tab === "all" ? t("board.seedNote") : t("board.todayNote", { date: today })}
         </p>
       </div>
     </>

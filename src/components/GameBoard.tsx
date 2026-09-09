@@ -8,7 +8,6 @@ import {
   MAX_OVERSEAS,
   REROLLS,
   STYLE_TEMPLATES,
-  istDateKey,
   makeSeed,
   nextSlotIndex,
   simU32FromSeed,
@@ -22,6 +21,7 @@ import {
   type XIConfig,
 } from "@/lib/game/types";
 import { buildPlayerSeasons, buildTeamSeasons } from "@/lib/game/data";
+import { useIstDay } from "@/lib/day";
 import { forecastSeason, simSeason, teamStrength, type GameResult, type SeasonResult } from "@/lib/sim/engine";
 import { SlotSpin } from "./SlotSpin";
 import { Confetti } from "./Confetti";
@@ -215,7 +215,7 @@ export function GameBoard({
   // in your XI you see exactly what you took.
   const hideRatings = difficulty === "Legend";
 
-  const today = istDateKey();
+  const today = useIstDay();
   const dailyQuery = useQuery(
     (api as any).daily?.getToday,
     mode === "daily" ? { date: today } : "skip"
