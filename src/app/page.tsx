@@ -6,6 +6,7 @@ import { api } from "../../convex/_generated/api";
 import { GameBoard } from "@/components/GameBoard";
 import { type PlayerSeason, type TeamSeason } from "@/lib/game/types";
 import { useIstDay } from "@/lib/day";
+import { useBackendUnreachable } from "@/lib/backend";
 import { buildPlayerSeasons, buildTeamSeasons } from "@/lib/game/data";
 import {
   Card,
@@ -429,6 +430,7 @@ function pct(count: number, of: number): number {
 /** The day's numbers, read straight out of what people actually played. */
 function TodayNumbers({ stats, goBoard }: { stats: TodayStats | undefined; goBoard: (tab?: BoardTab) => void }) {
   const t = useT();
+  const unreachable = useBackendUnreachable();
 
   const mostPicked = stats?.topPicks[0];
   const mostPickedPlayer = mostPicked ? PLAYER_BY_ID.get(mostPicked.id) : undefined;
@@ -454,7 +456,9 @@ function TodayNumbers({ stats, goBoard }: { stats: TodayStats | undefined; goBoa
       />
 
       {stats === undefined ? (
-        <p className="text-[15px] text-muted py-4">{t("home.statsLoading")}</p>
+        <p className="text-[15px] text-muted py-4">
+          {t(unreachable ? "backend.unreachable" : "home.statsLoading")}
+        </p>
       ) : (
         <>
           {/* Mobile: one strip of four. */}
@@ -714,7 +718,13 @@ const PODIUM = ["bg-trophy text-ground", "bg-silver text-ground", "bg-bronze tex
 
 function BoardRows({ rows, empty }: { rows: Row[] | undefined; empty: string }) {
   const t = useT();
-  if (rows === undefined) return <p className="text-[15px] text-muted py-4">{t("board.loading")}</p>;
+  const unreachable = useBackendUnreachable();
+  if (rows === undefined)
+    return (
+      <p className="text-[15px] text-muted py-4">
+        {t(unreachable ? "backend.unreachable" : "board.loading")}
+      </p>
+    );
   if (!rows.length) return <p className="text-[15px] text-muted py-4">{empty}</p>;
   return (
     <div className="flex flex-col">
