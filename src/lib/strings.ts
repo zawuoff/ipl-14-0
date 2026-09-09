@@ -103,6 +103,12 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
     hi: "आज तक किसी ने ड्राफ़्ट नहीं किया। एक स्क्वाड घुमाइए और इस लाइन पर पहला नाम आपका होगा।",
   },
   "home.statsLoading": { en: "Counting today's runs…", hi: "आज के रन गिने जा रहे हैं…" },
+  /* A query that never resolves reads the same as one still in flight, so the
+     page needs a way to stop promising a number that is not coming. */
+  "backend.unreachable": {
+    en: "Can't reach the board right now. Check your connection and try again.",
+    hi: "अभी बोर्ड तक पहुँच नहीं पा रहे। अपना कनेक्शन जाँचकर दोबारा कोशिश कीजिए।",
+  },
 
   /* ----------------------------------------------------------- leaderboard */
   "board.title": { en: "Leaderboard", hi: "लीडरबोर्ड" },
