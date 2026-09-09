@@ -43,11 +43,19 @@ export const analytics = {
   },
 
   // Pick number is the whole point: it says where people put the phone down.
-  pickMade(n: number, mode: GameMode, opts: { lastResort: boolean; rerollsLeft: number }) {
+  // `off_role` and `role` are how we find out whether the new multi-role tray is
+  // used at all, or whether everyone just takes the name in its filed position.
+  pickMade(
+    n: number,
+    mode: GameMode,
+    opts: { lastResort: boolean; offRole: boolean; role: string; rerollsLeft: number }
+  ) {
     track("pick_made", {
       pick_number: n,
       mode,
       last_resort: opts.lastResort,
+      off_role: opts.offRole,
+      role: opts.role,
       rerolls_left: opts.rerollsLeft,
     });
   },

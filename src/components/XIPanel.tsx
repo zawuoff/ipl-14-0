@@ -77,8 +77,17 @@ export function XIPanel({
             </span>
             {s.player ? (
               <>
-                <span className="flex-1 min-w-0 font-medium text-[16px] leading-[22px] truncate">
-                  {s.player.player}
+                <span className="flex-1 min-w-0 flex flex-col">
+                  <span className="font-medium text-[16px] leading-[22px] truncate">
+                    {s.player.player}
+                  </span>
+                  {/* A player out of position is a decision the manager made, so
+                      the XI owns up to it rather than hiding it behind a number. */}
+                  {s.player.offRole && s.player.filedRole && (
+                    <span className="text-[12px] leading-[15px] text-muted truncate">
+                      {t(`role.${s.player.filedRole}`)} · {t("draft.offRole")}
+                    </span>
+                  )}
                 </span>
                 {meta && <TeamChip code={meta.code} season={meta.season} colour={meta.colour} />}
                 <span className="w-8 shrink-0 text-right font-display font-bold text-[26px] leading-6 pt-[3px] tabular">

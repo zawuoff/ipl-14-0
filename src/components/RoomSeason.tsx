@@ -19,6 +19,7 @@ import {
 } from "@/lib/sim/engine";
 import { buildPlayerSeasons } from "@/lib/game/data";
 import { mulberry32, type Difficulty, type PlayerSeason } from "@/lib/game/types";
+import { decodePick } from "@/lib/game/roles";
 import { PlayoffMatch, franchiseColour, type PlayoffDetail } from "./PlayoffMatch";
 import { SeasonReport } from "./SeasonReport";
 import { copyText } from "@/lib/clipboard";
@@ -49,6 +50,8 @@ function stageWords(stage: string | undefined, t: (k: string) => string): string
 
 const ALL_PLAYERS = buildPlayerSeasons();
 const BY_ID = new Map(ALL_PLAYERS.map((p) => [p.id, p]));
+// Stored ids may carry the slot a player was drafted into — see decodePick.
+const fromId = (id: string) => decodePick(id, (k) => BY_ID.get(k));
 
 export function deviceId(): string {
   if (typeof window === "undefined") return "server";
@@ -91,7 +94,7 @@ export function RoomSeason({ room }: { room: any }) {
         .map((m) => ({
           name: m.name,
           deviceId: m.deviceId,
-          xi: m.picks.map((id: string) => BY_ID.get(id)).filter(Boolean) as PlayerSeason[],
+          xi: m.picks.map(fromId).filter(Boolean) as PlayerSeason[],
         }))
         .filter((h) => h.xi.length === 11);
       if (humans.length < 2) return null;
@@ -152,7 +155,7 @@ export function RoomSeason({ room }: { room: any }) {
     const xi = league && BY_ID
       ? members
           .find((m) => m.deviceId === me?.deviceId)
-          ?.picks.map((id: string) => BY_ID.get(id))
+          ?.picks.map(fromId)
           .filter(Boolean) as PlayerSeason[]
       : [];
     if (!xi || xi.length !== 11) return null;

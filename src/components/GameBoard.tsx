@@ -20,6 +20,7 @@ import {
   type TeamSeason,
   type XIConfig,
 } from "@/lib/game/types";
+import { assignRole, encodePick } from "@/lib/game/roles";
 import { buildPlayerSeasons, buildTeamSeasons } from "@/lib/game/data";
 import { useIstDay } from "@/lib/day";
 import { forecastSeason, simSeason, teamStrength, type GameResult, type SeasonResult } from "@/lib/sim/engine";
@@ -334,6 +335,18 @@ export function GameBoard({
     return c;
   }, [pickedXI]);
 
+  // Which of a player's eligible roles are actually takeable right now. A name
+  // is only spent when every one of them is shut — that is the whole point of
+  // multi-role: Kohli blocked at Middle can still walk in as an opener.
+  const openRoles = useCallback(
+    (p: PlayerSeason): Role[] => {
+      if (!draft) return [];
+      if (p.overseas && overseas >= MAX_OVERSEAS) return [];
+      return p.eligible.filter((r) => (roleCounts[r] ?? 0) < (draft.config[r] ?? 0));
+    },
+    [draft, overseas, roleCounts]
+  );
+
   // hard caps → greyed-out reasons (38-0 style: filled slots sink to bottom, greyed)
   const unavailable = useMemo(() => {
     const m = new Map<string, string>();
@@ -342,28 +355,40 @@ export function GameBoard({
     for (const p of getSquad(currentSpin.teamId)) {
       if (pickedNames.has(p.player)) continue; // already filtered out
       if (capHit && p.overseas) m.set(p.id, t("draft.capFull"));
-      else if ((roleCounts[p.role] ?? 0) >= (draft.config[p.role] ?? 0))
+      else if (openRoles(p).length === 0)
+        // Every door is shut, so name the one the eye expects: their own.
         m.set(p.id, t("draft.slotFilled", { role: t(`role.${p.role}`) }));
     }
     return m;
-  }, [draft, currentSpin, pickedNames, overseas, roleCounts]);
-  // dead spin: nothing in this squad fits the open slots → stand-ins who DO fit
-  // (same franchise flavour first). Caps stay absolute — quotas can never bust.
+  }, [draft, currentSpin, pickedNames, overseas, openRoles, t]);
+
+  // Dead spin: nobody in this squad can fill any open slot. Far rarer now that a
+  // player brings every role they could plausibly cover.
   const deadSpin = options.length > 0 && options.every((p) => unavailable.get(p.id));
+
+  // The stand-in ladder. It degrades the ROLE before it degrades the FRANCHISE,
+  // and never leaves the franchise at all: offering Sachin Tendulkar for Lucknow
+  // 2024 — the bug this replaces — breaks the one promise the game makes, that
+  // your XI came from the squads you actually spun. When a franchise genuinely
+  // cannot help (RR 2012 carries no keeper), the honest answer is a free re-spin,
+  // not a wrong player.
   const standIns = useMemo(() => {
-    if (!draft || !deadSpin) return [];
-    const spun = currentSpin ? TEAM_MAP.get(currentSpin.teamId) : undefined;
-    const fits = (p: PlayerSeason) =>
-      !pickedNames.has(p.player) &&
-      (roleCounts[p.role] ?? 0) < (draft.config[p.role] ?? 0) &&
-      (!p.overseas || overseas < MAX_OVERSEAS);
-    const same = oneRowPerPlayer(
-      ALL_PLAYERS.filter((p) => p.franchise === spun?.franchise && fits(p))
-    );
-    if (same.length > 0) return same.slice(0, 12);
-    return oneRowPerPlayer(ALL_PLAYERS.filter(fits)).slice(0, 12);
-  }, [draft, deadSpin, currentSpin, pickedNames, roleCounts, overseas]);
-  const lastResort = deadSpin && standIns.length === 0; // ~impossible; only then anyone goes
+    if (!draft || !deadSpin || !currentSpin) return [];
+    const spun = TEAM_MAP.get(currentSpin.teamId);
+    const fits = (p: PlayerSeason) => !pickedNames.has(p.player) && openRoles(p).length > 0;
+    // Another season of the same franchise, nearest years first — a Lucknow slot
+    // filled by a Lucknow player. There is deliberately no rung below this: a
+    // same-franchise player who fits nothing would render as a row you can click
+    // and nothing would happen, so the ladder ends here and the spin goes free.
+    return oneRowPerPlayer(
+      ALL_PLAYERS.filter((p) => p.franchise === spun?.franchise && fits(p)).sort(
+        (a, b) => Math.abs(a.season - spun!.season) - Math.abs(b.season - spun!.season)
+      )
+    ).slice(0, 12);
+  }, [draft, deadSpin, currentSpin, pickedNames, openRoles]);
+
+  // The franchise itself is out of answers — so the spin is on the house.
+  const freeRespin = deadSpin && standIns.length === 0;
   const shownOptions = deadSpin && standIns.length > 0 ? standIns : options;
   const effectiveUnavailable: Map<string, string> = deadSpin ? new Map() : unavailable;
 
@@ -378,8 +403,11 @@ export function GameBoard({
     }
   }, [draft, pickedXI]);
 
-  const rerollSpin = useCallback(() => {
-    if (!draft || slot < 0 || draft.rerollsLeft <= 0 || phase !== "squad") return;
+  // `free` is the dead-spin escape: the board had nothing to offer, so the spin
+  // costs nothing — including on Legend, which has no re-spins to give.
+  const rerollSpin = useCallback((free = false) => {
+    if (!draft || slot < 0 || phase !== "squad") return;
+    if (!free && draft.rerollsLeft <= 0) return;
     const used = new Set(draft.spins.map((s) => s.teamId));
     let target = ALL_TEAMS[Math.floor(Math.random() * ALL_TEAMS.length)].teamId;
     let guard = 0;
@@ -389,29 +417,36 @@ export function GameBoard({
     const spins = draft.spins.map((s) =>
       s.index === slot ? { ...s, teamId: target, rerolled: true } : s
     );
-    setDraft({ ...draft, spins, rerollsLeft: draft.rerollsLeft - 1 });
-    analytics.rerollUsed(slot + 1, draft.difficulty, draft.rerollsLeft - 1);
+    const left = free ? draft.rerollsLeft : draft.rerollsLeft - 1;
+    setDraft({ ...draft, spins, rerollsLeft: left });
+    analytics.rerollUsed(slot + 1, draft.difficulty, left);
     setPhase("slot");
     setSlotKey((k) => k + 1);
   }, [draft, slot, phase]);
 
   const pick = useCallback(
-    (p: PlayerSeason) => {
+    (base: PlayerSeason, as?: Role) => {
       if (!draft || slot < 0) return;
-      if (!lastResort) {
-        // hard caps, always enforced (UI greys these out — double-guarded here)
-        const roleN = draft.picks.filter((x) => x && (x as PlayerSeason).role === p.role).length;
-        const ovN = draft.picks.filter((x) => x && (x as PlayerSeason).overseas).length;
-        if (roleN >= (draft.config[p.role] ?? 0)) return;
-        if (p.overseas && ovN >= MAX_OVERSEAS) return;
-        if (pickedNames.has(p.player)) return;
-      }
+      // No role named means there was no choice to make: take the only open one,
+      // falling back to their own so a guarded pick still reads sensibly.
+      const open = openRoles(base);
+      const role = as ?? open[0] ?? base.role;
+      const p = assignRole(base, role);
+      // hard caps, always enforced (UI greys these out — double-guarded here)
+      const roleN = draft.picks.filter((x) => x && (x as PlayerSeason).role === role).length;
+      const ovN = draft.picks.filter((x) => x && (x as PlayerSeason).overseas).length;
+      if (roleN >= (draft.config[role] ?? 0)) return;
+      if (p.overseas && ovN >= MAX_OVERSEAS) return;
+      if (pickedNames.has(p.player)) return;
+      if (!base.eligible.includes(role)) return;
       const picks = [...draft.picks];
       picks[slot] = p;
       const done = picks.every(Boolean);
       setDraft({ ...draft, picks, status: done ? "complete" : "drafting" });
       analytics.pickMade(slot + 1, draft.mode, {
-        lastResort: lastResort,
+        lastResort: deadSpin,
+        offRole: p.offRole === true,
+        role,
         rerollsLeft: draft.rerollsLeft,
       });
       setLastPick(p.id);
@@ -420,7 +455,7 @@ export function GameBoard({
         setSlotKey((k) => k + 1);
       }
     },
-    [draft, slot, lastResort, pickedNames]
+    [draft, slot, deadSpin, openRoles, pickedNames]
   );
 
   const simulate = useCallback(() => {
@@ -451,7 +486,7 @@ export function GameBoard({
           dailyDate: draft.mode === "daily" ? today : undefined,
           difficulty: draft.difficulty,
           spins: draft.spins.map((s) => s.teamId),
-          picks: xi.map((p) => p.id),
+          picks: xi.map(encodePick),
           rerollsLeft: draft.rerollsLeft,
           status: "simulated",
         });
@@ -1031,7 +1066,7 @@ export function GameBoard({
                       {REROLLS[draft.difficulty] > 0 && (
                         <PlateButton
                           className="h-11 shrink-0"
-                          onClick={rerollSpin}
+                          onClick={() => rerollSpin()}
                           disabled={draft.rerollsLeft <= 0}
                         >
                           {t("draft.respin", { n: draft.rerollsLeft })}
@@ -1045,7 +1080,7 @@ export function GameBoard({
                     <div className="flex flex-col gap-1.5">
                       <SectionHead
                         title={
-                          lastResort
+                          freeRespin
                             ? t("draft.deadSpin")
                             : deadSpin
                               ? t("draft.noFit")
@@ -1053,19 +1088,28 @@ export function GameBoard({
                         }
                       />
                       <p className="text-[13px] leading-[18px] lg:text-[14px] lg:leading-5 text-muted">
-                        {deadSpin && !lastResort
-                          ? t("draft.standIns")
-                          : t("draft.stillOpen", { roles: openSlotSummary(draft.config, roleCounts, t) })}
+                        {freeRespin
+                          ? t("draft.deadSpinNote")
+                          : deadSpin
+                            ? t("draft.standIns", { franchise: spunTeam?.name ?? "" })
+                            : t("draft.stillOpen", { roles: openSlotSummary(draft.config, roleCounts, t) })}
                       </p>
                     </div>
-                    <SquadList
-                      squad={shownOptions}
-                      hideRatings={hideRatings}
-                      shuffleKey={hideRatings ? `${draft.seed}:${currentSpin?.teamId ?? ""}` : undefined}
-                      onPick={pick}
-                      unavailable={effectiveUnavailable}
-                      teamColour={spunTeam?.colour}
-                    />
+                    {freeRespin ? (
+                      <PlateButton className="h-12 self-start" onClick={() => rerollSpin(true)}>
+                        {t("draft.freeRespin")}
+                      </PlateButton>
+                    ) : (
+                      <SquadList
+                        squad={shownOptions}
+                        hideRatings={hideRatings}
+                        shuffleKey={hideRatings ? `${draft.seed}:${currentSpin?.teamId ?? ""}` : undefined}
+                        onPick={pick}
+                        openRoles={openRoles}
+                        unavailable={effectiveUnavailable}
+                        teamColour={spunTeam?.colour}
+                      />
+                    )}
                   </div>
                 </>
               )}
@@ -1163,7 +1207,7 @@ export function GameBoard({
                         code: roomQ.code,
                         deviceId: deviceId(),
                         config: draft.config,
-                        picks: (pickedXI as PlayerSeason[]).map((p) => p.id),
+                        picks: (pickedXI as PlayerSeason[]).map(encodePick),
                         seed: draft.seed,
                       });
                       analytics.roomXILocked(roomSeats(roomQ), roomMembers(roomQ).length);
