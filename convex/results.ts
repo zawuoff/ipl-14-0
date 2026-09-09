@@ -141,7 +141,7 @@ export const leaderboard = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const lim = Math.min(50, args.limit ?? 20);
+    const lim = Math.min(100, args.limit ?? 20);
     let rows;
     if (args.day) {
       rows = await ctx.db
