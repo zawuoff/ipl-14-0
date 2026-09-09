@@ -47,7 +47,16 @@ export default function Home() {
   const [mode, setMode] = useState<"classic" | "daily">("classic");
   const [intent, setIntent] = useState<"solo" | "friend">("solo");
   const [gameKey, setGameKey] = useState(0);
-  const today = istDateKey();
+  // The boards are a calendar day in IST, so a page left open across midnight
+  // has to roll onto the new day by itself rather than sit on yesterday's.
+  const [today, setToday] = useState(istDateKey);
+  useEffect(() => {
+    const id = setInterval(() => {
+      const now = istDateKey();
+      setToday((prev) => (prev === now ? prev : now));
+    }, 60000);
+    return () => clearInterval(id);
+  }, []);
 
   const challengeSpins = useMemo(() => {
     if (typeof window === "undefined") return undefined;
