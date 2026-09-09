@@ -81,9 +81,10 @@ export default function Home() {
     api.results.leaderboard,
     show === "home" ? { day: today, limit: 10 } : "skip"
   );
+  // All time goes a hundred deep; a young board simply stops where it runs out.
   const allTimeBoard = useQuery(
     api.results.leaderboard,
-    show === "board" ? { limit: 20 } : "skip"
+    show === "board" ? { limit: 100 } : "skip"
   );
   const play = (m: "classic" | "daily", how: "solo" | "friend" = "solo") => {
     setMode(m);
@@ -697,9 +698,9 @@ function BoardRows({ rows, empty }: { rows: Row[] | undefined; empty: string }) 
           }`}
         >
           <span
-            className={`flex items-center justify-center w-9 h-9 shrink-0 rounded-plate font-display font-bold text-[22px] leading-none pt-1 tabular ${
-              PODIUM[i] ?? "bg-plate border border-plate-line text-white"
-            }`}
+            className={`flex items-center justify-center w-9 h-9 shrink-0 rounded-plate font-display font-bold leading-none pt-1 tabular ${
+              i + 1 >= 100 ? "text-[15px]" : "text-[22px]"
+            } ${PODIUM[i] ?? "bg-plate border border-plate-line text-white"}`}
           >
             {i + 1}
           </span>
