@@ -77,7 +77,11 @@ function PlayerRow({
             off ? "text-faint" : "text-accent"
           }`}
         >
-          {choice ? t("draft.rolesN", { n: open.length }) : t(`role.${open[0] ?? p.role}`)}
+          {choice
+            ? expanded
+              ? t("draft.pickRole")
+              : t("draft.rolesN", { n: open.length })
+            : t(`role.${open[0] ?? p.role}`)}
         </span>
       </button>
 
@@ -85,30 +89,57 @@ function PlayerRow({
         <div
           role="radiogroup"
           aria-label={t("draft.chooseRole", { player: p.player })}
-          className="flex flex-wrap gap-1.5 pl-14 pr-2 pb-3 pt-0.5"
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pl-3 sm:pl-14 pr-3 pb-3 pt-1"
         >
           {ratings.map(({ role, overall }) => {
             const canTake = open.includes(role);
+            const usual = role === p.role;
+            const drop = p.overall - overall;
+            // The chip is the rating tile in miniature, so the heat colour does
+            // the comparing: an 86 in green next to an 83 in black says "opener"
+            // before anyone reads a number.
+            const tone = !canTake
+              ? { bg: "#16244A", fg: "rgba(255,255,255,0.45)" }
+              : hideRatings
+                ? { bg: teamColour ?? "#000000", fg: readableOn(teamColour ?? "#000000") }
+                : ratingTone(overall);
+            const sub = !canTake
+              ? t("draft.slotFilled", { role: t(`role.${role}`) })
+              : usual
+                ? t("draft.usualRole")
+                : hideRatings || drop === 0
+                  ? t("draft.alsoPlays")
+                  : `−${drop} · ${t("draft.offRole")}`;
             return (
               <button
                 key={role}
+                type="button"
                 role="radio"
                 aria-checked={false}
                 disabled={!canTake}
-                title={canTake ? undefined : t("draft.slotFilled", { role: t(`role.${role}`) })}
                 onClick={() => canTake && onPick?.(p, role)}
-                className={`flex items-baseline gap-1.5 px-2.5 h-9 rounded-control border text-[13px] font-semibold transition-colors ${
+                className={`flex items-center gap-2.5 p-1.5 pr-3 min-h-12 rounded-control border text-left transition-colors ${
                   canTake
-                    ? "border-accent/45 text-white hover:bg-accent hover:text-ground cursor-pointer"
-                    : "border-hairline text-faint cursor-not-allowed"
+                    ? "border-hairline bg-white/6 hover:border-accent hover:bg-white/12 cursor-pointer"
+                    : "border-hairline/60 cursor-not-allowed"
                 }`}
               >
-                <span>{t(`roleShort.${role}`)}</span>
-                {!hideRatings && (
-                  <span className={`tabular text-[12px] ${canTake ? "text-muted" : "text-faint"}`}>
-                    {overall}
+                <span
+                  className="flex items-center justify-center w-9 h-9 shrink-0 rounded-plate font-display font-bold text-[22px] leading-[22px] pt-[2px] tabular"
+                  style={{ backgroundColor: tone.bg, color: tone.fg }}
+                >
+                  {hideRatings ? "?" : overall}
+                </span>
+                <span className="flex flex-col min-w-0">
+                  <span
+                    className={`font-semibold text-[14px] leading-[18px] truncate ${canTake ? "" : "text-faint"}`}
+                  >
+                    {t(`role.${role}`)}
                   </span>
-                )}
+                  <span className={`text-[12px] leading-[15px] truncate ${canTake ? "text-muted" : "text-faint"}`}>
+                    {sub}
+                  </span>
+                </span>
               </button>
             );
           })}

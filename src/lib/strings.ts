@@ -155,13 +155,6 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "role.AR": { en: "All-rounder", hi: "ऑलराउंडर" },
   "role.Pace": { en: "Pace", hi: "तेज़ गेंदबाज़" },
   "role.Spin": { en: "Spin", hi: "स्पिन" },
-  // Short forms for the role chips, where the row has room for a word, not a phrase.
-  "roleShort.Opener": { en: "OP", hi: "ओप" },
-  "roleShort.Middle": { en: "MID", hi: "मिडल" },
-  "roleShort.WK": { en: "WK", hi: "कीपर" },
-  "roleShort.AR": { en: "AR", hi: "ऑल" },
-  "roleShort.Pace": { en: "PACE", hi: "तेज़" },
-  "roleShort.Spin": { en: "SPIN", hi: "स्पिन" },
   /* -------------------------------------------------------------- run bar */
   "draft.respinsLeft": { en: "{n} re-spins left", hi: "{n} री-स्पिन बचे" },
   "draft.respinLeftOne": { en: "1 re-spin left", hi: "1 री-स्पिन बचा" },
@@ -248,6 +241,9 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "draft.rolesN": { en: "{n} roles", hi: "{n} भूमिकाएँ" },
   "draft.chooseRole": { en: "Choose a role for {player}", hi: "{player} के लिए भूमिका चुनें" },
   "draft.offRole": { en: "out of position", hi: "अपनी जगह से हटकर" },
+  "draft.pickRole": { en: "Pick a role", hi: "भूमिका चुनें" },
+  "draft.usualRole": { en: "His usual role", hi: "उनकी सामान्य भूमिका" },
+  "draft.alsoPlays": { en: "Also plays here", hi: "यहाँ भी खेलते हैं" },
   "draft.xiSoFar": { en: "Your XI so far", hi: "अब तक आपकी XI" },
   "draft.overseasCount": { en: "{n} of 4 overseas", hi: "4 में से {n} विदेशी" },
   "draft.notPicked": { en: "Not picked yet", hi: "अभी नहीं चुना" },
