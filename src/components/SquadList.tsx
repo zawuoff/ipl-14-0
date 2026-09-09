@@ -41,7 +41,8 @@ function PlayerRow({
   const ratings = choice ? roleRatings(p) : [];
 
   return (
-    <div className={`border-t border-hairline ${expanded ? "bg-white/8" : ""}`}>
+    <div className="border-t border-hairline">
+      <div className={expanded ? "-mx-3 px-3 py-1 rounded-control bg-white/8" : ""}>
       <button
         onClick={onPick && !off ? (choice ? onToggle : () => onPick(p, open[0])) : undefined}
         disabled={!onPick || off}
@@ -145,6 +146,7 @@ function PlayerRow({
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }
