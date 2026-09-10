@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 
+import { GiftPrompt } from "@/components/GiftPrompt";
 import { Invincible } from "@/components/Invincible";
 import { Flap, PageBand, PlateButton } from "@/components/ui";
 import { fireworks } from "@/lib/sound";
@@ -13,14 +14,26 @@ import { fireworks } from "@/lib/sound";
    because the real thing fires perhaps once in a few thousand runs — without a
    bench there is no way to look at it again.
 
-   The card prompt is deliberately not staged here: it writes a real name and a
-   real address to a real table, and a bench is no place for that. */
+   The card prompt is staged too, but pointed at a seed that cannot exist, so
+   the bench can show the layout and the typing without ever being able to write
+   a real name and a real address to a real table. The one state it cannot show
+   is the thank-you, because reaching that would mean it had written something. */
+
+/* Deliberately not a real seed. The claim gate reads simResults, finds nothing,
+   and refuses — so the bench physically cannot store anybody's address. */
+const NO_SUCH_RUN = "lab-bench-not-a-real-run";
 
 export default function InvincibleLab() {
   const [playing, setPlaying] = useState(false);
+  const [asked, setAsked] = useState(false);
   const [run, setRun] = useState(0);
 
   const play = () => {
+    // the prompt only ever asks once per device; the bench needs it every time
+    try {
+      localStorage.removeItem("14-0-gift-asked");
+    } catch {}
+    setAsked(false);
     setPlaying(true);
     setRun((n) => n + 1);
     fireworks();
@@ -33,9 +46,13 @@ export default function InvincibleLab() {
           key={run}
           title="IMMORTAL"
           sub="Fourteen played. Fourteen won. Nobody does this."
-          onDone={() => setPlaying(false)}
+          onDone={() => {
+            setPlaying(false);
+            setAsked(true);
+          }}
         />
       )}
+      {asked && <GiftPrompt key={run} seed={NO_SUCH_RUN} deviceId="lab-bench" />}
 
       {/* the chooser */}
       <div className="bg-plate border-b border-plate-line">

@@ -241,3 +241,50 @@ body {
     opacity: 1;
   }
 }
+
+/* --------------------------------------------------------- the card prompt
+   One component, two shapes. On a phone it is a sheet that comes up off the
+   bottom edge and stays anchored there, which is where a thumb already is. On
+   anything wider it is a dialog in the middle of the screen, because a card
+   pinned to the bottom corner of a desktop browser reads as a cookie banner. */
+
+@keyframes gift-scrim {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes gift-sheet {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gift-dialog {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.965);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.gift-card {
+  animation: gift-sheet 340ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
+}
+
+@media (min-width: 640px) {
+  .gift-card {
+    animation: gift-dialog 260ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
+  }
+}

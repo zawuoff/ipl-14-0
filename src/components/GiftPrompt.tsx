@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useMutation } from "convex/react";
 
 import { api } from "../../convex/_generated/api";
-import { PrimaryButton } from "./ui";
+import { Eyebrow, PrimaryButton } from "./ui";
 import { useT } from "@/lib/i18n";
 
 /* The card for an unbeaten season has to be posted somewhere, so this is the
@@ -78,7 +78,18 @@ export function GiftPrompt({ seed, deviceId }: { seed: string; deviceId: string 
         setState("done");
         return;
       }
-      setError(t(res.reason === "badName" ? "gift.badName" : "gift.badEmail"));
+      // Each refusal says what actually went wrong. "notEarned" is very nearly
+      // always a race rather than a cheat: the season's own row is still on its
+      // way to the server while this form is already on screen.
+      setError(
+        t(
+          res.reason === "badName"
+            ? "gift.badName"
+            : res.reason === "notEarned"
+              ? "gift.notEarned"
+              : "gift.badEmail"
+        )
+      );
     } catch {
       setError(t("gift.failed"));
     }
@@ -86,27 +97,52 @@ export function GiftPrompt({ seed, deviceId }: { seed: string; deviceId: string 
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 px-4 pb-4 sm:px-5 sm:pb-5 flex justify-center">
-      <div className="w-full max-w-[420px] rounded-card bg-plate border border-plate-line shadow-[0_18px_50px_rgba(0,0,0,0.55)] px-5 py-4.5">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-5">
+      {/* Dimming the run behind it is what makes this read as a question rather
+          than as a banner that drifted in. Tapping it is an answer too. */}
+      <button
+        type="button"
+        aria-label={t("gift.close")}
+        onClick={close}
+        className="absolute inset-0 bg-ground/72 backdrop-blur-[2px]"
+        style={{ animation: "gift-scrim 260ms ease-out both" }}
+      />
+
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("gift.title")}
+        className="gift-card relative w-full sm:max-w-[440px] bg-surface rounded-t-2xl sm:rounded-card shadow-[0_-10px_40px_rgba(0,0,0,0.45)] sm:shadow-[0_24px_60px_rgba(0,0,0,0.55)] px-6 pt-5 pb-[max(26px,calc(env(safe-area-inset-bottom)+18px))] sm:px-8 sm:pt-7 sm:pb-8"
+      >
+        {/* the bar a thumb expects at the top of a sheet */}
+        <span
+          aria-hidden
+          className="sm:hidden block w-9 h-1 rounded-full bg-white/22 mx-auto mb-5"
+        />
+
         {state === "done" ? (
-          <div className="flex items-start gap-3">
-            <p className="flex-1 text-[15px] leading-[21px] text-white">{t("gift.thanks")}</p>
+          <div className="flex items-start gap-4 py-1.5">
+            <div className="flex-1 flex flex-col gap-2.5">
+              <Eyebrow tone="trophy">{t("gift.sent")}</Eyebrow>
+              <p className="text-[16px] leading-[23px] text-white">{t("gift.thanks")}</p>
+            </div>
             <CloseButton onClick={close} label={t("gift.close")} />
           </div>
         ) : (
           <>
-            <div className="flex items-start gap-3">
-              <div className="flex-1">
-                <p className="head-display text-trophy text-[17px] leading-none">
+            <div className="flex items-start gap-4">
+              <div className="flex-1 flex flex-col gap-2.5">
+                <Eyebrow tone="trophy">{t("inv.title")}</Eyebrow>
+                <p className="head-display text-white text-[23px] sm:text-[26px] leading-none">
                   {t("gift.title")}
                 </p>
-                <p className="text-[14px] leading-5 text-body-plate pt-1.5">{t("gift.blurb")}</p>
+                <p className="text-[15px] leading-[22px] text-muted">{t("gift.blurb")}</p>
               </div>
               <CloseButton onClick={close} label={t("gift.close")} />
             </div>
 
             <form
-              className="flex flex-col gap-2 pt-3.5"
+              className="flex flex-col gap-3 pt-6"
               onSubmit={(e) => {
                 e.preventDefault();
                 void send();
@@ -119,7 +155,7 @@ export function GiftPrompt({ seed, deviceId }: { seed: string; deviceId: string 
                 placeholder={t("gift.name")}
                 maxLength={60}
                 autoComplete="name"
-                className="h-12 rounded-control bg-ground border border-plate-line px-3.5 text-[16px] text-white outline-none focus:border-accent"
+                className="h-14 rounded-control bg-plate border border-plate-line px-4 text-[16px] text-white placeholder:text-muted-plate outline-none focus:border-accent transition-colors"
               />
               <input
                 value={email}
@@ -129,17 +165,19 @@ export function GiftPrompt({ seed, deviceId }: { seed: string; deviceId: string 
                 inputMode="email"
                 maxLength={254}
                 autoComplete="email"
-                className="h-12 rounded-control bg-ground border border-plate-line px-3.5 text-[16px] text-white outline-none focus:border-accent"
+                className="h-14 rounded-control bg-plate border border-plate-line px-4 text-[16px] text-white placeholder:text-muted-plate outline-none focus:border-accent transition-colors"
               />
               {error && <p className="text-[13px] leading-[18px] text-loss-soft">{error}</p>}
               <PrimaryButton
                 type="submit"
                 disabled={!name.trim() || !email.trim() || state === "sending"}
-                className="w-full"
+                className="w-full mt-1.5"
               >
                 {state === "sending" ? t("gift.sending") : t("gift.send")}
               </PrimaryButton>
-              <p className="text-[12px] leading-[17px] text-muted-plate">{t("gift.privacy")}</p>
+              <p className="text-[12px] leading-[17px] text-faint text-center pt-1">
+                {t("gift.privacy")}
+              </p>
             </form>
           </>
         )}
@@ -154,7 +192,7 @@ function CloseButton({ onClick, label }: { onClick: () => void; label: string })
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="shrink-0 -mr-1 -mt-0.5 w-8 h-8 flex items-center justify-center rounded-full text-muted-plate hover:text-white hover:bg-white/10 transition-colors"
+      className="shrink-0 -mr-1.5 -mt-1 w-9 h-9 flex items-center justify-center rounded-full text-muted hover:text-white hover:bg-white/10 transition-colors"
     >
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
         <path
