@@ -1,29 +1,27 @@
 "use client";
 import { useState } from "react";
 
-import { Invincible, type InvincibleVariant } from "@/components/Invincible";
+import { Invincible } from "@/components/Invincible";
 import { Flap, PageBand, PlateButton } from "@/components/ui";
 import { fireworks } from "@/lib/sound";
 
 /* A bench for the unbeaten-season celebration, and nothing else.
 
-   The three treatments have to be judged on the screen they will actually land
-   on — same fonts, same navy, same flaps, same sound — so this route stages a
-   real 14–0 result behind them rather than a blank page. It is not linked from
-   anywhere and it goes away once one of them is chosen. */
+   It has to be judged on the screen it will actually land on — same fonts, same
+   navy, same flaps, same sound — so this route stages a real 14–0 result behind
+   it rather than a blank page. It is not linked from anywhere, and it is kept
+   because the real thing fires perhaps once in a few thousand runs — without a
+   bench there is no way to look at it again.
 
-const VARIANTS: { key: InvincibleVariant; name: string; note: string }[] = [
-  { key: "gold", name: "Board goes gold", note: "14 chips flip, screen takes the trophy's colour, score lands" },
-  { key: "spotlight", name: "Trophy spotlight", note: "Lights down, beams sweep, the cup comes up out of the dark" },
-  { key: "stamp", name: "Immortal stamp", note: "One beat: the seal drops, the board shakes, paper goes up" },
-];
+   The card prompt is deliberately not staged here: it writes a real name and a
+   real address to a real table, and a bench is no place for that. */
 
 export default function InvincibleLab() {
-  const [playing, setPlaying] = useState<InvincibleVariant | null>(null);
+  const [playing, setPlaying] = useState(false);
   const [run, setRun] = useState(0);
 
-  const play = (v: InvincibleVariant) => {
-    setPlaying(v);
+  const play = () => {
+    setPlaying(true);
     setRun((n) => n + 1);
     fireworks();
   };
@@ -32,34 +30,30 @@ export default function InvincibleLab() {
     <div className="min-h-dvh flex flex-col">
       {playing && (
         <Invincible
-          key={`${playing}-${run}`}
-          variant={playing}
+          key={run}
           title="IMMORTAL"
           sub="Fourteen played. Fourteen won. Nobody does this."
-          onDone={() => setPlaying(null)}
+          onDone={() => setPlaying(false)}
         />
       )}
 
       {/* the chooser */}
       <div className="bg-plate border-b border-plate-line">
         <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 py-4 flex flex-col gap-3">
-          <p className="head-display text-[19px] leading-none text-white">
-            Pick the 14–0 celebration
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2.5">
-            {VARIANTS.map((v) => (
-              <button
-                key={v.key}
-                onClick={() => play(v.key)}
-                className="flex-1 text-left rounded-control border border-plate-line hover:border-accent px-4 py-3 transition-colors"
-              >
-                <span className="block text-white font-semibold text-[15px] leading-5">{v.name}</span>
-                <span className="block text-muted-plate text-[13px] leading-[18px] pt-1">{v.note}</span>
-              </button>
-            ))}
-          </div>
+          <p className="head-display text-[19px] leading-none text-white">The 14–0 celebration</p>
+          <button
+            onClick={play}
+            className="self-start text-left rounded-control border border-plate-line hover:border-accent px-4 py-3 transition-colors"
+          >
+            <span className="block text-white font-semibold text-[15px] leading-5">
+              Play the celebration
+            </span>
+            <span className="block text-muted-plate text-[13px] leading-[18px] pt-1">
+              Fourteen win cards turn over, the screen goes gold, the score lands
+            </span>
+          </button>
           <p className="text-muted-plate text-[13px] leading-[18px]">
-            Each one plays over the result screen below, exactly where it would land in a real run.
+            It plays over the result screen below, exactly where it would land in a real run.
           </p>
         </div>
       </div>
@@ -104,7 +98,7 @@ export default function InvincibleLab() {
             {playing ? (
               <p className="text-muted text-[14px] leading-5">Playing…</p>
             ) : (
-              <PlateButton onClick={() => play("gold")}>Replay last</PlateButton>
+              <PlateButton onClick={play}>Play again</PlateButton>
             )}
           </div>
         </div>

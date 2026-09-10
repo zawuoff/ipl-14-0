@@ -26,8 +26,10 @@ import { useIstDay } from "@/lib/day";
 import { forecastSeason, simSeason, teamStrength, type GameResult, type SeasonResult } from "@/lib/sim/engine";
 import { SlotSpin } from "./SlotSpin";
 import { Confetti } from "./Confetti";
+import { Invincible } from "./Invincible";
+import { GiftPrompt } from "./GiftPrompt";
 import { usePublishRun } from "./Chrome";
-import { fireworks } from "@/lib/sound";
+import { fireworks, prefetchRoar, roar } from "@/lib/sound";
 import { SquadList } from "./SquadList";
 import { XIPanel, unitWord } from "./XIPanel";
 import {
@@ -668,13 +670,30 @@ export function GameBoard({
       : null
   );
 
+  // Fourteen league games won and the cup on top of them. It has happened once,
+  // so it gets its own screen rather than more of the same confetti.
+  const invincible = wonIt && !!result?.perfect14;
+
+  // The crowd is a real recording, so it has to be on the device before the
+  // moment it belongs to. The playoffs are the last point where there is time
+  // to fetch it and still be early — and a run that is not unbeaten by then can
+  // never need it, so nobody else pays for the download.
+  useEffect(() => {
+    if (simPhase === "playoffs" && result?.perfect14) prefetchRoar();
+  }, [simPhase, result?.perfect14]);
+
   // The fanfare played when the final was won. Lifting the cup is the encore.
   const cheered = useRef(false);
   useEffect(() => {
     if (!wonIt || cheered.current) return;
     cheered.current = true;
-    fireworks();
-  }, [wonIt]);
+    if (invincible) roar();
+    else fireworks();
+  }, [wonIt, invincible]);
+
+  // The card is offered once the screen is the reader's again, never over the
+  // top of the celebration.
+  const [giftAsked, setGiftAsked] = useState(false);
 
   return (
     <div className="flex-1 flex flex-col">
@@ -1461,7 +1480,17 @@ export function GameBoard({
 
           {simPhase === "done" && (
             <div className="pb-12">
-              {result.champion && <Confetti variant="fireworks" />}
+              {result.champion && !invincible && <Confetti variant="fireworks" />}
+              {invincible && (
+                <Invincible
+                  title={t("inv.title")}
+                  sub={t("inv.sub")}
+                  onDone={() => setGiftAsked(true)}
+                />
+              )}
+              {invincible && giftAsked && draft && (
+                <GiftPrompt seed={draft.seed} deviceId={deviceId()} />
+              )}
               <PageBand
                 eyebrow={modeLabel}
                 title={headline(result, t)}

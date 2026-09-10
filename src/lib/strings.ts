@@ -355,6 +355,34 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "end.recordLine": { en: "{w} won, {l} lost, {points} points, finished {rank}.", hi: "{w} जीते, {l} हारे, {points} अंक, {rank} स्थान।" },
   "end.capsLine": { en: "{orange} led the runs with {runs} and {purple} took {wickets} wickets.", hi: "{orange} ने {runs} रन बनाए और {purple} ने {wickets} विकेट लिए।" },
   "end.neverDone": { en: "Nobody had done this before.", hi: "ऐसा पहले कभी नहीं हुआ।" },
+
+  /* ------------------------------------------------- the invincible season */
+  "inv.title": { en: "Immortal", hi: "अमर" },
+  "inv.sub": {
+    en: "Fourteen played. Fourteen won. Nobody does this.",
+    hi: "चौदह खेले। चौदह जीते। ऐसा कोई नहीं करता।",
+  },
+  "gift.title": { en: "Something for the shelf", hi: "आपकी शेल्फ़ के लिए कुछ" },
+  "gift.blurb": {
+    en: "Leave your name and we will email you a card for this run — your XI, your season, this scoreline.",
+    hi: "अपना नाम छोड़िए, हम इस रन का एक कार्ड ईमेल कर देंगे — आपकी XI, आपका सीज़न, यही स्कोर।",
+  },
+  "gift.name": { en: "Your name", hi: "आपका नाम" },
+  "gift.email": { en: "Your email", hi: "आपका ईमेल" },
+  "gift.send": { en: "Send me the card", hi: "कार्ड भेजिए" },
+  "gift.sending": { en: "Sending…", hi: "भेजा जा रहा है…" },
+  "gift.thanks": {
+    en: "Done. The card is on its way to your inbox.",
+    hi: "हो गया। कार्ड आपके इनबॉक्स की ओर है।",
+  },
+  "gift.privacy": {
+    en: "Used only to send you the card. Nothing else, and never shown on the board.",
+    hi: "सिर्फ़ कार्ड भेजने के लिए। और कुछ नहीं, और बोर्ड पर कभी नहीं दिखेगा।",
+  },
+  "gift.badName": { en: "A name would help.", hi: "एक नाम चाहिए।" },
+  "gift.badEmail": { en: "That address does not look right.", hi: "यह पता सही नहीं लग रहा।" },
+  "gift.failed": { en: "That did not go through. Try again?", hi: "यह नहीं गया। दोबारा कोशिश करें?" },
+  "gift.close": { en: "Close", hi: "बंद करें" },
   "end.promisedLand": { en: "Top four was the promised land.", hi: "ऊपर की चार में जगह ही मंज़िल थी।" },
   "end.playAnother": { en: "Play another run", hi: "एक और रन खेलिए" },
   "end.playAnotherNote": { en: "Your next run gets a fresh board. Today's challenge stays the same for everyone until midnight.", hi: "अगले रन में नया बोर्ड मिलेगा। आज की चुनौती आधी रात तक सबके लिए वही रहेगी।" },

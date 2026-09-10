@@ -11,6 +11,7 @@
 import type * as challenges from "../challenges.js";
 import type * as daily from "../daily.js";
 import type * as drafts from "../drafts.js";
+import type * as gifts from "../gifts.js";
 import type * as results from "../results.js";
 import type * as rooms from "../rooms.js";
 import type * as seed from "../seed.js";
@@ -26,6 +27,7 @@ declare const fullApi: ApiFromModules<{
   challenges: typeof challenges;
   daily: typeof daily;
   drafts: typeof drafts;
+  gifts: typeof gifts;
   results: typeof results;
   rooms: typeof rooms;
   seed: typeof seed;

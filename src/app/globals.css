@@ -180,9 +180,9 @@ body {
 }
 
 /* ------------------------------------------------- the invincible season
-   Fourteen out of fourteen and the cup. It has happened once. These are the
-   three candidate treatments, each mounted only for the few seconds it runs.
-   The reduced-motion rule above flattens every one of them to a still. */
+   Fourteen out of fourteen and the cup. It has happened once. Mounted only for
+   the five seconds it runs, and flattened to a still frame by the
+   reduced-motion rule above. */
 
 /* the screen taking on the colour of the trophy */
 @keyframes inv-wash {
@@ -194,8 +194,8 @@ body {
   }
 }
 
-/* a result chip turning over to green, one after the next */
-@keyframes inv-chip {
+/* a win card turning over, one after the next */
+@keyframes inv-card {
   from {
     transform: rotateX(-90deg);
   }
@@ -239,93 +239,5 @@ body {
   }
   to {
     opacity: 1;
-  }
-}
-
-/* floodlights sweeping the ground */
-@keyframes inv-rays {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* the cup coming up out of the dark */
-@keyframes inv-rise {
-  from {
-    opacity: 0;
-    transform: translateY(70px) scale(0.82);
-  }
-  70% {
-    opacity: 1;
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes inv-breathe {
-  from {
-    opacity: 0.45;
-  }
-  to {
-    opacity: 0.9;
-  }
-}
-
-/* a line of type walking up after the cup has landed */
-@keyframes inv-lift {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* the seal coming down from above the screen */
-@keyframes inv-stamp {
-  from {
-    opacity: 0;
-    transform: rotate(-16deg) scale(5.2);
-  }
-  70% {
-    opacity: 1;
-    transform: rotate(-8deg) scale(0.94);
-  }
-  85% {
-    transform: rotate(-8deg) scale(1.03);
-  }
-  to {
-    opacity: 1;
-    transform: rotate(-8deg) scale(1);
-  }
-}
-
-/* the board taking the hit */
-@keyframes inv-shake {
-  0%,
-  to {
-    transform: translate3d(0, 0, 0);
-  }
-  12% {
-    transform: translate3d(-9px, 5px, 0);
-  }
-  28% {
-    transform: translate3d(8px, -6px, 0);
-  }
-  44% {
-    transform: translate3d(-6px, -3px, 0);
-  }
-  62% {
-    transform: translate3d(4px, 4px, 0);
-  }
-  80% {
-    transform: translate3d(-2px, -2px, 0);
   }
 }
