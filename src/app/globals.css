@@ -178,3 +178,113 @@ body {
   background: var(--color-accent);
   color: var(--color-ground);
 }
+
+/* ------------------------------------------------- the invincible season
+   Fourteen out of fourteen and the cup. It has happened once. Mounted only for
+   the five seconds it runs, and flattened to a still frame by the
+   reduced-motion rule above. */
+
+/* the screen taking on the colour of the trophy */
+@keyframes inv-wash {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* a win card turning over, one after the next */
+@keyframes inv-card {
+  from {
+    transform: rotateX(-90deg);
+  }
+  to {
+    transform: rotateX(0deg);
+  }
+}
+
+/* the number arriving with weight: overshoot, then settle */
+@keyframes inv-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.32);
+  }
+  62% {
+    opacity: 1;
+    transform: scale(1.07);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* the ring the number pushes out ahead of it */
+@keyframes inv-ring {
+  from {
+    opacity: 0.5;
+    transform: scale(0.15);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.8);
+  }
+}
+
+/* the house lights going down */
+@keyframes inv-dim {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* --------------------------------------------------------- the card prompt
+   One component, two shapes. On a phone it is a sheet that comes up off the
+   bottom edge and stays anchored there, which is where a thumb already is. On
+   anything wider it is a dialog in the middle of the screen, because a card
+   pinned to the bottom corner of a desktop browser reads as a cookie banner. */
+
+@keyframes gift-scrim {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes gift-sheet {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gift-dialog {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.965);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.gift-card {
+  animation: gift-sheet 340ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
+}
+
+@media (min-width: 640px) {
+  .gift-card {
+    animation: gift-dialog 260ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
+  }
+}

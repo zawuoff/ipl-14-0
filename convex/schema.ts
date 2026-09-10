@@ -119,6 +119,26 @@ export default defineSchema({
     .index("by_device", ["deviceId"])
     .index("by_day", ["day"]),
 
+  /* Names and emails left by the handful of people who have gone unbeaten and
+     lifted the cup, so a card can be sent to them.
+
+     There is deliberately no query anywhere in this deployment that reads this
+     table. It is written to and never read back by the app, which is the only
+     watertight way to promise that one person's address never reaches another
+     person's browser. Read it in the Convex dashboard. */
+  giftClaims: defineTable({
+    seed: v.string(), // the run being celebrated; one claim per run
+    deviceId: v.string(),
+    name: v.string(),
+    email: v.string(),
+    createdAt: v.number(),
+    day: v.optional(v.string()),
+    // for whoever is sending the cards to tick off as they go
+    sent: v.optional(v.boolean()),
+  })
+    .index("by_seed", ["seed"])
+    .index("by_email", ["email"]),
+
   dailyChallenges: defineTable({
     date: v.string(), // "2026-09-04" IST
     spins: v.array(v.string()), // same 11 teamIds for all

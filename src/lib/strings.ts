@@ -355,6 +355,39 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "end.recordLine": { en: "{w} won, {l} lost, {points} points, finished {rank}.", hi: "{w} जीते, {l} हारे, {points} अंक, {rank} स्थान।" },
   "end.capsLine": { en: "{orange} led the runs with {runs} and {purple} took {wickets} wickets.", hi: "{orange} ने {runs} रन बनाए और {purple} ने {wickets} विकेट लिए।" },
   "end.neverDone": { en: "Nobody had done this before.", hi: "ऐसा पहले कभी नहीं हुआ।" },
+
+  /* ------------------------------------------------- the invincible season */
+  "inv.title": { en: "Immortal", hi: "अमर" },
+  "inv.sub": {
+    en: "Fourteen played. Fourteen won. Nobody does this.",
+    hi: "चौदह खेले। चौदह जीते। ऐसा कोई नहीं करता।",
+  },
+  "gift.title": { en: "A little something", hi: "एक छोटी सी चीज़" },
+  "gift.blurb": {
+    en: "Leave your name and email, and we will send you a small gift for this run.",
+    hi: "अपना नाम और ईमेल छोड़िए, हम इस रन के लिए आपको एक छोटा सा तोहफ़ा भेजेंगे।",
+  },
+  "gift.name": { en: "Your name", hi: "आपका नाम" },
+  "gift.email": { en: "Your email", hi: "आपका ईमेल" },
+  "gift.send": { en: "Send it to me", hi: "मुझे भेजिए" },
+  "gift.sending": { en: "Sending…", hi: "भेजा जा रहा है…" },
+  "gift.sent": { en: "On its way", hi: "रवाना" },
+  "gift.thanks": {
+    en: "Done. Keep an eye on your inbox.",
+    hi: "हो गया। अपने इनबॉक्स पर नज़र रखिए।",
+  },
+  "gift.privacy": {
+    en: "Used only to send your gift. Nothing else, and never shown on the board.",
+    hi: "सिर्फ़ तोहफ़ा भेजने के लिए। और कुछ नहीं, और बोर्ड पर कभी नहीं दिखेगा।",
+  },
+  "gift.badName": { en: "A name would help.", hi: "एक नाम चाहिए।" },
+  "gift.badEmail": { en: "That address does not look right.", hi: "यह पता सही नहीं लग रहा।" },
+  "gift.notEarned": {
+    en: "We could not match that run yet. Give it a moment and try again.",
+    hi: "उस रन का मिलान अभी नहीं हो पाया। एक पल रुककर दोबारा कोशिश कीजिए।",
+  },
+  "gift.failed": { en: "That did not go through. Try again?", hi: "यह नहीं गया। दोबारा कोशिश करें?" },
+  "gift.close": { en: "Close", hi: "बंद करें" },
   "end.promisedLand": { en: "Top four was the promised land.", hi: "ऊपर की चार में जगह ही मंज़िल थी।" },
   "end.playAnother": { en: "Play another run", hi: "एक और रन खेलिए" },
   "end.playAnotherNote": { en: "Your next run gets a fresh board. Today's challenge stays the same for everyone until midnight.", hi: "अगले रन में नया बोर्ड मिलेगा। आज की चुनौती आधी रात तक सबके लिए वही रहेगी।" },

@@ -156,3 +156,56 @@ export function fireworks(): void {
     blip(c, 2600 + i * 200, at + 0.02, 0.12, "sine", 0.04);
   }
 }
+
+/* ------------------------------------------------------------------ the roar
+
+   The one noise in the game that is not synthesised. Fourteen won, none lost,
+   and the cup lifted — no oscillator was going to sell that, so a real crowd
+   comes down the wire instead. See public/sfx/README.md for where it is from.
+
+   It costs nobody anything. Nothing is fetched until a run reaches the
+   playoffs, and only a run that is still unbeaten by then will ever play it,
+   which so far is one run in every few thousand. Starting the fetch that early
+   also means it is decoded and waiting well before the final ball. */
+
+const ROAR_URL = "/sfx/invincible.mp3";
+
+let roarBuffer: AudioBuffer | null = null;
+let roarPending = false;
+
+/** Start pulling the crowd down. Safe to call more than once; safe to ignore. */
+export function prefetchRoar(): void {
+  if (roarBuffer || roarPending) return;
+  const c = audio();
+  if (!c) return;
+  roarPending = true;
+  void fetch(ROAR_URL)
+    .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
+    .then((bytes) => c.decodeAudioData(bytes))
+    .then((buf) => {
+      roarBuffer = buf;
+    })
+    .catch(() => {
+      // No crowd, then. The synthesised encore below covers it.
+      roarPending = false;
+    });
+}
+
+/** The unbeaten season. Falls back to the fireworks if the crowd has not
+    arrived — a slow connection should still get a noise, not silence. */
+export function roar(): void {
+  if (isMuted()) return;
+  const c = audio();
+  if (!c) return;
+  if (!roarBuffer) {
+    prefetchRoar();
+    fireworks();
+    return;
+  }
+  const src = c.createBufferSource();
+  const g = c.createGain();
+  src.buffer = roarBuffer;
+  g.gain.setValueAtTime(0.9, c.currentTime);
+  src.connect(g).connect(c.destination);
+  src.start();
+}
