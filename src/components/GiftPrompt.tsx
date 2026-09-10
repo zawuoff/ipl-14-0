@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useMutation } from "convex/react";
 
 import { api } from "../../convex/_generated/api";
@@ -9,19 +9,36 @@ import { useT } from "@/lib/i18n";
 /* The card for an unbeaten season has to be posted somewhere, so this is the
    one place in the game that asks for a name and an address.
 
-   It only ever appears after fourteen wins and the cup, once the celebration
-   has finished and the screen is the reader's again — never over the top of it.
-   It is asked once per device and then never again, whether it was filled in,
-   dismissed, or ignored, because a second ask would be nagging somebody who has
-   already given their answer.
+   It appears twice at most, and only ever for a run that went fourteen wins
+   and the cup. Once when the celebration has finished and the screen is the
+   reader's again, never over the top of it; and if that ask went unanswered,
+   once more the next time they open the game, because the thing that earned it
+   happens once in a few thousand runs and a mistimed thumb should not cost it.
+   After that it is done, whichever way it was answered.
 
-   Nothing is stored locally except the fact that the question has been put. */
+   Which of the two asks this is decides only which key remembers it, so the two
+   cannot silence each other. Nothing is stored locally except the fact that the
+   question has been put.
 
-const ASKED_KEY = "14-0-gift-asked";
+   Whether to ask at all is the caller's decision, not this component's. Both
+   deciding meant both had to agree on the exact moment the key was written, and
+   they did not: the caller marked it as the form went up, this component read
+   the mark on its first render, and the form vanished before it was ever seen.
+   Now it renders when it is mounted, and closes when it is answered. */
 
-function alreadyAsked(): boolean {
+export const ASKED_KEY = "14-0-gift-asked";
+export const ASKED_AGAIN_KEY = "14-0-gift-asked-again";
+/* Set when an ask is closed without an answer, cleared when one is given.
+
+   It exists so the second ask costs nothing to not need. Without it the game
+   would have to ask the server "does this browser owe me anything?" on every
+   single page load, for every reader, to catch the handful who went unbeaten
+   and closed the form. The browser already knows, so it answers first. */
+const OWED_KEY = "14-0-gift-owed";
+
+function readKey(key: string): boolean {
   try {
-    return localStorage.getItem(ASKED_KEY) === "1";
+    return localStorage.getItem(key) === "1";
   } catch {
     // No storage to read means no memory of asking. Asking again is the kinder
     // failure than never asking at all.
@@ -29,10 +46,48 @@ function alreadyAsked(): boolean {
   }
 }
 
-function markAsked(): void {
+export function alreadyAsked(key: string): boolean {
+  return readKey(key);
+}
+
+/** Whether this browser walked away from an ask without answering it. */
+export function owesAnAnswer(): boolean {
+  return readKey(OWED_KEY);
+}
+
+export function markAsked(key: string): void {
   try {
-    localStorage.setItem(ASKED_KEY, "1");
+    localStorage.setItem(key, "1");
   } catch {}
+  // Deliberately not written back into the cache below. Marking has to be
+  // invisible to a caller that is already showing the form, or answering it
+  // would pull it off the screen before the thank-you could be read.
+}
+
+/* Settled once per page load and then held.
+
+   useSyncExternalStore calls getSnapshot on every render, so reading
+   localStorage live would mean the act of recording "asked" yanked the form out
+   from under whoever was typing in it. Caching also matches the question being
+   asked, which is about how this browser arrived, not how it is now.
+
+   The cost is that going unbeaten twice without reloading would ask twice. That
+   is two fourteen-nils in one page load, and the second claim overwrites the
+   first, so it is a fair trade for the form staying put. */
+const settled = new Map<string, boolean>();
+
+/** Whether this browser still owes an answer. False on the server and on the
+    first paint, so nothing flashes before localStorage can be read. */
+export function useMayAsk(key: string): boolean {
+  const read = useCallback(() => {
+    let v = settled.get(key);
+    if (v === undefined) {
+      v = readKey(key);
+      settled.set(key, v);
+    }
+    return !v;
+  }, [key]);
+  return useSyncExternalStore(NEVER_CHANGES, read, () => false);
 }
 
 /* Whether the question has been put is read the same way the mute switch is:
@@ -42,13 +97,23 @@ const NEVER_CHANGES = () => () => {};
 
 type State = "asking" | "sending" | "done";
 
-export function GiftPrompt({ seed, deviceId }: { seed: string; deviceId: string }) {
+export function GiftPrompt({
+  seed,
+  deviceId,
+  askKey = ASKED_KEY,
+  blurbKey = "gift.blurb",
+}: {
+  seed: string;
+  deviceId: string;
+  /** Which ask this is. The two remember themselves separately. */
+  askKey?: string;
+  blurbKey?: string;
+}) {
   const t = useT();
   const claim = useMutation(api.gifts.claim);
 
-  const asked = useSyncExternalStore(NEVER_CHANGES, alreadyAsked, () => true);
   const [dismissed, setDismissed] = useState(false);
-  const open = !asked && !dismissed;
+  const open = !dismissed;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -63,7 +128,10 @@ export function GiftPrompt({ seed, deviceId }: { seed: string; deviceId: string 
   if (!open) return null;
 
   const close = () => {
-    markAsked();
+    markAsked(askKey);
+    // Walked away from it. Worth one more ask next time, and worth the one
+    // query it takes to find out.
+    markAsked(OWED_KEY);
     setDismissed(true);
   };
 
@@ -74,7 +142,13 @@ export function GiftPrompt({ seed, deviceId }: { seed: string; deviceId: string 
     try {
       const res = await claim({ seed, deviceId, name, email });
       if (res.ok) {
-        markAsked();
+        // A filled-in form settles both asks at once: there is nothing left to
+        // chase, so the second one must never fire.
+        markAsked(ASKED_KEY);
+        markAsked(ASKED_AGAIN_KEY);
+        try {
+          localStorage.removeItem(OWED_KEY);
+        } catch {}
         setState("done");
         return;
       }
@@ -136,7 +210,7 @@ export function GiftPrompt({ seed, deviceId }: { seed: string; deviceId: string 
                 <p className="head-display text-white text-[23px] sm:text-[26px] leading-none">
                   {t("gift.title")}
                 </p>
-                <p className="text-[15px] leading-[22px] text-muted">{t("gift.blurb")}</p>
+                <p className="text-[15px] leading-[22px] text-muted">{t(blurbKey)}</p>
               </div>
               <CloseButton onClick={close} label={t("gift.close")} />
             </div>

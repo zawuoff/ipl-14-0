@@ -3,7 +3,8 @@ import Link from "next/link";
 import { use, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { RoomSeason, deviceId } from "@/components/RoomSeason";
+import { RoomSeason } from "@/components/RoomSeason";
+import { deviceId } from "@/lib/device";
 import { copyText } from "@/lib/clipboard";
 import {
   Flap,

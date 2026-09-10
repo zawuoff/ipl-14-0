@@ -1,15 +1,16 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { istDay } from "./stats";
 
 /* Somebody went fourteen and nothing and lifted the cup, and would like the
    card that gets sent for it.
 
-   This file has exactly one mutation and no query, on purpose. Nothing in the
-   app ever reads a name or an address back out — the only way to see this table
-   is the Convex dashboard, which is one account. A query here, however well
-   scoped, would be a way for one person's address to reach another person's
-   browser, and there is no version of that worth having.
+   Nothing in here ever returns a name or an address. The one query below
+   answers a yes-or-no question about the caller's own device and returns a
+   seed, which is already public — it is in the URL of every shared run. The
+   promise that stands is the one that matters: no field a person typed into
+   that form is readable by the app, on any path, so it cannot reach anybody
+   else's browser. The names and addresses are read in the dashboard.
 
    The gate is the run itself. A claim names a seed, and the seed has to already
    be sitting in simResults as an unbeaten season with the cup on top. That is
@@ -22,6 +23,40 @@ import { istDay } from "./stats";
 // thing, not to adjudicate RFC 5322 — a real address that this rejected would
 // be a person who went unbeaten and got told no.
 const LOOKS_LIKE_EMAIL = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
+
+/* Fourteen wins and the cup, and then the reader closed the card prompt without
+   filling it in. Perhaps they meant to, perhaps their thumb landed badly, and
+   the thing that earned it happens once in a few thousand runs — so the next
+   time they open the game they get asked once more, and then never again.
+
+   Answers only about the device that asked, returns only a seed, and is not
+   called at all unless the browser has an unanswered ask on record. */
+export const outstanding = query({
+  args: { deviceId: v.string() },
+  returns: v.union(v.null(), v.object({ seed: v.string() })),
+  handler: async (ctx, args) => {
+    const unbeaten = await ctx.db
+      .query("simResults")
+      .withIndex("by_device_perfect", (q) =>
+        q.eq("deviceId", args.deviceId).eq("perfect14", true)
+      )
+      .order("desc")
+      .take(10);
+
+    for (const run of unbeaten) {
+      // perfect14 is the league alone; the cup is the other half of it.
+      if (!run.champion) continue;
+      const claimed = await ctx.db
+        .query("giftClaims")
+        .withIndex("by_seed", (q) => q.eq("seed", run.seed))
+        .first();
+      // Their best run is already spoken for, so there is nothing to chase.
+      if (claimed) return null;
+      return { seed: run.seed };
+    }
+    return null;
+  },
+});
 
 export const claim = mutation({
   args: {

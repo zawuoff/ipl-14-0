@@ -1,12 +1,20 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "convex/react";
+import { useConvex, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import { GameBoard } from "@/components/GameBoard";
 import { type PlayerSeason, type TeamSeason } from "@/lib/game/types";
 import { useIstDay } from "@/lib/day";
 import { useBackendUnreachable } from "@/lib/backend";
+import { deviceId } from "@/lib/device";
+import {
+  ASKED_AGAIN_KEY,
+  GiftPrompt,
+  alreadyAsked,
+  markAsked,
+  owesAnAnswer,
+} from "@/components/GiftPrompt";
 import { buildPlayerSeasons, buildTeamSeasons } from "@/lib/game/data";
 import {
   Card,
@@ -126,6 +134,10 @@ export default function Home() {
           goBoard={goBoard}
         />
       )}
+
+      {/* Somebody who went unbeaten and closed the card prompt without filling
+          it in gets asked once more, here, and then never again. */}
+      {show === "home" && <UnclaimedGift />}
 
       {show === "game" && (
         <GameBoard
@@ -412,6 +424,55 @@ function HomeScreen({
 
 /** Reads the day's numbers. Lives below QuietBoundary so a backend without
     this query yet costs these two sections and nothing else. */
+/* The second and last ask.
+
+   A live subscription would be the wrong shape here twice over. It is a
+   question about how this browser arrived, which cannot change while the page
+   is open; and the moment the form is submitted the claim exists, so a live
+   answer flips to "nothing owed" and tears the prompt off the screen at exactly
+   the wrong instant, leaving the reader looking at nothing and wondering
+   whether their address went anywhere. One question, once, and then hold it.
+
+   Almost nobody has an unanswered ask, and the browser knows whether it does
+   before anybody is asked anything, so the common case costs two localStorage
+   reads and no request at all. The wait is so the game does not open with a
+   form in the reader's face. */
+function UnclaimedGift() {
+  const convex = useConvex();
+  const [asking, setAsking] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (alreadyAsked(ASKED_AGAIN_KEY) || !owesAnAnswer()) return;
+    let live = true;
+    const id = window.setTimeout(async () => {
+      try {
+        const owed = await convex.query(api.gifts.outstanding, { deviceId: deviceId() });
+        if (!live || !owed) return;
+        setAsking(owed.seed);
+        // Spent when it goes up, not when it is answered. Closing the tab on it
+        // is an answer too: either way this was the last ask.
+        markAsked(ASKED_AGAIN_KEY);
+      } catch {
+        // No answer, no ask. It keeps for next time.
+      }
+    }, 1600);
+    return () => {
+      live = false;
+      window.clearTimeout(id);
+    };
+  }, [convex]);
+
+  if (!asking) return null;
+  return (
+    <GiftPrompt
+      seed={asking}
+      deviceId={deviceId()}
+      askKey={ASKED_AGAIN_KEY}
+      blurbKey="gift.blurbAgain"
+    />
+  );
+}
+
 function TodaySections({ today, goBoard }: { today: string; goBoard: (tab?: BoardTab) => void }) {
   const stats = useQuery(api.stats.homeToday, { date: today });
   return (

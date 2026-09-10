@@ -39,6 +39,7 @@ import {
 } from "./ui";
 import { Confetti } from "./Confetti";
 import { fireworks } from "@/lib/sound";
+import { deviceId } from "@/lib/device";
 import { analytics } from "@/lib/analytics";
 import { useT, localiseMargin, ordinal } from "@/lib/i18n";
 import { withVia, type ShareVia } from "@/lib/share";
@@ -52,16 +53,6 @@ const ALL_PLAYERS = buildPlayerSeasons();
 const BY_ID = new Map(ALL_PLAYERS.map((p) => [p.id, p]));
 // Stored ids may carry the slot a player was drafted into — see decodePick.
 const fromId = (id: string) => decodePick(id, (k) => BY_ID.get(k));
-
-export function deviceId(): string {
-  if (typeof window === "undefined") return "server";
-  let d = localStorage.getItem("14-0-device");
-  if (!d) {
-    d = Math.random().toString(36).slice(2) + Date.now().toString(36);
-    localStorage.setItem("14-0-device", d);
-  }
-  return d;
-}
 
 function parseScore(s: string): [number, number] {
   const p = s.split("/");

@@ -117,6 +117,9 @@ export default defineSchema({
     .index("by_seed", ["seed"])
     .index("by_daily", ["dailyDate"])
     .index("by_device", ["deviceId"])
+    // So "has this device ever gone unbeaten?" is one indexed read rather than
+    // a walk back through every run they have ever played.
+    .index("by_device_perfect", ["deviceId", "perfect14"])
     .index("by_day", ["day"]),
 
   /* Names and emails left by the handful of people who have gone unbeaten and
