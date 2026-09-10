@@ -13,7 +13,8 @@ import {
   GiftPrompt,
   alreadyAsked,
   markAsked,
-  owesAnAnswer,
+  markChecked,
+  worthChecking,
 } from "@/components/GiftPrompt";
 import { buildPlayerSeasons, buildTeamSeasons } from "@/lib/game/data";
 import {
@@ -433,21 +434,25 @@ function HomeScreen({
    the wrong instant, leaving the reader looking at nothing and wondering
    whether their address went anywhere. One question, once, and then hold it.
 
-   Almost nobody has an unanswered ask, and the browser knows whether it does
-   before anybody is asked anything, so the common case costs two localStorage
-   reads and no request at all. The wait is so the game does not open with a
-   form in the reader's face. */
+   Every browser asks the server this once, ever, and after that only the ones
+   carrying an ask they never answered ask again. So the steady-state cost for
+   somebody who has never gone unbeaten is a localStorage read and no request at
+   all. The wait is so the game does not open with a form in the reader's
+   face. */
 function UnclaimedGift() {
   const convex = useConvex();
   const [asking, setAsking] = useState<string | null>(null);
 
   useEffect(() => {
-    if (alreadyAsked(ASKED_AGAIN_KEY) || !owesAnAnswer()) return;
+    if (alreadyAsked(ASKED_AGAIN_KEY) || !worthChecking()) return;
     let live = true;
     const id = window.setTimeout(async () => {
       try {
         const owed = await convex.query(api.gifts.outstanding, { deviceId: deviceId() });
-        if (!live || !owed) return;
+        if (!live) return;
+        // Asked and answered, whatever the answer was.
+        markChecked();
+        if (!owed) return;
         setAsking(owed.seed);
         // Spent when it goes up, not when it is answered. Closing the tab on it
         // is an answer too: either way this was the last ask.

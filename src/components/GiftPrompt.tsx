@@ -36,6 +36,16 @@ export const ASKED_AGAIN_KEY = "14-0-gift-asked-again";
    and closed the form. The browser already knows, so it answers first. */
 const OWED_KEY = "14-0-gift-owed";
 
+/* Set once the server has been asked about this browser at all.
+
+   The flag above only exists on a browser that saw an ask and walked away from
+   it, which no browser did before any of this was written. Somebody has already
+   gone unbeaten and lifted the cup, and they would have been the one person the
+   whole thing is for and never been asked. So every browser gets exactly one
+   question, once in its life, and after that only the ones that owe an answer
+   ask again. */
+const CHECKED_KEY = "14-0-gift-checked";
+
 function readKey(key: string): boolean {
   try {
     return localStorage.getItem(key) === "1";
@@ -53,6 +63,16 @@ export function alreadyAsked(key: string): boolean {
 /** Whether this browser walked away from an ask without answering it. */
 export function owesAnAnswer(): boolean {
   return readKey(OWED_KEY);
+}
+
+/** Whether it is worth asking the server about this browser at all: either it
+    has never been asked, or it is carrying an ask it never answered. */
+export function worthChecking(): boolean {
+  return !readKey(CHECKED_KEY) || readKey(OWED_KEY);
+}
+
+export function markChecked(): void {
+  markAsked(CHECKED_KEY);
 }
 
 export function markAsked(key: string): void {
