@@ -650,13 +650,25 @@ export function GameBoard({
       ? t("run.dailyWithDate", { date: today })
       : t("run.classic");
 
+  // The fanfare played when the final was won. Lifting the cup is the encore.
+  const cheered = useRef(false);
+
+  // The card is offered once the screen is the reader's again, never over the
+  // top of the celebration.
+  const [giftAsked, setGiftAsked] = useState(false);
+
   const restart = useCallback(() => {
     setDraft(null);
     setResult(null);
     setSimPhase("idle");
     setSimIdx(0);
     setPoIdx(0);
-  }, []);
+    setGiftAsked(false);
+    // Both of these latch for the run that has just finished. Without clearing
+    // them the next cup won is lifted in silence, and a second unbeaten season
+    // is asked for an address while the celebration is still playing.
+    cheered.current = false;
+  }, [setGiftAsked]);
 
   // The one bar at the top carries this run: what it is, what is left, and the
   // way out of it.
@@ -682,8 +694,6 @@ export function GameBoard({
     if (simPhase === "playoffs" && result?.perfect14) prefetchRoar();
   }, [simPhase, result?.perfect14]);
 
-  // The fanfare played when the final was won. Lifting the cup is the encore.
-  const cheered = useRef(false);
   useEffect(() => {
     if (!wonIt || cheered.current) return;
     cheered.current = true;
@@ -691,9 +701,6 @@ export function GameBoard({
     else fireworks();
   }, [wonIt, invincible]);
 
-  // The card is offered once the screen is the reader's again, never over the
-  // top of the celebration.
-  const [giftAsked, setGiftAsked] = useState(false);
 
   return (
     <div className="flex-1 flex flex-col">
