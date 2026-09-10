@@ -367,6 +367,10 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
     en: "Leave your name and email, and we will send you a small gift for this run.",
     hi: "अपना नाम और ईमेल छोड़िए, हम इस रन के लिए आपको एक छोटा सा तोहफ़ा भेजेंगे।",
   },
+  "gift.blurbAgain": {
+    en: "You went unbeaten and never told us where to send it. Last chance.",
+    hi: "आप अजेय रहे और बताया ही नहीं कि कहाँ भेजें। यह आख़िरी मौक़ा है।",
+  },
   "gift.name": { en: "Your name", hi: "आपका नाम" },
   "gift.email": { en: "Your email", hi: "आपका ईमेल" },
   "gift.send": { en: "Send it to me", hi: "मुझे भेजिए" },

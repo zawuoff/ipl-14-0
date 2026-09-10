@@ -23,11 +23,12 @@ import {
 import { assignRole, encodePick } from "@/lib/game/roles";
 import { buildPlayerSeasons, buildTeamSeasons } from "@/lib/game/data";
 import { useIstDay } from "@/lib/day";
+import { deviceId } from "@/lib/device";
 import { forecastSeason, simSeason, teamStrength, type GameResult, type SeasonResult } from "@/lib/sim/engine";
 import { SlotSpin } from "./SlotSpin";
 import { Confetti } from "./Confetti";
 import { Invincible } from "./Invincible";
-import { GiftPrompt } from "./GiftPrompt";
+import { ASKED_KEY, GiftPrompt, useMayAsk } from "./GiftPrompt";
 import { usePublishRun } from "./Chrome";
 import { fireworks, prefetchRoar, roar } from "@/lib/sound";
 import { SquadList } from "./SquadList";
@@ -151,19 +152,6 @@ function randomSpins(): string[] {
     if (!out.includes(pick)) out.push(pick);
   }
   return out;
-}
-
-function deviceId(): string {
-  if (typeof window === "undefined") return "server";
-  // Storage keys keep the old name deliberately. They are how a returning
-  // player is recognised on the leaderboard; renaming them orphans every
-  // existing device and wipes streaks, so the rename to BuildXI stops here.
-  let d = localStorage.getItem("14-0-device");
-  if (!d) {
-    d = Math.random().toString(36).slice(2) + Date.now().toString(36);
-    localStorage.setItem("14-0-device", d);
-  }
-  return d;
 }
 
 export function GameBoard({
@@ -654,8 +642,9 @@ export function GameBoard({
   const cheered = useRef(false);
 
   // The card is offered once the screen is the reader's again, never over the
-  // top of the celebration.
+  // top of the celebration, and only if this browser has not been asked before.
   const [giftAsked, setGiftAsked] = useState(false);
+  const mayAskForGift = useMayAsk(ASKED_KEY);
 
   const restart = useCallback(() => {
     setDraft(null);
@@ -1495,7 +1484,7 @@ export function GameBoard({
                   onDone={() => setGiftAsked(true)}
                 />
               )}
-              {invincible && giftAsked && draft && (
+              {invincible && giftAsked && mayAskForGift && draft && (
                 <GiftPrompt seed={draft.seed} deviceId={deviceId()} />
               )}
               <PageBand
