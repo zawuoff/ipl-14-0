@@ -1,5 +1,5 @@
 "use client";
-import { Children, type ReactNode } from "react";
+import { Children, type CSSProperties, type ReactNode } from "react";
 
 /* Shared pieces of the scoreboard language: flap cells, team chips, the pick
    strip, stat strips, split score cards, and the button shapes. Everything
@@ -334,6 +334,14 @@ export function StatCell({
           : tone === "accent"
             ? "text-accent"
             : "text-white";
+  /* A number sits at full size; a surname steps down to fit its cell rather
+     than spilling over its neighbour or ending in an ellipsis. The size comes
+     from the character count: Teko caps run about 0.55em each, so the cell's
+     inline size divided by (chars × 0.58) is the largest size at which the
+     whole word fits, with a little slack. Anything that is not plain text
+     falls back to a width-only step-down. The line box keeps its height
+     either way, so rows stay level. */
+  const chars = typeof value === "string" || typeof value === "number" ? String(value).length : 0;
   return (
     <div
       className={`@container flex flex-col items-center gap-0.5 flex-1 min-w-0 bg-surface px-2 py-3.5 lg:py-4 ${className}`}
@@ -342,10 +350,8 @@ export function StatCell({
         {label}
       </span>
       <span
-        /* A number sits at full size; a surname in a narrow cell steps down to
-           fit rather than spilling over its neighbour or ending in an ellipsis.
-           The line box keeps its height either way, so rows stay level. */
-        className={`max-w-full truncate font-display font-bold text-[clamp(17px,29cqi,32px)] leading-[32px] lg:text-[clamp(17px,29cqi,38px)] lg:leading-[36px] pt-1 tabular ${colour}`}
+        style={chars > 0 ? { "--fit": `calc(100cqi / ${chars * 0.58})` } as CSSProperties : undefined}
+        className={`max-w-full truncate font-display font-bold [--fit:29cqi] text-[clamp(17px,var(--fit),32px)] leading-[32px] lg:text-[clamp(17px,var(--fit),38px)] lg:leading-[36px] pt-1 tabular ${colour}`}
       >
         {value}
       </span>
