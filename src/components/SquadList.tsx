@@ -26,19 +26,35 @@ function PlayerRow({
 }) {
   const t = useT();
   const off = !!reason;
+
+  // The tray only earns its tap when there is a real choice. One open slot and
+  // the row behaves exactly as it always has: tap, picked, next spin.
+  const open = off ? [] : (openRoles?.(p) ?? [p.role]);
+  const choice = open.length > 1;
+  const ratings = off ? [] : roleRatings(p);
+
+  // What the name is worth RIGHT NOW. A card carries a player's best role, but
+  // once that slot is gone the only way in is out of position, for fewer points
+  // — and a tile still showing the best number means the 88 you tapped turns
+  // into an 84 the moment it lands in the XI. So the tile shows the best rating
+  // still on offer, and the row says out of position when that is below the
+  // number on the card.
+  const best = ratings.reduce<{ role: Role; overall: number } | undefined>(
+    (b, r) => (open.includes(r.role) && (!b || r.overall > b.overall) ? r : b),
+    undefined
+  );
+  const shown = best?.overall ?? p.overall;
+  // Legend hides every number, so there is no rating to contradict and nothing
+  // to own up to — the tray keeps its counsel there too.
+  const outOfPosition = !hideRatings && !!best && best.overall < p.overall;
+
   // Ratings visible: the tile carries the rating heat. Legend mode: no number
   // to colour, so the tile wears the squad's own colour instead.
   const tile = off
     ? { bg: "#16244A", fg: "rgba(255,255,255,0.45)" }
     : hideRatings
       ? { bg: teamColour ?? "#000000", fg: readableOn(teamColour ?? "#000000") }
-      : ratingTone(p.overall);
-
-  // The tray only earns its tap when there is a real choice. One open slot and
-  // the row behaves exactly as it always has: tap, picked, next spin.
-  const open = off ? [] : (openRoles?.(p) ?? [p.role]);
-  const choice = open.length > 1;
-  const ratings = choice ? roleRatings(p) : [];
+      : ratingTone(shown);
 
   return (
     <div className="border-t border-hairline">
@@ -56,7 +72,7 @@ function PlayerRow({
           className="flex items-center justify-center w-11 h-11 shrink-0 rounded-control font-display font-bold text-[26px] leading-[26px] pt-[3px] tabular"
           style={{ backgroundColor: tile.bg, color: tile.fg }}
         >
-          {hideRatings ? "?" : p.overall}
+          {hideRatings ? "?" : shown}
         </span>
         <span className="flex flex-col flex-1 min-w-0">
           <span
@@ -72,17 +88,26 @@ function PlayerRow({
         </span>
         {/* The role is what makes a name takeable, so it carries the accent.
             When a player can cover more than one, say so instead of picking
-            for them — the choice is the point. */}
+            for them — the choice is the point. When every door left is the
+            wrong one, the row admits it rather than letting the tile take the
+            blame for a rating that dropped on the way into the XI. */}
         <span
-          className={`w-[84px] shrink-0 text-right font-semibold text-[14px] leading-[18px] ${
+          className={`w-[96px] shrink-0 flex flex-col items-end ${
             off ? "text-faint" : "text-accent"
           }`}
         >
-          {choice
-            ? expanded
-              ? t("draft.pickRole")
-              : t("draft.rolesN", { n: open.length })
-            : t(`role.${open[0] ?? p.role}`)}
+          <span className="max-w-full truncate font-semibold text-[14px] leading-[18px]">
+            {choice
+              ? expanded
+                ? t("draft.pickRole")
+                : t("draft.rolesN", { n: open.length })
+              : t(`role.${open[0] ?? p.role}`)}
+          </span>
+          {outOfPosition && (
+            <span className="max-w-full truncate text-[12px] leading-[15px] text-muted">
+              {t("draft.offRole")}
+            </span>
+          )}
         </span>
       </button>
 
