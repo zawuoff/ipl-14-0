@@ -29,6 +29,7 @@ import { SlotSpin } from "./SlotSpin";
 import { Confetti } from "./Confetti";
 import { Invincible } from "./Invincible";
 import { ASKED_KEY, GiftPrompt, useMayAsk } from "./GiftPrompt";
+import { ShareCard } from "./ShareCard";
 import { usePublishRun } from "./Chrome";
 import { fireworks, prefetchRoar, roar } from "@/lib/sound";
 import { SquadList } from "./SquadList";
@@ -42,15 +43,12 @@ import {
   StatCell,
   StatStrip,
   PrimaryButton,
-  OutlineButton,
   PlateButton,
   SectionHead,
-  WhatsAppIcon,
   Crown,
 } from "./ui";
 import { PlayoffMatch } from "./PlayoffMatch";
 import { SeasonReport } from "./SeasonReport";
-import { copyText } from "@/lib/clipboard";
 import { MAX_NAME, playerName, setPlayerName } from "@/lib/player";
 import {
   MAX_ROOM_PLAYERS,
@@ -180,8 +178,14 @@ export function GameBoard({
   const [poIdx, setPoIdx] = useState(0); // playoff matches completed
   const [simSpeed, setSimSpeed] = useState<1 | 2 | 4>(1);
   const [simPower, setSimPower] = useState(0);
-  const [copied, setCopied] = useState(false);
-  const [challengeCopied, setChallengeCopied] = useState(false);
+  // Which surface opened the share card, or null while it is shut. The value
+  // doubles as the analytics label, so a share can be traced back to the button
+  // that started it.
+  const [shareOpen, setShareOpen] = useState<null | "report" | "plate">(null);
+  // The card is offered once per run, the moment the season is over. The latch
+  // makes closing it final: nobody wants the same card thrown back at them
+  // every time the results page re-renders.
+  const [cardOffered, setCardOffered] = useState(false);
   const [streak, setStreak] = useState(0);
   const [lastPick, setLastPick] = useState<string | null>(null);
   const feedRef = useRef<HTMLDivElement>(null);
@@ -272,7 +276,8 @@ export function GameBoard({
       setResult(null);
       setSimIdx(0);
       setSimPhase("idle");
-      setCopied(false);
+      setShareOpen(null);
+      setCardOffered(false);
       setLastPick(null);
       setPhase("slot");
       setSlotKey((k) => k + 1);
@@ -641,6 +646,7 @@ export function GameBoard({
   // The fanfare played when the final was won. Lifting the cup is the encore.
   const cheered = useRef(false);
 
+
   // The card is offered once the screen is the reader's again, never over the
   // top of the celebration, and only if this browser has not been asked before.
   const [giftAsked, setGiftAsked] = useState(false);
@@ -657,6 +663,8 @@ export function GameBoard({
     // them the next cup won is lifted in silence, and a second unbeaten season
     // is asked for an address while the celebration is still playing.
     cheered.current = false;
+    setCardOffered(false);
+    setShareOpen(null);
   }, [setGiftAsked]);
 
   // The one bar at the top carries this run: what it is, what is left, and the
@@ -674,6 +682,28 @@ export function GameBoard({
   // Fourteen league games won and the cup on top of them. It has happened once,
   // so it gets its own screen rather than more of the same confetti.
   const invincible = wonIt && !!result?.perfect14;
+
+  /* The season ends and the card comes up by itself.
+
+     A beat first, so the last screen of the run is the one that lands and not
+     a dialog on top of it, and so the confetti has somewhere to fall. A run
+     that missed the playoffs is over at `leagueDone`; everyone else plays on
+     to `done`.
+
+     The unbeaten season is the exception and stands aside: it has a five-second
+     celebration of its own and may owe the reader a card in the post, and three
+     things cannot have the screen at once. That run keeps the button. */
+  useEffect(() => {
+    if (cardOffered || !result) return;
+    const missedOut = simPhase === "leagueDone" && !result.madePlayoffs;
+    if (simPhase !== "done" && !missedOut) return;
+    if (wonIt && result.perfect14) return;
+    const id = setTimeout(() => {
+      setCardOffered(true);
+      setShareOpen(missedOut ? "report" : "plate");
+    }, 1100);
+    return () => clearTimeout(id);
+  }, [cardOffered, simPhase, result, wonIt]);
 
   // The crowd is a real recording, so it has to be on the device before the
   // moment it belongs to. The playoffs are the last point where there is time
@@ -1390,14 +1420,9 @@ export function GameBoard({
                         leagueOnly
                       />
                       <ShareBlock
-                        shareText={shareText}
                         seed={draft.seed}
-                        spins={draft.spins.map((s) => s.teamId)}
+                        onShare={() => setShareOpen("report")}
                         onPlayAgain={() => startDraft(mode, draft.config, { origin: "again" })}
-                        copied={copied}
-                        setCopied={setCopied}
-                        challengeCopied={challengeCopied}
-                        setChallengeCopied={setChallengeCopied}
                       />
                     </>
                   )}
@@ -1521,16 +1546,7 @@ export function GameBoard({
                   </div>
 
                   <div className="flex flex-col gap-2.5 xl:w-[268px] xl:shrink-0">
-                    <ShareButtons
-                      shareText={shareText}
-                      seed={draft.seed}
-                      spins={draft.spins.map((s) => s.teamId)}
-                      copied={copied}
-                      setCopied={setCopied}
-                      challengeCopied={challengeCopied}
-                      setChallengeCopied={setChallengeCopied}
-                      onPlate
-                    />
+                    <ShareOpenButton seed={draft.seed} onShare={() => setShareOpen("plate")} />
                   </div>
                 </div>
 
@@ -1583,6 +1599,21 @@ export function GameBoard({
                 </div>
               </div>
             </div>
+          )}
+
+          {shareOpen && (
+            <ShareCard
+              result={result}
+              seed={draft.seed}
+              spins={draft.spins.map((sp) => sp.teamId)}
+              headline={headline(result, t)}
+              modeLabel={modeLabel}
+              difficultyLabel={t(`difficulty.${draft.difficulty}`)}
+              rankLabel={ordinal(result.rank, t)}
+              shareText={shareText}
+              surface={shareOpen}
+              onClose={() => setShareOpen(null)}
+            />
           )}
         </>
       )}
@@ -1874,66 +1905,16 @@ function PlayoffSummary({
   );
 }
 
-function ShareButtons({
-  shareText,
-  seed,
-  spins,
-  copied,
-  setCopied,
-  challengeCopied,
-  setChallengeCopied,
-  onPlate,
-}: {
-  shareText: (via: ShareVia) => string;
-  seed: string;
-  spins: string[];
-  copied: boolean;
-  setCopied: (v: boolean) => void;
-  challengeCopied: boolean;
-  setChallengeCopied: (v: boolean) => void;
-  onPlate?: boolean;
-}) {
+/* The way out of a finished run. It used to be three buttons stacked in a
+   column, which is a form; the season deserves to be handed over as a card. */
+function ShareOpenButton({ seed, onShare }: { seed: string; onShare: () => void }) {
   const t = useT();
-  // The same three buttons sit under the season report and on the plate beside
-  // the final score. Which one gets used is worth knowing.
-  const surface = onPlate ? "plate" : "report";
   return (
     <>
-      <a
-        href={`https://wa.me/?text=${encodeURIComponent(shareText("wa"))}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={() => analytics.seasonShared("whatsapp", surface)}
-        className="flex items-center justify-center gap-2.5 h-14 px-6 rounded-full bg-turf text-white font-semibold text-[17px] whitespace-nowrap hover:bg-[#15702f] active:bg-[#125f28] transition-colors"
-      >
-        <WhatsAppIcon />
-        {t("share.whatsapp")}
-      </a>
-      <OutlineButton
-        onPlate={onPlate}
-        onClick={async () => {
-          if (await copyText(shareText("copy"))) {
-            analytics.seasonShared("copy", surface);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-          }
-        }}
-      >
-        {copied ? t("share.copied") : t("share.copy")}
-      </OutlineButton>
-      <OutlineButton
-        onPlate={onPlate}
-        onClick={async () => {
-          const url = withVia(`${window.location.origin}/?challenge=${spins.join(",")}`, "copy");
-          if (await copyText(t("share.beatMyBoard", { url }))) {
-            analytics.seasonShared("challenge", surface);
-            setChallengeCopied(true);
-            setTimeout(() => setChallengeCopied(false), 2000);
-          }
-        }}
-      >
-        {challengeCopied ? t("share.linkCopied") : t("share.challenge")}
-      </OutlineButton>
+      <PrimaryButton className="w-full" onClick={onShare}>
+        <ShareArrow />
+        {t("share.open")}
+      </PrimaryButton>
       <p className="text-[13px] leading-[18px] pt-0.5 text-muted">
         {t("share.replayNote", { seed })}
       </p>
@@ -1941,37 +1922,33 @@ function ShareButtons({
   );
 }
 
+function ShareArrow() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 16V3m0 0L7.5 7.5M12 3l4.5 4.5M4 14v5a2 2 0 002 2h12a2 2 0 002-2v-5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function ShareBlock({
-  shareText,
   seed,
-  spins,
+  onShare,
   onPlayAgain,
-  copied,
-  setCopied,
-  challengeCopied,
-  setChallengeCopied,
 }: {
-  shareText: (via: ShareVia) => string;
   seed: string;
-  spins: string[];
+  onShare: () => void;
   onPlayAgain: () => void;
-  copied: boolean;
-  setCopied: (v: boolean) => void;
-  challengeCopied: boolean;
-  setChallengeCopied: (v: boolean) => void;
 }) {
   const t = useT();
   return (
     <div className="mt-6 flex flex-col gap-2.5 max-w-[420px]">
-      <ShareButtons
-        shareText={shareText}
-        seed={seed}
-        spins={spins}
-        copied={copied}
-        setCopied={setCopied}
-        challengeCopied={challengeCopied}
-        setChallengeCopied={setChallengeCopied}
-      />
+      <ShareOpenButton seed={seed} onShare={onShare} />
       <PrimaryButton className="w-full mt-1" onClick={onPlayAgain}>
         {t("end.playAnother")}
       </PrimaryButton>

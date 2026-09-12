@@ -405,6 +405,36 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "share.replayNote": { en: "Anyone can replay this exact run at /r/{seed}", hi: "कोई भी यही रन /r/{seed} पर दोबारा देख सकता है" },
   "share.beatMyBoard": { en: "Beat my board: {url}", hi: "मेरा बोर्ड हराकर दिखाओ: {url}" },
 
+  /* the card that opens when a finished season is handed over */
+  "share.open": { en: "Share your season", hi: "अपना सीज़न शेयर करें" },
+  "share.eyebrow": { en: "Season over", hi: "सीज़न ख़त्म" },
+  "share.title": { en: "Take the card with you", hi: "यह कार्ड साथ ले जाइए" },
+  "share.sendIt": { en: "Send it", hi: "भेजिए" },
+  "share.post": { en: "Post", hi: "पोस्ट" },
+  "share.copyShort": { en: "Copy", hi: "कॉपी" },
+  "share.close": { en: "Close", hi: "बंद करें" },
+  "share.saveImage": { en: "Save the card as a picture", hi: "कार्ड को तस्वीर की तरह सेव करें" },
+  "share.drawing": { en: "Drawing…", hi: "बन रहा है…" },
+  "share.saved": { en: "Saved to your downloads.", hi: "आपके डाउनलोड में सेव हो गया।" },
+  "share.igSaved": {
+    en: "Saved. Open Instagram and add it to your story.",
+    hi: "सेव हो गया। Instagram खोलिए और स्टोरी में लगाइए।",
+  },
+  "share.imageFailed": {
+    en: "The picture would not draw. The link still works.",
+    hi: "तस्वीर नहीं बन पाई। लिंक अब भी काम करता है।",
+  },
+  "share.orangeCap": { en: "Orange cap", hi: "ऑरेंज कैप" },
+  "share.purpleCap": { en: "Purple cap", hi: "पर्पल कैप" },
+  "share.challengeNote": {
+    en: "Sends your eleven squads, not your result. Same board, their XI.",
+    hi: "आपकी ग्यारह स्क्वाड जाती हैं, नतीजा नहीं। वही बोर्ड, उनकी XI।",
+  },
+  "share.challengePasteNote": {
+    en: "Paste it wherever they will see it.",
+    hi: "जहाँ वे देखें, वहाँ चिपका दीजिए।",
+  },
+
   "report.xiNumbers": { en: "Your XI, season numbers", hi: "आपकी XI, सीज़न के आँकड़े" },
   "report.matches": { en: "{n} matches", hi: "{n} मैच" },
   "report.player": { en: "Player", hi: "खिलाड़ी" },
