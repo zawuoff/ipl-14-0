@@ -17,6 +17,15 @@ if (key) {
       // the document, so PostHog's own listener would only ever see the first.
       capture_pageview: false,
       capture_pageleave: true,
+      // The events in lib/analytics.ts are the whole question this project asks
+      // of its data. Autocapture was two thirds of everything ingested and
+      // answered none of it — a drafting game is nothing but taps, so every one
+      // of them arrived as an anonymous $autocapture.
+      autocapture: false,
+      // Rage clicks are the exception worth keeping: they are how we find out a
+      // page is fighting its readers, and they have their own switch rather
+      // than riding along with autocapture.
+      rageclick: true,
     });
     posthog.capture("$pageview");
   } catch {
