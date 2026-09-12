@@ -95,7 +95,13 @@ export const analytics = {
 
   // `surface` is the block it was sent from: the season report, or the plate
   // beside the final score.
-  seasonShared(channel: "whatsapp" | "copy" | "challenge", surface: "report" | "plate") {
+  seasonShared(
+    // Instagram and the saved picture both come out of the canvas card, and
+    // are worth telling apart: one went to a share sheet, the other to a
+    // downloads folder and possibly nowhere.
+    channel: "whatsapp" | "copy" | "challenge" | "instagram" | "x" | "image",
+    surface: "report" | "plate"
+  ) {
     track("season_shared", { channel, surface });
   },
 
