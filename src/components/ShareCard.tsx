@@ -492,7 +492,26 @@ export function ShareCard({
 
         {/* Same eleven squads, their own XI. A different thing from sending a
             result, so it gets its own line rather than a fourth icon. */}
-        <div className="mt-3 pt-3 border-t border-hairline">
+        <div className="mt-3 pt-3 border-t border-hairline flex flex-col gap-1.5">
+          {/* This was the one share in the game that only ever reached the
+              clipboard, on the assumption the sender would paste it somewhere
+              themselves. Everywhere the game offers both, WhatsApp beats copy
+              about four to one — so the dare leads with WhatsApp now, and the
+              clipboard stays underneath for a desktop that has no share sheet. */}
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(
+              t("share.beatMyBoard", {
+                url: withVia(`${origin}/?challenge=${spins.join(",")}`, "wa"),
+              })
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => analytics.seasonShared("challenge", surface)}
+            className="w-full flex items-center justify-center gap-2 h-[52px] rounded-full bg-accent text-ground font-semibold text-[15px] hover:bg-accent-deep transition-colors"
+          >
+            <SwordsIcon size={17} />
+            {t("share.challenge")}
+          </a>
           <button
             type="button"
             onClick={async () => {
@@ -503,12 +522,11 @@ export function ShareCard({
                 setTimeout(() => setChallengeCopied(false), 2400);
               }
             }}
-            className="w-full flex items-center justify-center gap-2 h-[52px] rounded-full bg-accent text-ground font-semibold text-[15px] hover:bg-accent-deep transition-colors"
+            className="min-h-11 flex items-center justify-center text-[13px] leading-[18px] text-muted text-center hover:text-white transition-colors"
           >
-            <SwordsIcon size={17} />
-            {challengeCopied ? t("share.linkCopied") : t("share.challenge")}
+            {challengeCopied ? t("share.linkCopied") : t("share.copyShort")}
           </button>
-          <p className="pt-2 text-[12px] leading-[17px] text-muted text-center">
+          <p className="text-[12px] leading-[17px] text-muted text-center">
             {challengeCopied ? t("share.challengePasteNote") : t("share.challengeNote")}
           </p>
         </div>

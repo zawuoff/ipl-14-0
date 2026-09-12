@@ -781,6 +781,23 @@ export function RoomSeason({ room }: { room: any }) {
               })}
             </p>
           </div>
+          {/* The result has just landed, and this is the moment it is worth
+              passing on. The fuller block at the foot of the page — room code,
+              copy link, where the room lives — is still there for anyone who
+              scrolls, but it sat below a season report and a league table,
+              which on a phone is a long way past the feeling. The lobby invite
+              converts because it is the first thing under the code; this is the
+              same idea at the other end of the season. */}
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(share("wa"))}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => analytics.roomShared("whatsapp", "result")}
+            className="flex items-center justify-center gap-2.5 h-14 px-8 rounded-full bg-turf text-white font-semibold text-[17px] whitespace-nowrap hover:bg-[#15702f] active:bg-[#125f28] transition-colors max-w-[420px]"
+          >
+            <WhatsAppIcon />
+            {t("share.whatsapp")}
+          </a>
           <SeasonReport
             result={report}
             forecast={null}
