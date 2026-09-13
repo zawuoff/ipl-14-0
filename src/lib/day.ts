@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { istDateKey } from "@/lib/game/types";
 
 /* Which IST day the game is on.
@@ -54,4 +54,28 @@ export function useIstDay(): string {
   }, [skew]);
 
   return day;
+}
+
+/* Nothing to subscribe to: the day arrives as a re-render from `useIstDay`,
+   and a re-render is when the snapshot is read again. */
+const subscribeNothing = () => () => {};
+const serverSnapshot = () => "";
+
+/** A day from `useIstDay`, held back until the client has it — for the markup.
+
+    `useIstDay` answers immediately because a query can be sent against a day
+    that may be corrected a moment later. Rendering it is a different matter:
+    the guess is computed during render, and a page Next prerenders runs that
+    render at build time, so the day is baked into the static HTML and every
+    visitor after the build hydrates against a stale date. React threw #418 on
+    the home page for exactly that reason.
+
+    `useSyncExternalStore` is the primitive for a value the server cannot know:
+    the prerender reads the server snapshot, the client reads its own, and React
+    reconciles the two itself rather than calling the difference a failure. Pass
+    the day the caller already holds — asking for it again would mean a second
+    clock request and a second timer for the same date. The first paint simply
+    has no day in it, the same trade the gift prompt and the mute toggle make. */
+export function useIstDayLabel(day: string): string {
+  return useSyncExternalStore(subscribeNothing, () => day, serverSnapshot);
 }

@@ -5,7 +5,7 @@ import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import { GameBoard } from "@/components/GameBoard";
 import { type PlayerSeason, type TeamSeason } from "@/lib/game/types";
-import { useIstDay } from "@/lib/day";
+import { useIstDay, useIstDayLabel } from "@/lib/day";
 import { useBackendUnreachable } from "@/lib/backend";
 import { deviceId } from "@/lib/device";
 import {
@@ -301,10 +301,16 @@ function HomeScreen({
 }) {
   const t = useT();
   const { lang } = useLang();
-  const day = today.slice(8);
-  const month = new Date(`${today}T00:00:00Z`)
-    .toLocaleString(lang === "hi" ? "hi-IN" : "en-GB", { month: "short", timeZone: "UTC" })
-    .toUpperCase();
+  // The date reaches the markup here, so it comes from the label hook: this
+  // page is prerendered, and rendering the render-time guess put the build
+  // date into the static HTML.
+  const shownDay = useIstDayLabel(today);
+  const day = shownDay.slice(8);
+  const month = shownDay
+    ? new Date(`${shownDay}T00:00:00Z`)
+        .toLocaleString(lang === "hi" ? "hi-IN" : "en-GB", { month: "short", timeZone: "UTC" })
+        .toUpperCase()
+    : "";
 
   return (
     <>
@@ -378,7 +384,7 @@ function HomeScreen({
         <ModeCard
           eyebrow={t("home.daily.title")}
           title={t("home.daily.blurb")}
-          note={`${month} ${day} · ${t("home.resetNote")}`}
+          note={shownDay ? `${month} ${day} · ${t("home.resetNote")}` : t("home.resetNote")}
           onClick={() => play("daily")}
         />
         <ModeCard
