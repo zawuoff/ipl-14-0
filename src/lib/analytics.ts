@@ -4,7 +4,7 @@ import posthog from "posthog-js";
 import type { Difficulty, GameMode } from "@/lib/game/types";
 import type { Lang } from "@/lib/i18n";
 import type { SeasonResult } from "@/lib/sim/engine";
-import type { ShareKind, ShareVia } from "@/lib/share";
+import type { SeenBefore, ShareKind, ShareVia } from "@/lib/share";
 
 type Props = Record<string, unknown>;
 
@@ -20,11 +20,23 @@ export const analytics = {
   // A link opened. The rest of the visit belongs to this arrival, so the marker
   // is registered for the session: the draft it leads to carries it too, and
   // the loop reads end to end — shared, opened, played.
-  shareOpened(kind: ShareKind, via: ShareVia | "unknown") {
+  // `seen` is the one that answers whether sharing grows anything: `via` alone
+  // cannot tell a friend arriving on a link from the manager opening his own
+  // room for the third time, and both of those read "unknown".
+  shareOpened(kind: ShareKind, via: ShareVia | "unknown", seen: SeenBefore) {
     try {
-      posthog.register_for_session({ share_kind: kind, share_via: via });
+      posthog.register_for_session({ share_kind: kind, share_via: via, share_seen: seen });
     } catch {}
-    track("share_opened", { kind, via });
+    track("share_opened", { kind, via, seen });
+  },
+
+  // A challenge link that arrived and could not be read. The parser wants
+  // exactly eleven ids; anything else drops the visitor on the home page, and
+  // until now it did so with nothing recorded at all — so a link clipped by
+  // whatever it was pasted into was invisible, and the feature looked merely
+  // unloved rather than possibly broken.
+  challengeLinkBroken(parts: number) {
+    track("challenge_link_broken", { parts });
   },
 
   // `origin` separates a first run from a rematch, `entry` says which door they

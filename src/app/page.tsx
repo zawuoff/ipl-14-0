@@ -40,6 +40,7 @@ import { QuietBoundary } from "@/components/QuietBoundary";
 import { ChromeProvider, useChrome } from "@/components/Chrome";
 import { useMuted } from "@/lib/sound";
 import { useT, useLang, LangToggle, type T } from "@/lib/i18n";
+import { analytics } from "@/lib/analytics";
 import { useShareOpened } from "@/lib/share";
 
 type Screen = "home" | "game" | "board";
@@ -63,13 +64,27 @@ export default function Home() {
   const [gameKey, setGameKey] = useState(0);
   const today = useIstDay();
 
-  const challengeSpins = useMemo(() => {
-    if (typeof window === "undefined") return undefined;
+  /* A challenge link carries the eleven squads in its address, and anything
+     other than eleven of them cannot be played. That used to fail in silence:
+     the visitor landed on the home page as though they had typed it in, and
+     nothing was recorded, so a link clipped by whatever it was pasted into
+     looked exactly like a link nobody ever sent. */
+  const challengeParts = useMemo(() => {
+    if (typeof window === "undefined") return null;
     const c = new URLSearchParams(window.location.search).get("challenge");
-    if (!c) return undefined;
-    const parts = c.split(",").map((s) => s.trim()).filter(Boolean);
-    return parts.length === 11 ? parts : undefined;
+    if (!c) return null;
+    return c.split(",").map((s) => s.trim()).filter(Boolean);
   }, []);
+  const challengeSpins = challengeParts?.length === 11 ? challengeParts : undefined;
+  const challengeBroken =
+    challengeParts && challengeParts.length !== 11 ? challengeParts.length : null;
+
+  // Reported from an effect rather than the memo above: a memo runs during
+  // render, which is no place to send anything.
+  useEffect(() => {
+    if (challengeBroken === null) return;
+    analytics.challengeLinkBroken(challengeBroken);
+  }, [challengeBroken]);
   const roomCode = useMemo(() => {
     if (typeof window === "undefined") return undefined;
     const c = new URLSearchParams(window.location.search).get("room");
