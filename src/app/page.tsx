@@ -42,6 +42,7 @@ import { useMuted } from "@/lib/sound";
 import { useT, useLang, LangToggle, type T } from "@/lib/i18n";
 import { analytics } from "@/lib/analytics";
 import { useShareOpened } from "@/lib/share";
+import { HOME_LINKS, SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
 
 type Screen = "home" | "game" | "board";
 // Today is every run of the IST day; challenge is only that day's shared squads.
@@ -132,9 +133,35 @@ export default function Home() {
     setScreen("board");
   };
 
+  /* The links in the page are real addresses (HOME_LINKS), so one opened in a
+     new tab, pasted, or followed by a crawler has to land on the screen a click
+     would have shown. Read once, after hydration, so the prerendered home page
+     is what the server and the first client render agree on. A challenge or
+     room link has already claimed the screen and wins. */
+  useEffect(() => {
+    if (entered === "game") return;
+    const q = new URLSearchParams(window.location.search);
+    const view = q.get("view");
+    const how = q.get("play");
+    // The address does not exist while this prerenders, so it waits for mount.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (view === "leaderboard") {
+      const tab = q.get("tab");
+      goBoard(tab === "all" || tab === "daily" ? tab : "today");
+    } else if (how === "daily") {
+      play("daily");
+    } else if (how === "multiplayer") {
+      play("classic", "friend");
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // Once, on arrival: later clicks move between screens themselves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <ChromeProvider>
     <main className="min-h-screen bg-ground text-white flex flex-col">
+      <StructuredData />
       <TopBar
         screen={show}
         go={(s) => (s === "board" ? goBoard("today") : setScreen(s))}
@@ -175,7 +202,7 @@ export default function Home() {
         />
       )}
 
-      <SiteFooter />
+      <SiteFooter go={setScreen} goBoard={goBoard} play={play} />
     </main>
     </ChromeProvider>
   );
@@ -216,14 +243,19 @@ function TopBar({
       <div className="relative mx-auto w-full max-w-[1440px] px-3 lg:px-10 h-[56px] lg:h-[72px] flex items-center">
         <div className="flex items-center gap-1 lg:gap-7 min-w-0">
           <nav className="hidden lg:flex items-center gap-7">
-            <button className={link} onClick={() => go("home")}>{t("nav.howItWorks")}</button>
-            <button
+            <PageLink className={link} href={HOME_LINKS.howItWorks} onNavigate={() => go("home")} scrollTo="how-it-works">
+              {t("nav.howItWorks")}
+            </PageLink>
+            <PageLink
               className={`${link} ${screen === "board" ? "text-accent" : ""}`}
-              onClick={() => go("board")}
+              href={HOME_LINKS.leaderboard}
+              onNavigate={() => go("board")}
             >
               {t("nav.leaderboard")}
-            </button>
-            <button className={link} onClick={() => goFriend()}>{t("nav.playAFriend")}</button>
+            </PageLink>
+            <PageLink className={link} href={HOME_LINKS.multiplayer} onNavigate={goFriend}>
+              {t("nav.playAFriend")}
+            </PageLink>
           </nav>
           <IconButton
             onClick={toggleMuted}
@@ -235,13 +267,14 @@ function TopBar({
           <LangToggle plain className="lg:hidden w-10 h-9 text-[13px]" />
         </div>
 
-        <button
-          onClick={() => !inGame && go("home")}
-          aria-label="BuildXI"
+        <PageLink
+          href="/"
+          onNavigate={() => !inGame && go("home")}
+          aria-label="BuildXI home"
           className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2"
         >
           <Logo className="text-[30px] lg:text-[40px]" />
-        </button>
+        </PageLink>
 
         <span className="flex-1" />
         <div className="shrink-0 flex items-center gap-1 lg:gap-3">
@@ -285,21 +318,186 @@ function TopBar({
   );
 }
 
-function SiteFooter() {
+/* An ordinary anchor with a real address, so crawlers, new tabs and copied
+   links all have somewhere to go. A plain click stays inside the page and
+   switches screen the way the buttons these replaced did; a modified click
+   (new tab, new window) is left to the browser. */
+function PageLink({
+  href,
+  onNavigate,
+  scrollTo,
+  className,
+  children,
+  "aria-label": ariaLabel,
+}: {
+  href: string;
+  onNavigate: () => void;
+  scrollTo?: string;
+  className?: string;
+  children: React.ReactNode;
+  "aria-label"?: string;
+}) {
+  return (
+    <a
+      href={href}
+      aria-label={ariaLabel}
+      className={className}
+      onClick={(e) => {
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        onNavigate();
+        if (scrollTo) {
+          // The section only exists once the home screen has rendered again,
+          // and the day's numbers above it arrive a beat later and push it
+          // down, so it is found again once they have had the chance.
+          const land = () => document.getElementById(scrollTo)?.scrollIntoView({ block: "start" });
+          requestAnimationFrame(land);
+          window.setTimeout(land, 400);
+        }
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
+function SiteFooter({
+  go,
+  goBoard,
+  play,
+}: {
+  go: (s: Screen) => void;
+  goBoard: (tab?: BoardTab) => void;
+  play: (m: "classic" | "daily", how?: "solo" | "friend") => void;
+}) {
   const t = useT();
+  const link = "hover:underline";
+  const dot = <span className="text-faint" aria-hidden> · </span>;
   return (
     <footer className="mt-auto border-t border-hairline">
       <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 py-8 lg:py-10 flex flex-col lg:flex-row lg:items-start gap-3 lg:gap-10">
         <p className="flex-1 max-w-[720px] text-[13px] leading-5 text-faint">
           {t("footer.legal")}
         </p>
-        <p className="text-[13px] lg:text-[14px] leading-5 font-medium text-accent">
-          {t("footer.links")}
-        </p>
+        <nav aria-label="Footer" className="text-[13px] lg:text-[14px] leading-5 font-medium text-accent">
+          <PageLink className={link} href={HOME_LINKS.leaderboard} onNavigate={() => goBoard("today")}>
+            {t("nav.leaderboard")}
+          </PageLink>
+          {dot}
+          <PageLink className={link} href={HOME_LINKS.daily} onNavigate={() => play("daily")}>
+            {t("home.daily.title")}
+          </PageLink>
+          {dot}
+          <PageLink className={link} href={HOME_LINKS.multiplayer} onNavigate={() => play("classic", "friend")}>
+            {t("home.friend.title")}
+          </PageLink>
+          {dot}
+          <PageLink className={link} href={HOME_LINKS.howItWorks} onNavigate={() => go("home")} scrollTo="how-it-works">
+            {t("nav.howItWorks")}
+          </PageLink>
+        </nav>
       </div>
     </footer>
   );
 }
+
+/* What the page is, for search engines and answer engines, in schema.org
+   terms. Every answer below is said on the page itself, in the same words. */
+function StructuredData() {
+  const graph = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${SITE_URL}/#organization`,
+        name: "BuildXI",
+        url: `${SITE_URL}/`,
+        logo: { "@type": "ImageObject", url: `${SITE_URL}/apple-icon.png`, width: 180, height: 180 },
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_URL}/#website`,
+        url: `${SITE_URL}/`,
+        name: "BuildXI",
+        alternateName: ["Build XI", "BuildXI IPL draft game"],
+        description: SITE_DESCRIPTION,
+        inLanguage: ["en-IN", "hi-IN"],
+        publisher: { "@id": `${SITE_URL}/#organization` },
+      },
+      {
+        "@type": ["VideoGame", "WebApplication"],
+        "@id": `${SITE_URL}/#game`,
+        name: "BuildXI",
+        url: `${SITE_URL}/`,
+        description: SITE_DESCRIPTION,
+        image: `${SITE_URL}/opengraph-image.png`,
+        genre: ["Sports", "Cricket", "Strategy"],
+        gamePlatform: "Web browser",
+        applicationCategory: "GameApplication",
+        operatingSystem: "Any",
+        playMode: ["SinglePlayer", "MultiPlayer"],
+        inLanguage: ["en-IN", "hi-IN"],
+        isAccessibleForFree: true,
+        offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
+        about: {
+          "@type": "SportsOrganization",
+          name: "Indian Premier League",
+          sameAs: "https://en.wikipedia.org/wiki/Indian_Premier_League",
+        },
+        publisher: { "@id": `${SITE_URL}/#organization` },
+        isPartOf: { "@id": `${SITE_URL}/#website` },
+      },
+      {
+        "@type": "FAQPage",
+        "@id": `${SITE_URL}/#faq`,
+        isPartOf: { "@id": `${SITE_URL}/#website` },
+        mainEntity: FAQ.map(([q, a]) => ({
+          "@type": "Question",
+          name: q,
+          acceptedAnswer: { "@type": "Answer", text: a },
+        })),
+      },
+    ],
+  };
+  return (
+    <script
+      type="application/ld+json"
+      // Escaped so no string in it can close the script tag early.
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(graph).replace(/</g, "\\u003c") }}
+    />
+  );
+}
+
+const FAQ: [string, string][] = [
+  [
+    "What is BuildXI?",
+    "BuildXI is a free, fan-made IPL draft game. Spin real IPL squads from 2008 to 2025, take one player from each, and play a full season. Win all fourteen and the board reads 14–0.",
+  ],
+  [
+    "How do you play BuildXI?",
+    "Spin a squad: the board lands on a real team-season, like Mumbai Indians 2019 or Deccan Chargers 2009, one of 156 from every season from 2008 to 2025. Pick one player from that exact season's squad, eleven times, with four overseas players at most. Then play the season: fourteen league games, then the playoffs, with the final played ball by ball.",
+  ],
+  [
+    "What does 14–0 mean in BuildXI?",
+    "14–0 is a perfect league season: all fourteen league games won and none lost. A perfect 14–0 tops the leaderboard on any setting.",
+  ],
+  [
+    "Is BuildXI free, and do I need to sign up?",
+    "It is free and there is no sign-up. A run takes about 3 minutes in the browser.",
+  ],
+  [
+    "What is today's challenge?",
+    "Everyone gets the same eleven squads, so you can compare your XI with the rest of the country. The board resets at midnight IST.",
+  ],
+  [
+    "Can I play BuildXI with friends?",
+    "Yes. In multiplayer, up to five friends draft their own XI, then one shared league decides it. Send the invite on WhatsApp.",
+  ],
+  [
+    "Is BuildXI affiliated with the IPL?",
+    "No. BuildXI is a fan-made game and is not affiliated with the IPL or BCCI. Ratings are derived from public season statistics.",
+  ],
+];
 
 /* ------------------------------------------------------------------ home */
 
@@ -400,12 +598,14 @@ function HomeScreen({
           eyebrow={t("home.daily.title")}
           title={t("home.daily.blurb")}
           note={shownDay ? `${month} ${day} · ${t("home.resetNote")}` : t("home.resetNote")}
+          href={HOME_LINKS.daily}
           onClick={() => play("daily")}
         />
         <ModeCard
           eyebrow={t("home.friend.title")}
           title={t("home.friend.blurb")}
           note={t("home.friend.actionLong")}
+          href={HOME_LINKS.multiplayer}
           onClick={() => play("classic", "friend")}
         />
       </section>
@@ -420,17 +620,17 @@ function HomeScreen({
           title={t("home.bestRuns")}
           note={
             <>
-              <button onClick={() => goBoard("today")} className="text-accent font-semibold hover:underline">{t("home.seeFullBoard")}</button>
+              <PageLink href={HOME_LINKS.leaderboard} onNavigate={() => goBoard("today")} className="text-accent font-semibold hover:underline">{t("home.seeFullBoard")}</PageLink>
               <span className="text-faint"> · </span>
-              <button onClick={() => goBoard("all")} className="text-accent font-semibold hover:underline">{t("board.tab.allTime")}</button>
+              <PageLink href={HOME_LINKS.allTime} onNavigate={() => goBoard("all")} className="text-accent font-semibold hover:underline">{t("board.tab.allTime")}</PageLink>
             </>
           }
         />
         <BoardRows rows={rows} empty={t("board.empty.today")} />
       </section>
 
-      {/* How a run works */}
-      <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-10 lg:pt-16 pb-4 flex flex-col gap-4 lg:gap-7">
+      {/* How a run works. The nav's "How it works" link lands here. */}
+      <section id="how-it-works" className="scroll-mt-4 mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-10 lg:pt-16 pb-4 flex flex-col gap-4 lg:gap-7">
         <SectionHead title={t("home.steps.title")} />
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-12">
           <Step n={1} title={t("home.step1.title")} body={t("home.step1.body")} />
@@ -536,9 +736,9 @@ function TodayNumbers({ stats, goBoard }: { stats: TodayStats | undefined; goBoa
       <SectionHead
         title={t("home.todayNumbers")}
         note={
-          <button onClick={() => goBoard("today")} className="text-accent font-semibold hover:underline">
+          <PageLink href={HOME_LINKS.leaderboard} onNavigate={() => goBoard("today")} className="text-accent font-semibold hover:underline">
             {t("nav.leaderboard")}
-          </button>
+          </PageLink>
         }
       />
 
@@ -700,16 +900,19 @@ function ModeCard({
   eyebrow,
   title,
   note,
+  href,
   onClick,
 }: {
   eyebrow: string;
   title: string;
   note: string;
+  href: string;
   onClick: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
+    <PageLink
+      href={href}
+      onNavigate={onClick}
       className="flex-1 flex items-center gap-4 text-left p-4 lg:p-5 bg-surface rounded-card hover:bg-[#15296d] transition-colors"
     >
       <span className="flex flex-col gap-1 flex-1 min-w-0">
@@ -722,7 +925,7 @@ function ModeCard({
       <span className="flex items-center justify-center w-9 h-9 shrink-0 rounded-full bg-white/10 text-white">
         <Chevron />
       </span>
-    </button>
+    </PageLink>
   );
 }
 
