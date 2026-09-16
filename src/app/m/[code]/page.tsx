@@ -19,6 +19,7 @@ import {
   Chevron,
 } from "@/components/ui";
 import { useMuted } from "@/lib/sound";
+import { SiteFooter } from "@/components/SiteChrome";
 import { analytics } from "@/lib/analytics";
 import { useT, LangToggle } from "@/lib/i18n";
 import { useShareOpened, withVia, challengeInviteText, type ShareVia } from "@/lib/share";
@@ -113,6 +114,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
           />
         )}
       </div>
+      <SiteFooter />
     </main>
   );
 }

@@ -32,6 +32,15 @@ const nextConfig: NextConfig = {
         destination: "https://buildxi.in/:path",
         permanent: true,
       },
+      /* The board had a query-string address before it had a page. Links to
+         it went out, so they are sent on rather than left to open the home
+         page. The rest of the query string travels with them, ?tab included. */
+      {
+        source: "/",
+        has: [{ type: "query", key: "view", value: "leaderboard" }],
+        destination: "/leaderboard",
+        permanent: true,
+      },
     ];
   },
   // PostHog's ingest endpoints are trailing-slash sensitive.

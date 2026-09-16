@@ -1,21 +1,25 @@
 # BuildXI
 
-> BuildXI is a free, fan-made IPL draft game at https://buildxi.in. You spin real IPL team-seasons from 2008 to 2025, pick one player from each to build an all-time XI, and play a full simulated season. The target is a perfect 14–0 league record. It runs in the browser, takes about three minutes, and needs no sign-up.
+> BuildXI is a free, fan-made IPL draft game at https://buildxi.in. You spin real IPL team-seasons from 2008 to 2025, pick one player from each to build an all-time XI, and play a full simulated season. The target is a perfect 14–0 league record. It runs in the browser, takes about three minutes, and needs no sign-up. It is not affiliated with the IPL or BCCI.
 
-## How a run works
+## Pages
 
-- Spin a squad: the board lands on a real team-season, such as Mumbai Indians 2019 or Deccan Chargers 2009. There are 156 of them, every IPL season from 2008 to 2025.
-- Pick one player from that exact season's squad. Eleven spins, at most four overseas players. Three settings: Rookie (weaker opposition, 3 re-spins), Pro (1 re-spin) and Legend (no re-spins, ratings hidden).
-- Play the season: fourteen league games, then the playoffs, with the final played ball by ball. The top four go through. Every result reproduces from its seed.
+- [How BuildXI works](https://buildxi.in/how-it-works): the full rules. 156 team-seasons, XI shapes, the four-overseas limit, re-spins by setting, the 14-game season and the playoffs, today's challenge, and an FAQ.
+- [How ratings work](https://buildxi.in/how-ratings-work): one hand-set rating from 62 to 99 per player-season, how it splits into batting and bowling, what playing out of position costs, and how ratings decide a match.
+- [Leaderboard](https://buildxi.in/leaderboard): today's best seasons, today's challenge and all time, and how the board is ranked.
+- [Multiplayer](https://buildxi.in/multiplayer): rooms for 2 to 5 managers, invites on WhatsApp, one shared 10-team league with IPL-format playoffs.
 
-## Ways to play
+## Key facts
 
-- Classic: draft an XI and play a season. https://buildxi.in/
-- Today's challenge: everyone gets the same eleven squads that day, and the board resets at midnight IST. https://buildxi.in/?play=daily
-- Multiplayer: up to five friends draft their own XIs, then one shared league decides it. Invites go out on WhatsApp. https://buildxi.in/?play=multiplayer
-- Leaderboard: the day's best seasons, the daily challenge and all time. A perfect 14–0 tops the board. https://buildxi.in/?view=leaderboard
-
-## Notes
-
+- 156 real IPL team-seasons from 2008 to 2025, each a squad of twelve: 1,872 player-seasons across 436 players.
+- Eleven spins, one pick from each squad, at most four overseas players.
+- Settings: Rookie (3 re-spins, weaker opposition), Pro (1 re-spin), Legend (no re-spins, ratings hidden until you pick, stronger opposition).
+- A season is 14 league games simulated ball by ball; the top four reach the playoffs.
+- Today's challenge gives everyone the same eleven opening squads and resets at midnight IST.
 - Available in English and Hindi.
-- BuildXI is not affiliated with the IPL or BCCI. Player ratings are derived from public season statistics.
+
+## Play
+
+- [Play a season](https://buildxi.in/)
+- [Today's challenge](https://buildxi.in/?play=daily)
+- [Create a multiplayer room](https://buildxi.in/?play=multiplayer)
