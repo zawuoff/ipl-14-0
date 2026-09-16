@@ -206,5 +206,15 @@ export default defineSchema({
       })
     ),
     createdAt: v.number(),
+    // A dare sent from a finished solo season. The lobby invite uses this
+    // record so the WhatsApp line still has the score after they leave the
+    // result screen. Ordinary rooms never have one.
+    boast: v.optional(
+      v.object({
+        wins: v.number(),
+        losses: v.number(),
+        champion: v.optional(v.boolean()),
+      })
+    ),
   }).index("by_code", ["code"]),
 });

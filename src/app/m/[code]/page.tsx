@@ -21,7 +21,7 @@ import {
 import { useMuted } from "@/lib/sound";
 import { analytics } from "@/lib/analytics";
 import { useT, LangToggle } from "@/lib/i18n";
-import { useShareOpened, withVia, type ShareVia } from "@/lib/share";
+import { useShareOpened, withVia, challengeInviteText, type ShareVia } from "@/lib/share";
 import {
   hasLockedXI,
   isHost,
@@ -165,8 +165,16 @@ function RoomLobby({
   };
 
   // The address stays readable in the message; only the link inside carries
-  // the marker, and only for the channel it actually went out on.
-  const inviteVia = (via: ShareVia) => t("mroom.inviteText", { code, url: withVia(roomUrl, via) });
+  // the marker, and only for the channel it actually went out on. A room
+  // opened from a finished season already has a record, so the invite is
+  // the same dare that left the result screen.
+  const dare = !!room.boast;
+  const shareStage = dare ? "challenge" : "lobby";
+  const inviteVia = (via: ShareVia) => {
+    const url = withVia(roomUrl, via);
+    if (room.boast) return challengeInviteText(t, room.boast, url);
+    return t("mroom.inviteText", { code, url });
+  };
 
   // The last seat filling is the lobby's own conversion. Only the host reports
   // it, or a five-manager room would count it five times.
@@ -256,7 +264,7 @@ function RoomLobby({
               href={`https://wa.me/?text=${encodeURIComponent(inviteVia("wa"))}`}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => analytics.roomShared("whatsapp", "lobby")}
+              onClick={() => analytics.roomShared("whatsapp", shareStage)}
               className="flex items-center justify-center gap-2.5 h-14 rounded-full bg-turf text-white font-semibold text-[17px] hover:bg-[#15702f] active:bg-[#125f28] transition-colors"
             >
               <WhatsAppIcon />
@@ -264,8 +272,9 @@ function RoomLobby({
             </a>
             <button
               onClick={async () => {
-                if (await copyText(withVia(roomUrl, "copy"))) {
-                  analytics.roomShared("copy", "lobby");
+                const copiedText = dare ? inviteVia("copy") : withVia(roomUrl, "copy");
+                if (await copyText(copiedText)) {
+                  analytics.roomShared("copy", shareStage);
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }

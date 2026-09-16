@@ -117,12 +117,14 @@ export const analytics = {
     track("season_shared", { channel, surface });
   },
 
-  roomShared(channel: "whatsapp" | "copy", stage: "lobby" | "result") {
+  roomShared(channel: "whatsapp" | "copy", stage: "lobby" | "result" | "challenge") {
     track("room_shared", { channel, stage });
   },
 
-  roomCreated(seats: number) {
-    track("room_created", { seats });
+  // `origin` is which door opened the room: the multiplayer setup, or the
+  // dare on a finished solo season. Without it those two funnels collapse.
+  roomCreated(seats: number, origin: "setup" | "result" = "setup") {
+    track("room_created", { seats, origin });
   },
 
   roomJoined(seats: number) {

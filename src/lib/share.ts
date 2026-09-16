@@ -18,6 +18,40 @@ export function withVia(url: string, via: ShareVia): string {
   return `${url}${url.includes("?") ? "&" : "?"}${PARAM}=${via}`;
 }
 
+/* A dare from a finished run is one room per seed. WhatsApp takes the tab,
+   and coming back must find the same room rather than open a second one. */
+const CHALLENGE_ROOM_KEY = "14-0-challenge-room:";
+
+export function readChallengeRoom(seed: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(CHALLENGE_ROOM_KEY + seed);
+    return raw && /^[A-Z0-9]{6}$/.test(raw) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeChallengeRoom(seed: string, code: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(CHALLENGE_ROOM_KEY + seed, code.toUpperCase());
+  } catch {}
+}
+
+export function challengeInviteText(
+  t: (key: string, vars?: Record<string, string | number>) => string,
+  boast: { wins: number; losses: number; champion?: boolean },
+  url: string
+): string {
+  return t("share.challengeInvite", {
+    w: boast.wins,
+    l: boast.losses,
+    won: boast.champion ? t("room.andWonIt") : "",
+    url,
+  });
+}
+
 /** How this visit arrived. "unknown" covers a bare link, a pasted address, and
     a manager reopening their own board. */
 export function readVia(): ShareVia | "unknown" {

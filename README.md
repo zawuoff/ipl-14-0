@@ -35,7 +35,7 @@ npx convex data                            # verify
 - Difficulty: Rookie (−7 opp) / Pro / Legend (+7 opp)
 - Daily challenge: same 11 spins for everyone (IST date), deterministic from date hash
 - Share: `/r/<seed>` verifiable result page + emoji-grid copy card
-- 1v1-lite: result card has “send this exact wheel” → friend opens `/?challenge=<11 teamIds>`
+- Challenge a friend: finished season opens a 1v1 room with that XI locked; WhatsApp gets a one-line invite with the record and `/m/<code>`
 
 ## Ratings
 

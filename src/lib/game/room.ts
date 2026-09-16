@@ -20,6 +20,9 @@ export interface Room {
   difficulty: string;
   maxPlayers?: number;
   members?: RoomMember[];
+  // Present when the room was opened from a finished solo season, so the
+  // lobby invite can still name the record that started the dare.
+  boast?: { wins: number; losses: number; champion?: boolean };
 }
 
 /** Seats in this room. Rooms opened before rooms could hold a crowd are 1v1s. */

@@ -401,9 +401,15 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "share.copy": { en: "Copy result card", hi: "नतीजा कॉपी करें" },
   "share.copied": { en: "Copied", hi: "कॉपी हो गया" },
   "share.challenge": { en: "Challenge a friend", hi: "दोस्त को चुनौती दें" },
+  "share.challengeAgain": { en: "Send again", hi: "फिर भेजें" },
+  "share.challengeLocked": { en: "Your XI is locked in room {code}", hi: "आपकी XI रूम {code} में लॉक है" },
+  "share.challengeFailed": { en: "The room would not open. Try again?", hi: "रूम नहीं खुला। दोबारा कोशिश करें?" },
+  "share.challengeInvite": {
+    en: "I went {w}-{l}{won} at BuildXI. Beat my XI: {url}",
+    hi: "मैंने BuildXI में {w}-{l} किया{won}। मेरी XI हराकर दिखाओ: {url}",
+  },
   "share.linkCopied": { en: "Link copied", hi: "लिंक कॉपी हो गया" },
   "share.replayNote": { en: "Anyone can replay this exact run at /r/{seed}", hi: "कोई भी यही रन /r/{seed} पर दोबारा देख सकता है" },
-  "share.beatMyBoard": { en: "Beat my board: {url}", hi: "मेरा बोर्ड हराकर दिखाओ: {url}" },
 
   /* the card that opens when a finished season is handed over */
   "share.open": { en: "Share your season", hi: "अपना सीज़न शेयर करें" },
@@ -427,12 +433,8 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "share.orangeCap": { en: "Orange cap", hi: "ऑरेंज कैप" },
   "share.purpleCap": { en: "Purple cap", hi: "पर्पल कैप" },
   "share.challengeNote": {
-    en: "Sends your eleven squads, not your result. Same board, their XI.",
-    hi: "आपकी ग्यारह स्क्वाड जाती हैं, नतीजा नहीं। वही बोर्ड, उनकी XI।",
-  },
-  "share.challengePasteNote": {
-    en: "Paste it wherever they will see it.",
-    hi: "जहाँ वे देखें, वहाँ चिपका दीजिए।",
+    en: "Locks this XI in a room. They draft theirs, one league decides it.",
+    hi: "यह XI रूम में लॉक हो जाती है। वे अपनी चुनते हैं, एक लीग फ़ैसला करती है।",
   },
 
   "report.xiNumbers": { en: "Your XI, season numbers", hi: "आपकी XI, सीज़न के आँकड़े" },

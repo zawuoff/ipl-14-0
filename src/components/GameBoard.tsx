@@ -43,9 +43,11 @@ import {
   StatCell,
   StatStrip,
   PrimaryButton,
+  OutlineButton,
   PlateButton,
   SectionHead,
   Crown,
+  WhatsAppIcon,
 } from "./ui";
 import { PlayoffMatch } from "./PlayoffMatch";
 import { SeasonReport } from "./SeasonReport";
@@ -59,7 +61,13 @@ import {
   roomSeats,
 } from "@/lib/game/room";
 import { useT, localiseMargin, ordinal } from "@/lib/i18n";
-import { withVia, type ShareVia } from "@/lib/share";
+import {
+  challengeInviteText,
+  readChallengeRoom,
+  withVia,
+  writeChallengeRoom,
+  type ShareVia,
+} from "@/lib/share";
 import { SITE_URL } from "@/lib/site";
 
 const ALL_TEAMS: TeamSeason[] = buildTeamSeasons();
@@ -182,10 +190,6 @@ export function GameBoard({
   // doubles as the analytics label, so a share can be traced back to the button
   // that started it.
   const [shareOpen, setShareOpen] = useState<null | "report" | "plate">(null);
-  // The card is offered once per run, the moment the season is over. The latch
-  // makes closing it final: nobody wants the same card thrown back at them
-  // every time the results page re-renders.
-  const [cardOffered, setCardOffered] = useState(false);
   const [streak, setStreak] = useState(0);
   const [lastPick, setLastPick] = useState<string | null>(null);
   const feedRef = useRef<HTMLDivElement>(null);
@@ -277,7 +281,6 @@ export function GameBoard({
       setSimIdx(0);
       setSimPhase("idle");
       setShareOpen(null);
-      setCardOffered(false);
       setLastPick(null);
       setPhase("slot");
       setSlotKey((k) => k + 1);
@@ -659,11 +662,9 @@ export function GameBoard({
     setSimIdx(0);
     setPoIdx(0);
     setGiftAsked(false);
-    // Both of these latch for the run that has just finished. Without clearing
-    // them the next cup won is lifted in silence, and a second unbeaten season
-    // is asked for an address while the celebration is still playing.
+    // The roar latch belongs to the run that has just finished. Without
+    // clearing it the next cup won is lifted in silence.
     cheered.current = false;
-    setCardOffered(false);
     setShareOpen(null);
   }, [setGiftAsked]);
 
@@ -683,27 +684,10 @@ export function GameBoard({
   // so it gets its own screen rather than more of the same confetti.
   const invincible = wonIt && !!result?.perfect14;
 
-  /* The season ends and the card comes up by itself.
-
-     A beat first, so the last screen of the run is the one that lands and not
-     a dialog on top of it, and so the confetti has somewhere to fall. A run
-     that missed the playoffs is over at `leagueDone`; everyone else plays on
-     to `done`.
-
-     The unbeaten season is the exception and stands aside: it has a five-second
-     celebration of its own and may owe the reader a card in the post, and three
-     things cannot have the screen at once. That run keeps the button. */
-  useEffect(() => {
-    if (cardOffered || !result) return;
-    const missedOut = simPhase === "leagueDone" && !result.madePlayoffs;
-    if (simPhase !== "done" && !missedOut) return;
-    if (wonIt && result.perfect14) return;
-    const id = setTimeout(() => {
-      setCardOffered(true);
-      setShareOpen(missedOut ? "report" : "plate");
-    }, 1100);
-    return () => clearTimeout(id);
-  }, [cardOffered, simPhase, result, wonIt]);
+  /* The season used to hand over a picture of itself the moment it ended.
+     The dare is the thing worth sending now, so the result screen keeps the
+     screen and the primary button opens a room. The card is still there if
+     they want the picture; it no longer arrives on its own. */
 
   // The crowd is a real recording, so it has to be on the device before the
   // moment it belongs to. The playoffs are the last point where there is time
@@ -987,7 +971,7 @@ export function GameBoard({
                           maxPlayers: seatCount,
                         })) as unknown as { code: string } | null;
                         if (r?.code) {
-                          analytics.roomCreated(seatCount);
+                          analytics.roomCreated(seatCount, "setup");
                           window.location.href = `/m/${r.code}`;
                         }
                       } catch {}
@@ -1420,7 +1404,10 @@ export function GameBoard({
                         leagueOnly
                       />
                       <ShareBlock
-                        seed={draft.seed}
+                        draft={draft}
+                        result={result}
+                        pickedXI={pickedXI as PlayerSeason[]}
+                        surface="report"
                         onShare={() => setShareOpen("report")}
                         onPlayAgain={() => startDraft(mode, draft.config, { origin: "again" })}
                       />
@@ -1546,7 +1533,13 @@ export function GameBoard({
                   </div>
 
                   <div className="flex flex-col gap-2.5 xl:w-[268px] xl:shrink-0">
-                    <ShareOpenButton seed={draft.seed} onShare={() => setShareOpen("plate")} />
+                    <ChallengeFriend
+                      draft={draft}
+                      result={result}
+                      pickedXI={pickedXI as PlayerSeason[]}
+                      surface="plate"
+                      onShare={() => setShareOpen("plate")}
+                    />
                   </div>
                 </div>
 
@@ -1605,7 +1598,6 @@ export function GameBoard({
             <ShareCard
               result={result}
               seed={draft.seed}
-              spins={draft.spins.map((sp) => sp.teamId)}
               headline={headline(result, t)}
               modeLabel={modeLabel}
               difficultyLabel={t(`difficulty.${draft.difficulty}`)}
@@ -1905,50 +1897,141 @@ function PlayoffSummary({
   );
 }
 
-/* The way out of a finished run. It used to be three buttons stacked in a
-   column, which is a form; the season deserves to be handed over as a card. */
-function ShareOpenButton({ seed, onShare }: { seed: string; onShare: () => void }) {
+/* The dare at the end of a solo season: lock this XI in a 1v1 room and
+   send the record on WhatsApp. One room per seed, so coming back from
+   WhatsApp does not open a second one. */
+function ChallengeFriend({
+  draft,
+  result,
+  pickedXI,
+  surface,
+  onShare,
+}: {
+  draft: DraftState;
+  result: SeasonResult;
+  pickedXI: PlayerSeason[];
+  surface: "report" | "plate";
+  onShare: () => void;
+}) {
   const t = useT();
+  const createRoom = useMutation((api as any).rooms?.create);
+  const [code, setCode] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const saved = readChallengeRoom(draft.seed);
+    if (saved) setCode(saved);
+  }, [draft.seed]);
+
+  const waHref = (roomCode: string) => {
+    const origin = typeof window !== "undefined" ? window.location.origin : SITE_URL;
+    const url = withVia(`${origin}/m/${roomCode}`, "wa");
+    return `https://wa.me/?text=${encodeURIComponent(
+      challengeInviteText(t, result, url)
+    )}`;
+  };
+
+  const send = async () => {
+    if (busy || code || pickedXI.length !== 11) return;
+    setBusy(true);
+    setFailed(false);
+    try {
+      const r = (await createRoom({
+        name: playerName() || "Manager",
+        difficulty: draft.difficulty,
+        deviceId: deviceId(),
+        maxPlayers: MIN_ROOM_PLAYERS,
+        config: draft.config,
+        picks: pickedXI.map(encodePick),
+        seed: draft.seed,
+        boast: {
+          wins: result.wins,
+          losses: result.losses,
+          champion: result.champion,
+        },
+      })) as unknown as { code: string } | null;
+      if (r?.code) {
+        const roomCode = r.code.toUpperCase();
+        writeChallengeRoom(draft.seed, roomCode);
+        setCode(roomCode);
+        analytics.roomCreated(MIN_ROOM_PLAYERS, "result");
+        analytics.roomShared("whatsapp", "challenge");
+        window.location.assign(waHref(roomCode));
+        return;
+      }
+      setFailed(true);
+    } catch {
+      setFailed(true);
+    }
+    setBusy(false);
+  };
+
+  const waClass =
+    "flex items-center justify-center gap-2.5 h-14 px-8 rounded-full font-semibold text-[17px] whitespace-nowrap bg-turf text-white hover:bg-[#15702f] active:bg-[#125f28] transition-colors w-full";
+
   return (
     <>
-      <PrimaryButton className="w-full" onClick={onShare}>
-        <ShareArrow />
+      {code ? (
+        <a
+          href={waHref(code)}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => analytics.roomShared("whatsapp", "challenge")}
+          className={waClass}
+        >
+          <WhatsAppIcon />
+          {t("share.challengeAgain")}
+        </a>
+      ) : (
+        <PrimaryButton className="w-full" tone="whatsapp" disabled={busy} onClick={send}>
+          <WhatsAppIcon />
+          {busy ? "…" : t("share.challenge")}
+        </PrimaryButton>
+      )}
+      <OutlineButton className="w-full" onPlate={surface === "plate"} onClick={onShare}>
         {t("share.open")}
-      </PrimaryButton>
+      </OutlineButton>
       <p className="text-[13px] leading-[18px] pt-0.5 text-muted">
-        {t("share.replayNote", { seed })}
+        {failed
+          ? t("share.challengeFailed")
+          : code
+            ? (
+                <a href={`/m/${code}`} className="hover:text-white transition-colors">
+                  {t("share.challengeLocked", { code })}
+                </a>
+              )
+            : t("share.challengeNote")}
       </p>
     </>
   );
 }
 
-function ShareArrow() {
-  return (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 16V3m0 0L7.5 7.5M12 3l4.5 4.5M4 14v5a2 2 0 002 2h12a2 2 0 002-2v-5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function ShareBlock({
-  seed,
+  draft,
+  result,
+  pickedXI,
+  surface,
   onShare,
   onPlayAgain,
 }: {
-  seed: string;
+  draft: DraftState;
+  result: SeasonResult;
+  pickedXI: PlayerSeason[];
+  surface: "report" | "plate";
   onShare: () => void;
   onPlayAgain: () => void;
 }) {
   const t = useT();
   return (
     <div className="mt-6 flex flex-col gap-2.5 max-w-[420px]">
-      <ShareOpenButton seed={seed} onShare={onShare} />
+      <ChallengeFriend
+        draft={draft}
+        result={result}
+        pickedXI={pickedXI}
+        surface={surface}
+        onShare={onShare}
+      />
       <PrimaryButton className="w-full mt-1" onClick={onPlayAgain}>
         {t("end.playAnother")}
       </PrimaryButton>

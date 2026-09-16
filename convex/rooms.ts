@@ -32,14 +32,29 @@ function seats(n: number | undefined): number {
 
 const BLANK_CONFIG = { Opener: 2, Middle: 3, WK: 1, AR: 2, Pace: 2, Spin: 1 };
 
+const boastValidator = v.object({
+  wins: v.number(),
+  losses: v.number(),
+  champion: v.optional(v.boolean()),
+});
+
 export const create = mutation({
   args: {
     name: v.string(),
     difficulty: v.string(),
     deviceId: v.string(),
     maxPlayers: v.optional(v.number()),
+    // A finished solo season can open the room with the host XI already in,
+    // so the friend is drafting against a side that already exists.
+    config: v.optional(configValidator),
+    picks: v.optional(v.array(v.string())),
+    seed: v.optional(v.string()),
+    boast: v.optional(boastValidator),
   },
   handler: async (ctx, args) => {
+    if (args.picks && args.picks.length !== 11) {
+      throw new Error("XI needs exactly 11 picks");
+    }
     let code = makeCode();
     for (let i = 0; i < 5; i++) {
       const taken = await ctx.db
@@ -51,6 +66,7 @@ export const create = mutation({
     }
     const roomSeed = Math.floor(Math.random() * 0xffffffff);
     const maxPlayers = seats(args.maxPlayers);
+    const seeded = args.picks?.length === 11;
     const id = await ctx.db.insert("rooms", {
       code,
       roomSeed,
@@ -58,17 +74,19 @@ export const create = mutation({
       maxPlayers,
       members: [],
       createdAt: Date.now(),
+      ...(args.boast ? { boast: args.boast } : {}),
     });
-    // host auto-joins (XI submitted after their draft)
+    // host auto-joins. A challenge from a finished run arrives with the XI
+    // already locked; everyone else drafts after they sit down.
     await ctx.db.patch(id, {
       members: [
         {
           deviceId: args.deviceId,
           name: cleanName(args.name),
-          config: { ...BLANK_CONFIG },
-          picks: [],
-          seed: "",
-          submittedAt: 0,
+          config: seeded && args.config ? args.config : { ...BLANK_CONFIG },
+          picks: seeded ? args.picks! : [],
+          seed: seeded ? (args.seed ?? "") : "",
+          submittedAt: seeded ? Date.now() : 0,
         },
       ],
     });

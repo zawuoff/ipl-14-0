@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { analytics } from "@/lib/analytics";
 import { copyText } from "@/lib/clipboard";
 import { useT } from "@/lib/i18n";
-import { withVia, type ShareVia } from "@/lib/share";
+import type { ShareVia } from "@/lib/share";
 import { canShareFile, downloadBlob, renderShareImage } from "@/lib/share-image";
 import type { SeasonResult } from "@/lib/sim/engine";
 import { WhatsAppIcon } from "./ui";
@@ -30,7 +30,6 @@ type Cell = { value: string; label: string; colour: string };
 export function ShareCard({
   result,
   seed,
-  spins,
   headline,
   modeLabel,
   difficultyLabel,
@@ -41,7 +40,6 @@ export function ShareCard({
 }: {
   result: SeasonResult;
   seed: string;
-  spins: string[];
   headline: string;
   modeLabel: string;
   difficultyLabel: string;
@@ -55,7 +53,6 @@ export function ShareCard({
 
   const [tilt, setTilt] = useState({ x: 7, y: -9 });
   const [copied, setCopied] = useState(false);
-  const [challengeCopied, setChallengeCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -490,47 +487,6 @@ export function ShareCard({
           </button>
         </div>
 
-        {/* Same eleven squads, their own XI. A different thing from sending a
-            result, so it gets its own line rather than a fourth icon. */}
-        <div className="mt-3 pt-3 border-t border-hairline flex flex-col gap-1.5">
-          {/* This was the one share in the game that only ever reached the
-              clipboard, on the assumption the sender would paste it somewhere
-              themselves. Everywhere the game offers both, WhatsApp beats copy
-              about four to one — so the dare leads with WhatsApp now, and the
-              clipboard stays underneath for a desktop that has no share sheet. */}
-          <a
-            href={`https://wa.me/?text=${encodeURIComponent(
-              t("share.beatMyBoard", {
-                url: withVia(`${origin}/?challenge=${spins.join(",")}`, "wa"),
-              })
-            )}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => analytics.seasonShared("challenge", surface)}
-            className="w-full flex items-center justify-center gap-2 h-[52px] rounded-full bg-accent text-ground font-semibold text-[15px] hover:bg-accent-deep transition-colors"
-          >
-            <SwordsIcon size={17} />
-            {t("share.challenge")}
-          </a>
-          <button
-            type="button"
-            onClick={async () => {
-              const url = withVia(`${origin}/?challenge=${spins.join(",")}`, "copy");
-              if (await copyText(t("share.beatMyBoard", { url }))) {
-                analytics.seasonShared("challenge", surface);
-                setChallengeCopied(true);
-                setTimeout(() => setChallengeCopied(false), 2400);
-              }
-            }}
-            className="min-h-11 flex items-center justify-center text-[13px] leading-[18px] text-muted text-center hover:text-white transition-colors"
-          >
-            {challengeCopied ? t("share.linkCopied") : t("share.copyShort")}
-          </button>
-          <p className="text-[12px] leading-[17px] text-muted text-center">
-            {challengeCopied ? t("share.challengePasteNote") : t("share.challengeNote")}
-          </p>
-        </div>
-
         <p
           aria-live="polite"
           className={`pt-2 text-[12px] leading-[17px] text-center transition-opacity ${
@@ -583,20 +539,6 @@ function DownloadIcon({ size = 16 }: { size?: number }) {
       <path
         d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 19h16"
         stroke="#FFFFFF"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function SwordsIcon({ size = 17 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M3 3h4l11 11M3 21l7-7M21 3h-4l-4 4M21 21h-4l-2.5-2.5M3 21v-4"
-        stroke="#071238"
         strokeWidth="1.9"
         strokeLinecap="round"
         strokeLinejoin="round"
