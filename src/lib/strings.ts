@@ -9,11 +9,15 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "nav.howItWorks": { en: "How it works", hi: "कैसे खेलें" },
   "nav.leaderboard": { en: "Leaderboard", hi: "लीडरबोर्ड" },
   "nav.playAFriend": { en: "Multiplayer", hi: "मल्टीप्लेयर" },
+  "nav.howRatingsWork": { en: "How ratings work", hi: "रेटिंग कैसे बनती है" },
+  "footer.play": { en: "Play", hi: "खेलें" },
+  "footer.playClassic": { en: "Play a season", hi: "सीज़न खेलें" },
+  "footer.learn": { en: "Learn", hi: "जानें" },
   "nav.board": { en: "Board", hi: "बोर्ड" },
   "nav.backToGame": { en: "Back to the game", hi: "गेम पर वापस" },
   "footer.legal": {
-    en: "BuildXI is a fan-made game and is not affiliated with the IPL or BCCI. Player names and season ratings are used for description only, and ratings are derived from public season statistics.",
-    hi: "BuildXI एक फ़ैन-मेड गेम है और इसका IPL या BCCI से कोई संबंध नहीं है। खिलाड़ियों के नाम और सीज़न रेटिंग सिर्फ़ जानकारी के लिए हैं, और रेटिंग सार्वजनिक सीज़न आँकड़ों से निकाली गई हैं।",
+    en: "BuildXI is a fan-made game and is not affiliated with the IPL or BCCI. Player names and season ratings are used for description only, and each rating is our own judgement of that player's season.",
+    hi: "BuildXI एक फ़ैन-मेड गेम है और इसका IPL या BCCI से कोई संबंध नहीं है। खिलाड़ियों के नाम और सीज़न रेटिंग सिर्फ़ जानकारी के लिए हैं, और हर रेटिंग उस खिलाड़ी के सीज़न पर हमारा अपना आकलन है।",
   },
 
   /* ------------------------------------------------------------------ home */
@@ -50,6 +54,7 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "home.friend.action": { en: "Invite", hi: "बुलाएँ" },
   "home.friend.actionLong": { en: "Create a room", hi: "रूम बनाएँ" },
   "home.steps.title": { en: "How a run works", hi: "एक रन कैसे चलता है" },
+  "home.steps.more": { en: "The full rules", hi: "पूरे नियम" },
   "home.step1.title": { en: "Spin a squad", hi: "स्क्वाड घुमाइए" },
   "home.step1.body": {
     en: "The board lands on a real team-season, like Mumbai Indians 2019 or Deccan Chargers 2009. There are 156 of them, every season from 2008 to 2025.",
@@ -57,8 +62,8 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   },
   "home.step2.title": { en: "Pick one player", hi: "एक खिलाड़ी चुनिए" },
   "home.step2.body": {
-    en: "From that exact season's squad, and only that one. Eleven spins, two re-spins, four overseas players at most. Legend mode hides the ratings.",
-    hi: "उसी सीज़न की स्क्वाड में से, और सिर्फ़ उसी में से। ग्यारह स्पिन, दो री-स्पिन, ज़्यादा से ज़्यादा चार विदेशी खिलाड़ी। लेजेंड मोड में रेटिंग छिपी रहती है।",
+    en: "From that exact season's squad, and only that one. Eleven spins, four overseas players at most, and 3, 1 or 0 re-spins on Rookie, Pro or Legend. Legend mode hides the ratings.",
+    hi: "उसी सीज़न की स्क्वाड में से, और सिर्फ़ उसी में से। ग्यारह स्पिन, ज़्यादा से ज़्यादा चार विदेशी खिलाड़ी, और रूकी, प्रो या लेजेंड पर 3, 1 या 0 री-स्पिन। लेजेंड मोड में रेटिंग छिपी रहती है।",
   },
   "home.step3.title": { en: "Play the season", hi: "सीज़न खेलिए" },
   "home.step3.body": {

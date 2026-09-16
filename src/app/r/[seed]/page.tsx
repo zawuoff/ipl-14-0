@@ -16,6 +16,7 @@ import {
   Chevron,
 } from "@/components/ui";
 import { useMuted } from "@/lib/sound";
+import { SiteFooter } from "@/components/SiteChrome";
 import { useT, LangToggle, localiseMargin } from "@/lib/i18n";
 import { useShareOpened } from "@/lib/share";
 
@@ -233,6 +234,7 @@ export default function SharePage({ params }: { params: Promise<{ seed: string }
           </>
         )}
       </div>
+      <SiteFooter />
     </main>
   );
 }

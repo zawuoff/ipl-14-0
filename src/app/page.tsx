@@ -23,7 +23,6 @@ import {
   Eyebrow,
   Flap,
   Logo,
-  PageBand,
   PlayerBurstCard,
   PrimaryButton,
   OutlineButton,
@@ -42,11 +41,12 @@ import { useMuted } from "@/lib/sound";
 import { useT, useLang, LangToggle, type T } from "@/lib/i18n";
 import { analytics } from "@/lib/analytics";
 import { useShareOpened } from "@/lib/share";
-import { HOME_LINKS, SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
+import Link from "next/link";
+import { BoardRows, type Row } from "@/components/Leaderboard";
+import { SiteFooter, SiteNav } from "@/components/SiteChrome";
+import { PAGES, SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
 
-type Screen = "home" | "game" | "board";
-// Today is every run of the IST day; challenge is only that day's shared squads.
-type BoardTab = "today" | "daily" | "all";
+type Screen = "home" | "game";
 
 /* The player and squad tables already ship to the client for the draft, so the
    home page resolves the day's pick counts locally instead of asking the
@@ -59,7 +59,6 @@ type TodayStats = FunctionReturnType<typeof api.stats.homeToday>;
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("home");
-  const [boardTab, setBoardTab] = useState<BoardTab>("today");
   const [mode, setMode] = useState<"classic" | "daily">("classic");
   const [intent, setIntent] = useState<"solo" | "friend">("solo");
   const [gameKey, setGameKey] = useState(0);
@@ -101,26 +100,11 @@ export default function Home() {
   const [entered] = useState(initialScreen);
   const show: Screen = entered === "game" ? "game" : screen;
 
-  // The board screen's first tab is the shared daily challenge. The home page
-  // shows the whole day, so it lines up with the day's numbers beside it.
-  const dailyBoard = useQuery(
-    api.results.leaderboard,
-    show === "board" ? { dailyDate: today, limit: 100 } : "skip"
-  );
-  // The same day-scoped board both places: ten of it beside the day's numbers,
-  // all hundred once you open it.
+  // The top ten of the day, beside the day's numbers. The full board has its
+  // own page at /leaderboard.
   const todayBoard = useQuery(
     api.results.leaderboard,
-    show === "home"
-      ? { day: today, limit: 10 }
-      : show === "board"
-        ? { day: today, limit: 100 }
-        : "skip"
-  );
-  // All time goes a hundred deep; a young board simply stops where it runs out.
-  const allTimeBoard = useQuery(
-    api.results.leaderboard,
-    show === "board" ? { limit: 100 } : "skip"
+    show === "home" ? { day: today, limit: 10 } : "skip"
   );
   const play = (m: "classic" | "daily", how: "solo" | "friend" = "solo") => {
     setMode(m);
@@ -128,27 +112,18 @@ export default function Home() {
     setGameKey((k) => k + 1);
     setScreen("game");
   };
-  const goBoard = (tab: BoardTab = "today") => {
-    setBoardTab(tab);
-    setScreen("board");
-  };
 
-  /* The links in the page are real addresses (HOME_LINKS), so one opened in a
-     new tab, pasted, or followed by a crawler has to land on the screen a click
-     would have shown. Read once, after hydration, so the prerendered home page
-     is what the server and the first client render agree on. A challenge or
-     room link has already claimed the screen and wins. */
+  /* /?play=daily and /?play=multiplayer open the game straight onto that mode,
+     from a link, a new tab or the footer. Read once, after hydration, so the
+     prerendered home page is what the server and the first client render agree
+     on. A challenge or room link has already claimed the screen and wins. */
   useEffect(() => {
     if (entered === "game") return;
     const q = new URLSearchParams(window.location.search);
-    const view = q.get("view");
     const how = q.get("play");
     // The address does not exist while this prerenders, so it waits for mount.
     /* eslint-disable react-hooks/set-state-in-effect */
-    if (view === "leaderboard") {
-      const tab = q.get("tab");
-      goBoard(tab === "all" || tab === "daily" ? tab : "today");
-    } else if (how === "daily") {
+    if (how === "daily") {
       play("daily");
     } else if (how === "multiplayer") {
       play("classic", "friend");
@@ -162,19 +137,13 @@ export default function Home() {
     <ChromeProvider>
     <main className="min-h-screen bg-ground text-white flex flex-col">
       <StructuredData />
-      <TopBar
-        screen={show}
-        go={(s) => (s === "board" ? goBoard("today") : setScreen(s))}
-        goFriend={() => play("classic", "friend")}
-        inGame={entered === "game"}
-      />
+      <TopBar go={setScreen} inGame={entered === "game"} />
 
       {show === "home" && (
         <HomeScreen
           today={today}
           play={play}
           rows={todayBoard as Row[] | undefined}
-          goBoard={goBoard}
         />
       )}
 
@@ -192,17 +161,7 @@ export default function Home() {
         />
       )}
 
-      {show === "board" && (
-        <Leaderboard
-          today={today}
-          todayRows={todayBoard as Row[] | undefined}
-          daily={dailyBoard as Row[] | undefined}
-          allTime={allTimeBoard as Row[] | undefined}
-          initialTab={boardTab}
-        />
-      )}
-
-      <SiteFooter go={setScreen} goBoard={goBoard} play={play} />
+      <SiteFooter />
     </main>
     </ChromeProvider>
   );
@@ -211,21 +170,16 @@ export default function Home() {
 /* ---------------------------------------------------------------- chrome */
 
 function TopBar({
-  screen,
   go,
-  goFriend,
   inGame,
 }: {
-  screen: Screen;
   go: (s: Screen) => void;
-  goFriend: () => void;
   inGame: boolean;
 }) {
   const t = useT();
   const { run } = useChrome();
   const [muted, toggleMuted] = useMuted();
   const [confirmRestart, setConfirmRestart] = useState(false);
-  const link = "text-[15px] leading-5 font-medium text-white/80 hover:text-accent transition-colors";
 
   // A restart throws the board away, and the control is now an icon, so it asks
   // once. The question withdraws itself rather than sitting there armed.
@@ -237,26 +191,14 @@ function TopBar({
 
   /* The drawn design centres the wordmark and balances it: navigation on one
      side, one action on the other. Three chips crowded down the right-hand end
-     was never the shape of it. */
+     was never the shape of it. The four pages only fit beside the wordmark on
+     a wide screen; below that the trophy stands in for the leaderboard and the
+     footer carries the rest, so the game keeps its one bar on a phone. */
   return (
     <header className="bg-band">
       <div className="relative mx-auto w-full max-w-[1440px] px-3 lg:px-10 h-[56px] lg:h-[72px] flex items-center">
         <div className="flex items-center gap-1 lg:gap-7 min-w-0">
-          <nav className="hidden lg:flex items-center gap-7">
-            <PageLink className={link} href={HOME_LINKS.howItWorks} onNavigate={() => go("home")} scrollTo="how-it-works">
-              {t("nav.howItWorks")}
-            </PageLink>
-            <PageLink
-              className={`${link} ${screen === "board" ? "text-accent" : ""}`}
-              href={HOME_LINKS.leaderboard}
-              onNavigate={() => go("board")}
-            >
-              {t("nav.leaderboard")}
-            </PageLink>
-            <PageLink className={link} href={HOME_LINKS.multiplayer} onNavigate={goFriend}>
-              {t("nav.playAFriend")}
-            </PageLink>
-          </nav>
+          <SiteNav className="hidden xl:flex" />
           <IconButton
             onClick={toggleMuted}
             label={muted ? t("run.soundOff") : t("run.soundOn")}
@@ -267,14 +209,20 @@ function TopBar({
           <LangToggle plain className="lg:hidden w-10 h-9 text-[13px]" />
         </div>
 
-        <PageLink
+        {/* Already on the home route, so a click only has to bring the home
+            screen back; the address is still there for everything else. */}
+        <Link
           href="/"
-          onNavigate={() => !inGame && go("home")}
+          onClick={(e) => {
+            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            if (!inGame) go("home");
+          }}
           aria-label="BuildXI home"
           className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2"
         >
           <Logo className="text-[30px] lg:text-[40px]" />
-        </PageLink>
+        </Link>
 
         <span className="flex-1" />
         <div className="shrink-0 flex items-center gap-1 lg:gap-3">
@@ -304,13 +252,14 @@ function TopBar({
             </button>
           ) : (
             /* A wide screen already has the leaderboard in the nav. */
-            <IconButton
-              onClick={() => go("board")}
-              label={t("nav.leaderboard")}
-              className="w-10 lg:hidden"
+            <Link
+              href={PAGES.leaderboard}
+              aria-label={t("nav.leaderboard")}
+              title={t("nav.leaderboard")}
+              className="xl:hidden shrink-0 w-10 h-9 flex items-center justify-center rounded-full text-white hover:bg-white/10 transition-colors"
             >
               <TrophyIcon />
-            </IconButton>
+            </Link>
           )}
         </div>
       </div>
@@ -318,91 +267,9 @@ function TopBar({
   );
 }
 
-/* An ordinary anchor with a real address, so crawlers, new tabs and copied
-   links all have somewhere to go. A plain click stays inside the page and
-   switches screen the way the buttons these replaced did; a modified click
-   (new tab, new window) is left to the browser. */
-function PageLink({
-  href,
-  onNavigate,
-  scrollTo,
-  className,
-  children,
-  "aria-label": ariaLabel,
-}: {
-  href: string;
-  onNavigate: () => void;
-  scrollTo?: string;
-  className?: string;
-  children: React.ReactNode;
-  "aria-label"?: string;
-}) {
-  return (
-    <a
-      href={href}
-      aria-label={ariaLabel}
-      className={className}
-      onClick={(e) => {
-        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-        e.preventDefault();
-        onNavigate();
-        if (scrollTo) {
-          // The section only exists once the home screen has rendered again,
-          // and the day's numbers above it arrive a beat later and push it
-          // down, so it is found again once they have had the chance.
-          const land = () => document.getElementById(scrollTo)?.scrollIntoView({ block: "start" });
-          requestAnimationFrame(land);
-          window.setTimeout(land, 400);
-        }
-      }}
-    >
-      {children}
-    </a>
-  );
-}
-
-function SiteFooter({
-  go,
-  goBoard,
-  play,
-}: {
-  go: (s: Screen) => void;
-  goBoard: (tab?: BoardTab) => void;
-  play: (m: "classic" | "daily", how?: "solo" | "friend") => void;
-}) {
-  const t = useT();
-  const link = "hover:underline";
-  const dot = <span className="text-faint" aria-hidden> · </span>;
-  return (
-    <footer className="mt-auto border-t border-hairline">
-      <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 py-8 lg:py-10 flex flex-col lg:flex-row lg:items-start gap-3 lg:gap-10">
-        <p className="flex-1 max-w-[720px] text-[13px] leading-5 text-faint">
-          {t("footer.legal")}
-        </p>
-        <nav aria-label="Footer" className="text-[13px] lg:text-[14px] leading-5 font-medium text-accent">
-          <PageLink className={link} href={HOME_LINKS.leaderboard} onNavigate={() => goBoard("today")}>
-            {t("nav.leaderboard")}
-          </PageLink>
-          {dot}
-          <PageLink className={link} href={HOME_LINKS.daily} onNavigate={() => play("daily")}>
-            {t("home.daily.title")}
-          </PageLink>
-          {dot}
-          <PageLink className={link} href={HOME_LINKS.multiplayer} onNavigate={() => play("classic", "friend")}>
-            {t("home.friend.title")}
-          </PageLink>
-          {dot}
-          <PageLink className={link} href={HOME_LINKS.howItWorks} onNavigate={() => go("home")} scrollTo="how-it-works">
-            {t("nav.howItWorks")}
-          </PageLink>
-        </nav>
-      </div>
-    </footer>
-  );
-}
-
-/* What the page is, for search engines and answer engines, in schema.org
-   terms. Every answer below is said on the page itself, in the same words. */
+/* What the site is, for search engines and answer engines, in schema.org
+   terms. The questions and answers live on /how-it-works, where they are
+   written out on the page. */
 function StructuredData() {
   const graph = {
     "@context": "https://schema.org",
@@ -447,16 +314,6 @@ function StructuredData() {
         publisher: { "@id": `${SITE_URL}/#organization` },
         isPartOf: { "@id": `${SITE_URL}/#website` },
       },
-      {
-        "@type": "FAQPage",
-        "@id": `${SITE_URL}/#faq`,
-        isPartOf: { "@id": `${SITE_URL}/#website` },
-        mainEntity: FAQ.map(([q, a]) => ({
-          "@type": "Question",
-          name: q,
-          acceptedAnswer: { "@type": "Answer", text: a },
-        })),
-      },
     ],
   };
   return (
@@ -468,49 +325,16 @@ function StructuredData() {
   );
 }
 
-const FAQ: [string, string][] = [
-  [
-    "What is BuildXI?",
-    "BuildXI is a free, fan-made IPL draft game. Spin real IPL squads from 2008 to 2025, take one player from each, and play a full season. Win all fourteen and the board reads 14–0.",
-  ],
-  [
-    "How do you play BuildXI?",
-    "Spin a squad: the board lands on a real team-season, like Mumbai Indians 2019 or Deccan Chargers 2009, one of 156 from every season from 2008 to 2025. Pick one player from that exact season's squad, eleven times, with four overseas players at most. Then play the season: fourteen league games, then the playoffs, with the final played ball by ball.",
-  ],
-  [
-    "What does 14–0 mean in BuildXI?",
-    "14–0 is a perfect league season: all fourteen league games won and none lost. A perfect 14–0 tops the leaderboard on any setting.",
-  ],
-  [
-    "Is BuildXI free, and do I need to sign up?",
-    "It is free and there is no sign-up. A run takes about 3 minutes in the browser.",
-  ],
-  [
-    "What is today's challenge?",
-    "Everyone gets the same eleven squads, so you can compare your XI with the rest of the country. The board resets at midnight IST.",
-  ],
-  [
-    "Can I play BuildXI with friends?",
-    "Yes. In multiplayer, up to five friends draft their own XI, then one shared league decides it. Send the invite on WhatsApp.",
-  ],
-  [
-    "Is BuildXI affiliated with the IPL?",
-    "No. BuildXI is a fan-made game and is not affiliated with the IPL or BCCI. Ratings are derived from public season statistics.",
-  ],
-];
-
 /* ------------------------------------------------------------------ home */
 
 function HomeScreen({
   today,
   play,
   rows,
-  goBoard,
 }: {
   today: string;
   play: (m: "classic" | "daily", how?: "solo" | "friend") => void;
   rows: Row[] | undefined;
-  goBoard: (tab?: BoardTab) => void;
 }) {
   const t = useT();
   const { lang } = useLang();
@@ -598,20 +422,18 @@ function HomeScreen({
           eyebrow={t("home.daily.title")}
           title={t("home.daily.blurb")}
           note={shownDay ? `${month} ${day} · ${t("home.resetNote")}` : t("home.resetNote")}
-          href={HOME_LINKS.daily}
           onClick={() => play("daily")}
         />
         <ModeCard
           eyebrow={t("home.friend.title")}
           title={t("home.friend.blurb")}
           note={t("home.friend.actionLong")}
-          href={HOME_LINKS.multiplayer}
           onClick={() => play("classic", "friend")}
         />
       </section>
 
       <QuietBoundary>
-        <TodaySections today={today} goBoard={goBoard} />
+        <TodaySections today={today} />
       </QuietBoundary>
 
       {/* Today's best runs, straight off the board. */}
@@ -620,18 +442,25 @@ function HomeScreen({
           title={t("home.bestRuns")}
           note={
             <>
-              <PageLink href={HOME_LINKS.leaderboard} onNavigate={() => goBoard("today")} className="text-accent font-semibold hover:underline">{t("home.seeFullBoard")}</PageLink>
+              <Link href={PAGES.leaderboard} className="text-accent font-semibold hover:underline">{t("home.seeFullBoard")}</Link>
               <span className="text-faint"> · </span>
-              <PageLink href={HOME_LINKS.allTime} onNavigate={() => goBoard("all")} className="text-accent font-semibold hover:underline">{t("board.tab.allTime")}</PageLink>
+              <Link href={`${PAGES.leaderboard}?tab=all`} className="text-accent font-semibold hover:underline">{t("board.tab.allTime")}</Link>
             </>
           }
         />
         <BoardRows rows={rows} empty={t("board.empty.today")} />
       </section>
 
-      {/* How a run works. The nav's "How it works" link lands here. */}
-      <section id="how-it-works" className="scroll-mt-4 mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-10 lg:pt-16 pb-4 flex flex-col gap-4 lg:gap-7">
-        <SectionHead title={t("home.steps.title")} />
+      {/* How a run works, in three steps. The whole of it is at /how-it-works. */}
+      <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-10 lg:pt-16 pb-4 flex flex-col gap-4 lg:gap-7">
+        <SectionHead
+          title={t("home.steps.title")}
+          note={
+            <Link href={PAGES.howItWorks} className="text-accent font-semibold hover:underline">
+              {t("home.steps.more")}
+            </Link>
+          }
+        />
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-12">
           <Step n={1} title={t("home.step1.title")} body={t("home.step1.body")} />
           <Step n={2} title={t("home.step2.title")} body={t("home.step2.body")} />
@@ -699,11 +528,11 @@ function UnclaimedGift() {
   );
 }
 
-function TodaySections({ today, goBoard }: { today: string; goBoard: (tab?: BoardTab) => void }) {
+function TodaySections({ today }: { today: string }) {
   const stats = useQuery(api.stats.homeToday, { date: today });
   return (
     <>
-      <TodayNumbers stats={stats} goBoard={goBoard} />
+      <TodayNumbers stats={stats} />
       <MostPickedToday stats={stats} />
     </>
   );
@@ -715,7 +544,7 @@ function pct(count: number, of: number): number {
 }
 
 /** The day's numbers, read straight out of what people actually played. */
-function TodayNumbers({ stats, goBoard }: { stats: TodayStats | undefined; goBoard: (tab?: BoardTab) => void }) {
+function TodayNumbers({ stats }: { stats: TodayStats | undefined }) {
   const t = useT();
   const unreachable = useBackendUnreachable();
 
@@ -736,9 +565,9 @@ function TodayNumbers({ stats, goBoard }: { stats: TodayStats | undefined; goBoa
       <SectionHead
         title={t("home.todayNumbers")}
         note={
-          <PageLink href={HOME_LINKS.leaderboard} onNavigate={() => goBoard("today")} className="text-accent font-semibold hover:underline">
+          <Link href={PAGES.leaderboard} className="text-accent font-semibold hover:underline">
             {t("nav.leaderboard")}
-          </PageLink>
+          </Link>
         }
       />
 
@@ -900,19 +729,16 @@ function ModeCard({
   eyebrow,
   title,
   note,
-  href,
   onClick,
 }: {
   eyebrow: string;
   title: string;
   note: string;
-  href: string;
   onClick: () => void;
 }) {
   return (
-    <PageLink
-      href={href}
-      onNavigate={onClick}
+    <button
+      onClick={onClick}
       className="flex-1 flex items-center gap-4 text-left p-4 lg:p-5 bg-surface rounded-card hover:bg-[#15296d] transition-colors"
     >
       <span className="flex flex-col gap-1 flex-1 min-w-0">
@@ -925,140 +751,6 @@ function ModeCard({
       <span className="flex items-center justify-center w-9 h-9 shrink-0 rounded-full bg-white/10 text-white">
         <Chevron />
       </span>
-    </PageLink>
-  );
-}
-
-/* ----------------------------------------------------------- leaderboard */
-
-type Row = {
-  seed: string;
-  wins: number;
-  losses: number;
-  nrr: number;
-  difficulty: string;
-  champion?: boolean;
-  perfect14?: boolean;
-  madePlayoffs?: boolean;
-  deviceId: string;
-  name?: string | null;
-};
-
-const TABS: { key: BoardTab; label: string; empty: string }[] = [
-  { key: "today", label: "board.tab.today", empty: "board.empty.today" },
-  { key: "daily", label: "board.tab.challenge", empty: "board.empty.challenge" },
-  { key: "all", label: "board.tab.allTime", empty: "board.empty.allTime" },
-];
-
-function Leaderboard({
-  today,
-  todayRows,
-  daily,
-  allTime,
-  initialTab,
-}: {
-  today: string;
-  todayRows: Row[] | undefined;
-  daily: Row[] | undefined;
-  allTime: Row[] | undefined;
-  initialTab: BoardTab;
-}) {
-  const t = useT();
-  const [tab, setTab] = useState<BoardTab>(initialTab);
-  const rows = tab === "today" ? todayRows : tab === "daily" ? daily : allTime;
-  return (
-    <>
-      <PageBand eyebrow={t("board.sub")} title={t("board.title")} />
-      <div className="mx-auto w-full max-w-[900px] px-5 lg:px-16 pt-5 lg:pt-8 pb-10">
-        <div className="flex gap-1 p-1 rounded-full bg-surface">
-          {TABS.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`flex-1 h-10 px-2 rounded-full font-semibold text-[14px] sm:text-[15px] transition-colors ${
-                tab === key ? "bg-accent text-ground" : "text-white hover:bg-white/8"
-              }`}
-            >
-              {t(label)}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-4">
-          <BoardRows rows={rows} empty={t(TABS.find((x) => x.key === tab)!.empty)} />
-        </div>
-        {/* The order is not just wins any more, so the board says what it is. */}
-        <p className="text-[13px] leading-5 text-muted pt-3">{t("board.ranking")}</p>
-        <p className="text-[13px] leading-5 text-muted pt-1.5">
-          {tab === "all" ? t("board.seedNote") : t("board.todayNote", { date: today })}
-        </p>
-      </div>
-    </>
-  );
-}
-
-function outcomeKey(r: Row): string {
-  if (r.champion) return "outcome.champions";
-  if (r.madePlayoffs) return "outcome.madePlayoffs";
-  return "outcome.missedPlayoffs";
-}
-
-/* Gold, silver, bronze for the podium; everyone else keeps the black plate. */
-const PODIUM = ["bg-trophy text-ground", "bg-silver text-ground", "bg-bronze text-ground"];
-
-function BoardRows({ rows, empty }: { rows: Row[] | undefined; empty: string }) {
-  const t = useT();
-  const unreachable = useBackendUnreachable();
-  if (rows === undefined)
-    return (
-      <p className="text-[15px] text-muted py-4">
-        {t(unreachable ? "backend.unreachable" : "board.loading")}
-      </p>
-    );
-  if (!rows.length) return <p className="text-[15px] text-muted py-4">{empty}</p>;
-  return (
-    <div className="flex flex-col">
-      {rows.map((r, i) => (
-        <a
-          key={r.seed}
-          href={`/r/${r.seed}`}
-          className={`flex items-center gap-3 lg:gap-4 h-[62px] border-t border-hairline hover:bg-white/5 transition-colors ${
-            i === rows.length - 1 ? "border-b" : ""
-          }`}
-        >
-          <span
-            className={`flex items-center justify-center w-9 h-9 shrink-0 rounded-plate font-display font-bold leading-none pt-1 tabular ${
-              i + 1 >= 100 ? "text-[15px]" : "text-[22px]"
-            } ${PODIUM[i] ?? "bg-plate border border-plate-line text-white"}`}
-          >
-            {i + 1}
-          </span>
-          <span className="flex flex-col flex-1 min-w-0">
-            <span className="font-medium text-[16px] leading-[22px] truncate">
-              {r.name?.trim() || t("board.manager", { id: r.deviceId.slice(0, 4).toUpperCase() })}
-            </span>
-            <span className="text-[13px] leading-[18px] text-muted truncate">
-              {t("board.rowMeta", {
-                difficulty: t(`difficulty.${r.difficulty}`),
-                outcome: t(outcomeKey(r)),
-                nrr: `${r.nrr > 0 ? "+" : ""}${r.nrr}`,
-              })}
-            </span>
-          </span>
-          {r.perfect14 && (
-            <span className="hidden sm:inline-flex items-center h-6 px-2 pt-[2px] shrink-0 rounded-chip bg-trophy font-display font-semibold text-[16px] leading-4 text-ground">
-              {t("board.perfect")}
-            </span>
-          )}
-          <span
-            className={`w-[62px] shrink-0 text-right font-display font-bold text-[30px] leading-7 pt-[3px] tabular ${
-              r.perfect14 ? "text-trophy" : ""
-            }`}
-          >
-            {r.wins}–{r.losses}
-          </span>
-        </a>
-      ))}
-    </div>
+    </button>
   );
 }
