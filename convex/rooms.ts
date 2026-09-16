@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { maskDevices } from "./privacy";
 
 const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 function makeCode(): string {
@@ -94,13 +95,18 @@ export const create = mutation({
   },
 });
 
+/* Anyone with the code can read a room, so the other managers' device ids go
+   out as stand-ins (see privacy.ts). Pass your own id to get your own seat
+   back as it is. */
 export const get = query({
-  args: { code: v.string() },
+  args: { code: v.string(), deviceId: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const room = await ctx.db
       .query("rooms")
       .withIndex("by_code", (q) => q.eq("code", args.code.toUpperCase()))
       .first();
+    if (!room) return null;
+    return { ...room, members: await maskDevices(room.members, `room:${room.code}`, args.deviceId) };
   },
 });
 

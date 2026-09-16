@@ -41,7 +41,8 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const [muted, toggleMuted] = useMuted();
   // Nobody types a room code in from nothing — this page is the end of an invite.
   useShareOpened("room");
-  const room = useQuery((api as any).rooms?.get, { code: upper });
+  // Your own id comes back as it is; everyone else's is a stand-in.
+  const room = useQuery((api as any).rooms?.get, { code: upper, deviceId: deviceId() });
   // Every XI locked: the league is on, so the lobby chrome gets out of the way.
   const started = roomReady(room);
   const joinRoom = useMutation((api as any).rooms?.join);
