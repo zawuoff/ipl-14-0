@@ -15,10 +15,6 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
     en: "BuildXI is a fan-made game and is not affiliated with the IPL or BCCI. Player names and season ratings are used for description only, and ratings are derived from public season statistics.",
     hi: "BuildXI एक फ़ैन-मेड गेम है और इसका IPL या BCCI से कोई संबंध नहीं है। खिलाड़ियों के नाम और सीज़न रेटिंग सिर्फ़ जानकारी के लिए हैं, और रेटिंग सार्वजनिक सीज़न आँकड़ों से निकाली गई हैं।",
   },
-  "footer.links": {
-    en: "Leaderboard · How ratings work · Contact",
-    hi: "लीडरबोर्ड · रेटिंग कैसे बनती है · संपर्क",
-  },
 
   /* ------------------------------------------------------------------ home */
   "home.headline.mobile": {
