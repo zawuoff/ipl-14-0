@@ -85,7 +85,10 @@ export const claim = mutation({
       .query("simResults")
       .withIndex("by_seed", (q) => q.eq("seed", args.seed))
       .first();
-    if (!run || !run.perfect14 || !run.champion) {
+    // Earned by the device that played it. The seed alone is on the public
+    // board, and was enough for anyone to put their own address on somebody
+    // else's unbeaten season.
+    if (!run || !run.perfect14 || !run.champion || run.deviceId !== args.deviceId) {
       return { ok: false, reason: "notEarned" as const };
     }
 

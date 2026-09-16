@@ -241,7 +241,8 @@ export function GameBoard({
   const [roomBusy, setRoomBusy] = useState(false);
   const roomQ = useQuery(
     (api as any).rooms?.get,
-    initialRoom ? { code: initialRoom.toUpperCase() } : "skip"
+    // Your own id comes back as it is; everyone else's is a stand-in.
+    initialRoom ? { code: initialRoom.toUpperCase(), deviceId: deviceId() } : "skip"
   );
   const inRoomGame = !!initialRoom && !!roomQ;
   const myRoomMember = roomQ?.members?.find((m: any) => m.deviceId === deviceId());

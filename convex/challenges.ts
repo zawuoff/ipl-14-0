@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { maskDevices } from "./privacy";
 
 const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 function makeCode(): string {
@@ -46,13 +47,22 @@ export const create = mutation({
   },
 });
 
+// Readable by anyone with the code, so no device id leaves it (see privacy.ts).
 export const get = query({
-  args: { code: v.string() },
+  args: { code: v.string(), deviceId: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const challenge = await ctx.db
       .query("challenges")
       .withIndex("by_code", (q) => q.eq("code", args.code.toUpperCase()))
       .first();
+    if (!challenge) return null;
+    const { creatorDevice, ...rest } = challenge;
+    const scope = `challenge:${challenge.code}`;
+    return {
+      ...rest,
+      creatorIsYou: !!args.deviceId && creatorDevice === args.deviceId,
+      entries: await maskDevices(challenge.entries, scope, args.deviceId),
+    };
   },
 });
 

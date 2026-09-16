@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { istDay } from "./stats";
+import { withoutDevice } from "./privacy";
 
 export const saveDraft = mutation({
   args: {
@@ -20,6 +21,9 @@ export const saveDraft = mutation({
       .withIndex("by_seed", (q) => q.eq("seed", args.seed))
       .first();
     const now = Date.now();
+    // A seed is public (it is in every shared link), so it is not proof of
+    // anything. Only the device that started a draft may write to it.
+    if (existing && existing.deviceId !== args.deviceId) throw new Error("Not your draft");
     if (existing) {
       // Keep the day the run started on, not the day the last pick landed.
       await ctx.db.patch(existing._id, {
@@ -36,10 +40,12 @@ export const saveDraft = mutation({
 export const getBySeed = query({
   args: { seed: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const draft = await ctx.db
       .query("drafts")
       .withIndex("by_seed", (q) => q.eq("seed", args.seed))
       .first();
+    // Looked up by a public seed, so the device id stays behind.
+    return draft ? withoutDevice(draft) : null;
   },
 });
 

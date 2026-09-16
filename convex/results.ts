@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { istDay } from "./stats";
+import { publicId, withoutDevice } from "./privacy";
 
 const gameValidator = v.object({
   opp: v.string(),
@@ -74,7 +75,9 @@ export const getBySeed = query({
       .first();
     if (!result) return null;
     const draft = result.draftId ? await ctx.db.get(result.draftId) : null;
-    return { result, draft };
+    // A shared season is opened by anyone the link reaches, so neither row
+    // carries its device id out (see privacy.ts).
+    return { result: withoutDevice(result), draft: draft ? withoutDevice(draft) : null };
   },
 });
 
@@ -158,9 +161,12 @@ export const leaderboard = query({
     }
     const filtered = args.mode ? rows.filter((r) => r.mode === args.mode) : rows;
     filtered.sort(compareRuns);
-    return filtered.slice(0, lim).map((r) => ({
+    // The anonymous "Manager XXXX" tag used to be the start of the real id,
+    // which handed out a third of it. It is a stand-in now, the same for one
+    // device on every row.
+    return Promise.all(filtered.slice(0, lim).map(async (r) => ({
       seed: r.seed,
-      deviceId: r.deviceId.slice(0, 6),
+      deviceId: (await publicId(r.deviceId, "board")).slice(2, 8),
       name: r.name,
       mode: r.mode,
       difficulty: r.difficulty,
@@ -172,6 +178,6 @@ export const leaderboard = query({
       // The row says "made the playoffs" or "missed" off this. It was never
       // sent, so every run that reached the top four read as having missed it.
       madePlayoffs: r.madePlayoffs,
-    }));
+    })));
   },
 });
