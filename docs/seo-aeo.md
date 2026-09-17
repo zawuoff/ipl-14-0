@@ -124,16 +124,22 @@ clearest case on the site where the SEO return is now modest and the AEO return
 is high, which is a good reason to keep investing in it even though the rich
 result is gone.
 
-**Where to take it next.** The current seven answer what the game is. The gap is
-the comparison and intent queries, which are exactly what people ask a model:
+**Where it went next (17 Sep 2026).** The original seven answered what the game
+is, and missed the comparison and intent queries that are exactly what people
+ask a model. The set is now thirteen, adding the draft-rules phrasings people
+search, the multiplayer question, the Dream11 comparison, the affiliation
+answer, and game length as a question of its own. A body section, *What BuildXI
+is, and is not*, carries the same two claims in prose, because every answer in
+the FAQ is also said above it on the page.
 
-- "Is BuildXI free?" is there — "Is there a free IPL fantasy game?" is not.
-- Nothing addresses how it differs from Dream11 or official IPL fantasy. That
-  comparison is the most likely question a model gets asked, and right now
-  there is no text on the site that answers it.
-- Nothing states plainly that it is unaffiliated with the IPL or BCCI. That
-  sentence is in `llms.txt` but not in the FAQ, where a crawler is likelier to
-  find it.
+The home page now carries its own three-question block — what BuildXI is, how a
+draft is played, and whether it is free — with a matching `FAQPage` node. Both
+pages were checked after build: every question and answer string in the
+structured data is present verbatim in the rendered HTML, which is the
+requirement that most often breaks silently.
+
+Still open: nothing on the site targets "is there a free IPL fantasy game",
+which is a different query from "is BuildXI free".
 
 ---
 

@@ -37,6 +37,26 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "home.cta": { en: "Play", hi: "खेलें" },
   "home.multiplayer": { en: "Multiplayer", hi: "मल्टीप्लेयर" },
   "home.ctaNote": { en: "About 3 minutes. No sign-up.", hi: "करीब 3 मिनट। कोई साइन-अप नहीं।" },
+  // The three questions a first-time visitor asks before playing. They are
+  // written out on the page and fed to the FAQ structured data from these same
+  // strings, so the markup can never describe something a reader cannot see.
+  "home.faq.title": { en: "Questions", hi: "सवाल" },
+  "home.faq.more": { en: "All the rules", hi: "पूरे नियम" },
+  "home.faq.q1": { en: "What is BuildXI?", hi: "BuildXI क्या है?" },
+  "home.faq.a1": {
+    en: "BuildXI is a free IPL draft game. You spin real IPL squads from 2008 to 2025, pick one player from each, and try to go 14–0. No sign-up.",
+    hi: "BuildXI एक मुफ़्त IPL ड्राफ़्ट गेम है। 2008 से 2025 तक की असली IPL स्क्वाड घुमाइए, हर एक से एक खिलाड़ी चुनिए, और 14–0 करने की कोशिश कीजिए। कोई साइन-अप नहीं।",
+  },
+  "home.faq.q2": { en: "How do you play an IPL draft on BuildXI?", hi: "BuildXI पर IPL ड्राफ़्ट कैसे खेलते हैं?" },
+  "home.faq.a2": {
+    en: "You get eleven spins. Each one lands on a real team-season squad, and you pick exactly one player from it. Fill your XI with at most four overseas, then play a full simulated season. About 3 minutes.",
+    hi: "ग्यारह स्पिन मिलते हैं। हर स्पिन एक असली टीम-सीज़न की स्क्वाड पर रुकती है, और उसमें से आप ठीक एक खिलाड़ी चुनते हैं। ज़्यादा से ज़्यादा चार विदेशी खिलाड़ियों के साथ अपनी XI पूरी कीजिए, फिर पूरा सीज़न खेलिए। करीब 3 मिनट।",
+  },
+  "home.faq.q3": { en: "Is BuildXI free?", hi: "क्या BuildXI मुफ़्त है?" },
+  "home.faq.a3": {
+    en: "Yes. BuildXI is free in the browser, with no account needed.",
+    hi: "हाँ। BuildXI ब्राउज़र में मुफ़्त है, किसी अकाउंट की ज़रूरत नहीं।",
+  },
   "home.bestRuns": { en: "Today's best runs", hi: "आज के सबसे अच्छे रन" },
   "home.seeFullBoard": { en: "See the full board", hi: "पूरा बोर्ड देखें" },
   "home.resetNote": { en: "The board resets at midnight IST.", hi: "बोर्ड आधी रात (IST) पर रीसेट होता है।" },
