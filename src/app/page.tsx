@@ -136,7 +136,7 @@ export default function Home() {
   return (
     <ChromeProvider>
     <main className="min-h-screen bg-ground text-white flex flex-col">
-      <StructuredData />
+      <StructuredData faq={show === "home"} />
       <TopBar go={setScreen} inGame={entered === "game"} />
 
       {show === "home" && (
@@ -267,10 +267,47 @@ function TopBar({
   );
 }
 
+/* The three questions the page answers out loud, named once. The visible block
+   and the FAQ structured data both read these keys, so the two cannot drift. */
+const HOME_FAQ = [
+  { q: "home.faq.q1", a: "home.faq.a1" },
+  { q: "home.faq.q2", a: "home.faq.a2" },
+  { q: "home.faq.q3", a: "home.faq.a3" },
+] as const;
+
+function HomeFaq() {
+  const t = useT();
+  return (
+    <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-10 lg:pt-16 pb-4 flex flex-col gap-4 lg:gap-7">
+      <SectionHead
+        title={t("home.faq.title")}
+        note={
+          <Link href={PAGES.howItWorks} className="text-accent font-semibold hover:underline">
+            {t("home.faq.more")}
+          </Link>
+        }
+      />
+      <div className="flex flex-col lg:max-w-[900px]">
+        {HOME_FAQ.map(({ q, a }, i) => (
+          <div
+            key={q}
+            className={`py-4 flex flex-col gap-1.5 ${i ? "border-t border-hairline" : ""}`}
+          >
+            <h3 className="font-semibold text-[17px] leading-6">{t(q)}</h3>
+            <p className="text-[16px] leading-[26px] text-muted">{t(a)}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /* What the site is, for search engines and answer engines, in schema.org
-   terms. The questions and answers live on /how-it-works, where they are
-   written out on the page. */
-function StructuredData() {
+   terms. The fuller set of questions lives on /how-it-works; the three here
+   are the ones the home page itself answers, and they are only declared while
+   that block is on screen. */
+function StructuredData({ faq }: { faq: boolean }) {
+  const t = useT();
   const graph = {
     "@context": "https://schema.org",
     "@graph": [
@@ -314,6 +351,21 @@ function StructuredData() {
         publisher: { "@id": `${SITE_URL}/#organization` },
         isPartOf: { "@id": `${SITE_URL}/#website` },
       },
+      ...(faq
+        ? [
+            {
+              "@type": "FAQPage",
+              "@id": `${SITE_URL}/#faq`,
+              inLanguage: "en-IN",
+              isPartOf: { "@id": `${SITE_URL}/#website` },
+              mainEntity: HOME_FAQ.map(({ q, a }) => ({
+                "@type": "Question",
+                name: t(q),
+                acceptedAnswer: { "@type": "Answer", text: t(a) },
+              })),
+            },
+          ]
+        : []),
     ],
   };
   return (
@@ -466,6 +518,8 @@ function HomeScreen({
           <Step n={3} title={t("home.step3.title")} body={t("home.step3.body")} />
         </div>
       </section>
+
+      <HomeFaq />
     </>
   );
 }

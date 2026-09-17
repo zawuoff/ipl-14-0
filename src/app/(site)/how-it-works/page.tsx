@@ -29,8 +29,16 @@ export const metadata: Metadata = pageMetadata({
    matches what the game does in code: src/lib/game and src/lib/sim. */
 const FAQ = [
   {
-    q: "How do you play BuildXI?",
-    a: "Spin a real IPL team-season, pick one player from that exact squad, and repeat eleven times until your XI is full. Then the game plays a 14-match league season and, if you finish in the top four, the playoffs.",
+    q: "How do I play the BuildXI IPL draft game?",
+    a: "Spin eleven real IPL team-seasons from 2008 to 2025. From each squad you pick one player, filling an XI shape with at most four overseas. Then the game plays a simulated season of fourteen league games, and the playoffs if you finish in the top four. The target is 14–0.",
+  },
+  {
+    q: "What are the BuildXI IPL draft rules?",
+    a: "Eleven spins, one player from each real team-season squad, and a player can only be in your XI once whichever season he comes from. At most four overseas. Every pick has to fill one of the open places in the XI shape you chose. Easy, Medium and Hard change the number of re-spins, the strength of the opposition, and whether ratings are shown.",
+  },
+  {
+    q: "How many players do I draft in BuildXI?",
+    a: "Exactly eleven — one pick from each of eleven squad spins.",
   },
   {
     q: "What does 14–0 mean?",
@@ -53,8 +61,24 @@ const FAQ = [
     a: "The opposition gets stronger at each level, you get fewer re-spins, and on Hard the squad list hides every rating until you have made your pick.",
   },
   {
+    q: "Can I play an IPL draft with friends on BuildXI?",
+    a: "Yes. Open a multiplayer room for two to five managers, send the invite on WhatsApp, and everyone drafts their own XI into one shared league.",
+  },
+  {
+    q: "How is BuildXI different from Dream11 or IPL fantasy?",
+    a: "They are built on different things. Dream11 and the official IPL fantasy game follow live matches: you pick players who are turning out that day and your score follows what they do in real time. BuildXI is a draft game about IPL history — the squads are finished seasons from 2008 to 2025, and your season is simulated the moment your XI is full. There is no live match to wait for, no entry fee and no account.",
+  },
+  {
+    q: "Is BuildXI affiliated with the IPL or BCCI?",
+    a: "No. BuildXI is fan-made and not affiliated with the IPL or the BCCI. The player-season ratings are our own judgement, not official numbers.",
+  },
+  {
     q: "Is BuildXI free?",
-    a: "Yes. It runs in the browser, needs no sign-up and a season takes about three minutes.",
+    a: "Yes. BuildXI is free in the browser and needs no sign-up or account.",
+  },
+  {
+    q: "How long does a BuildXI game take?",
+    a: "About three minutes for a solo season, from the first spin to the final league table.",
   },
 ];
 
@@ -181,6 +205,21 @@ export default function HowItWorksPage() {
             by game, so a 14–0 can be shared and looked at, not just claimed. To play the same draft
             against people you know, set up a <A href={PAGES.multiplayer}>multiplayer room</A> and
             send the link on WhatsApp.
+          </P>
+        </Section>
+
+        <Section title="What BuildXI is, and is not">
+          <P>
+            Dream11 and the official IPL fantasy game are built on live matches: you pick players
+            who are turning out that day, and your score follows what they do in real time. BuildXI
+            is a different thing — a draft game about IPL history. The squads are finished seasons,
+            your season is simulated the moment your XI is full, and there is no live match to wait
+            for, no entry fee and no account.
+          </P>
+          <P>
+            It is fan-made, and not affiliated with the IPL or the BCCI. The ratings are our own
+            judgement of each player-season rather than official numbers, and{" "}
+            <A href={PAGES.howRatingsWork}>how ratings work</A> sets out how they are arrived at.
           </P>
         </Section>
 
