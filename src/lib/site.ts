@@ -21,6 +21,7 @@ export const PAGES = {
   leaderboard: "/leaderboard",
   multiplayer: "/multiplayer",
   howRatingsWork: "/how-ratings-work",
+  allTimeXI: "/all-time-ipl-xi",
   dailyChallenge: "/?play=daily",
   startMultiplayer: "/?play=multiplayer",
 } as const;

@@ -6,6 +6,7 @@
 
 - [How BuildXI works](https://buildxi.in/how-it-works): the full rules. 156 team-seasons, XI shapes, the four-overseas limit, re-spins by setting, the 14-game season and the playoffs, today's challenge, and an FAQ.
 - [How ratings work](https://buildxi.in/how-ratings-work): one hand-set rating from 62 to 99 per player-season, how it splits into batting and bowling, what playing out of position costs, and how ratings decide a match.
+- [The all-time IPL XI](https://buildxi.in/all-time-ipl-xi): the strongest eleven available from all 156 squads under real rules, the best overseas players the four-overseas cap keeps out, and a ranked shortlist at every position.
 - [Leaderboard](https://buildxi.in/leaderboard): today's best seasons, today's challenge and all time, and how the board is ranked.
 - [Multiplayer](https://buildxi.in/multiplayer): rooms for 2 to 5 managers, invites on WhatsApp, one shared 10-team league with IPL-format playoffs.
 

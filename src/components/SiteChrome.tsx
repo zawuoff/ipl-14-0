@@ -16,6 +16,7 @@ const NAV: { href: string; label: string }[] = [
   { href: PAGES.howItWorks, label: "nav.howItWorks" },
   { href: PAGES.leaderboard, label: "nav.leaderboard" },
   { href: PAGES.multiplayer, label: "nav.playAFriend" },
+  { href: PAGES.allTimeXI, label: "nav.allTimeXI" },
   { href: PAGES.howRatingsWork, label: "nav.howRatingsWork" },
 ];
 
@@ -141,6 +142,7 @@ export function SiteFooter() {
           </FooterColumn>
           <FooterColumn title={t("footer.learn")}>
             <FooterLink href={PAGES.howItWorks}>{t("nav.howItWorks")}</FooterLink>
+            <FooterLink href={PAGES.allTimeXI}>{t("nav.allTimeXI")}</FooterLink>
             <FooterLink href={PAGES.howRatingsWork}>{t("nav.howRatingsWork")}</FooterLink>
           </FooterColumn>
         </div>

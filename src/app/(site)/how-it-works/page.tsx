@@ -231,6 +231,7 @@ export default function HowItWorksPage() {
 
         <Related
           links={[
+            { href: PAGES.allTimeXI, title: "The all-time IPL XI", blurb: "The strongest eleven in the game, and who the overseas rule keeps out." },
             { href: PAGES.howRatingsWork, title: "How ratings work", blurb: "What a player's number means and what it costs to play him out of position." },
             { href: PAGES.leaderboard, title: "Leaderboard", blurb: "Today's best seasons, today's challenge and the all-time board." },
             { href: PAGES.multiplayer, title: "Multiplayer", blurb: "Draft against up to four friends in one shared league." },

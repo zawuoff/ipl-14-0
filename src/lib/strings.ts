@@ -10,6 +10,7 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "nav.leaderboard": { en: "Leaderboard", hi: "लीडरबोर्ड" },
   "nav.playAFriend": { en: "Multiplayer", hi: "मल्टीप्लेयर" },
   "nav.howRatingsWork": { en: "How ratings work", hi: "रेटिंग कैसे बनती है" },
+  "nav.allTimeXI": { en: "All-time XI", hi: "ऑल-टाइम XI" },
   "footer.play": { en: "Play", hi: "खेलें" },
   "footer.playClassic": { en: "Play a season", hi: "सीज़न खेलें" },
   "footer.learn": { en: "Learn", hi: "जानें" },
