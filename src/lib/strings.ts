@@ -62,8 +62,8 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   },
   "home.step2.title": { en: "Pick one player", hi: "एक खिलाड़ी चुनिए" },
   "home.step2.body": {
-    en: "From that exact season's squad, and only that one. Eleven spins, four overseas players at most, and 3, 1 or 0 re-spins on Rookie, Pro or Legend. Legend mode hides the ratings.",
-    hi: "उसी सीज़न की स्क्वाड में से, और सिर्फ़ उसी में से। ग्यारह स्पिन, ज़्यादा से ज़्यादा चार विदेशी खिलाड़ी, और रूकी, प्रो या लेजेंड पर 3, 1 या 0 री-स्पिन। लेजेंड मोड में रेटिंग छिपी रहती है।",
+    en: "From that exact season's squad, and only that one. Eleven spins, four overseas players at most, and 3, 1 or 0 re-spins on Easy, Medium or Hard. Hard hides the ratings.",
+    hi: "उसी सीज़न की स्क्वाड में से, और सिर्फ़ उसी में से। ग्यारह स्पिन, ज़्यादा से ज़्यादा चार विदेशी खिलाड़ी, और आसान, मध्यम या कठिन पर 3, 1 या 0 री-स्पिन। कठिन में रेटिंग छिपी रहती है।",
   },
   "home.step3.title": { en: "Play the season", hi: "सीज़न खेलिए" },
   "home.step3.body": {
@@ -154,9 +154,12 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "word.difficulty": { en: "difficulty", hi: "कठिनाई" },
   "word.onTheTable": { en: "on the table", hi: "अंक तालिका में" },
   "word.runsScored": { en: "runs scored", hi: "बनाए रन" },
-  "difficulty.Rookie": { en: "Rookie", hi: "रूकी" },
-  "difficulty.Pro": { en: "Pro", hi: "प्रो" },
-  "difficulty.Legend": { en: "Legend", hi: "लेजेंड" },
+  /* The keys are the stored names (Rookie, Pro, Legend), which every saved
+     result carries. Only what a player reads changed, because "Rookie" did not
+     say which one was easy. */
+  "difficulty.Rookie": { en: "Easy", hi: "आसान" },
+  "difficulty.Pro": { en: "Medium", hi: "मध्यम" },
+  "difficulty.Legend": { en: "Hard", hi: "कठिन" },
   "role.Opener": { en: "Opener", hi: "ओपनर" },
   "role.Middle": { en: "Middle", hi: "मिडल ऑर्डर" },
   "role.WK": { en: "Keeper", hi: "विकेटकीपर" },
@@ -232,7 +235,7 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "draft.respin": { en: "Re-spin · {n} left", hi: "री-स्पिन · {n} बचे" },
   "draft.teamSeason": { en: "{name}, {season}", hi: "{name}, {season}" },
   "draft.takeOne": { en: "Take one player from this squad.", hi: "इस स्क्वाड से एक खिलाड़ी चुनिए।" },
-  "draft.legendNote": { en: "Legend mode. The squad's ratings are hidden until you pick.", hi: "लेजेंड मोड। जब तक आप चुन न लें, स्क्वाड की रेटिंग छिपी रहती है।" },
+  "draft.legendNote": { en: "Hard mode. The squad's ratings are hidden until you pick.", hi: "कठिन मोड। जब तक आप चुन न लें, स्क्वाड की रेटिंग छिपी रहती है।" },
   "draft.pickFrom": { en: "Pick one from the {season} squad", hi: "{season} की स्क्वाड से एक चुनिए" },
   "draft.stillOpen": { en: "Still open: {roles}", hi: "अब भी खाली: {roles}" },
   "draft.deadSpin": { en: "This squad can't help you", hi: "यह स्क्वाड आपके काम नहीं आ सकता" },

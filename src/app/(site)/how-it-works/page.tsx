@@ -46,11 +46,11 @@ const FAQ = [
   },
   {
     q: "How many re-spins do I get?",
-    a: "Three on Rookie, one on Pro and none on Legend. If a spin lands on a squad with nobody who fits your open slots, you are offered players from other seasons of the same franchise first, and a free re-spin if none of them fit either.",
+    a: "Three on Easy, one on Medium and none on Hard. If a spin lands on a squad with nobody who fits your open slots, you are offered players from other seasons of the same franchise first, and a free re-spin if none of them fit either.",
   },
   {
-    q: "What is the difference between Rookie, Pro and Legend?",
-    a: "The opposition gets stronger at each level, you get fewer re-spins, and on Legend the squad list hides every rating until you have made your pick.",
+    q: "What is the difference between Easy, Medium and Hard?",
+    a: "The opposition gets stronger at each level, you get fewer re-spins, and on Hard the squad list hides every rating until you have made your pick.",
   },
   {
     q: "Is BuildXI free?",
@@ -138,13 +138,13 @@ export default function HowItWorksPage() {
           <FactTable
             head={["Setting", "Re-spins", "Opposition", "Ratings"]}
             rows={[
-              ["Rookie", 3, "Weaker sides", "Shown"],
-              ["Pro", 1, "Standard", "Shown"],
-              ["Legend", 0, "Stronger sides", "Hidden until you pick"],
+              ["Easy", 3, "Weaker sides", "Shown"],
+              ["Medium", 1, "Standard", "Shown"],
+              ["Hard", 0, "Stronger sides", "Hidden until you pick"],
             ]}
           />
           <P>
-            On Legend the squad list shows a question mark in place of every rating and is shuffled,
+            On Hard the squad list shows a question mark in place of every rating and is shuffled,
             so you are picking on what you remember about that player&apos;s season, not on a number.
           </P>
         </Section>

@@ -48,7 +48,7 @@ export default function MultiplayerPage() {
           <List ordered>
             <li>
               <strong className="text-white font-semibold">Open a room.</strong> Choose how many
-              managers will play, from 2 to 5 including you, and the setting: Rookie, Pro or Legend.
+              managers will play, from 2 to 5 including you, and the setting: Easy, Medium or Hard.
               The room gets a six-character code.
             </li>
             <li>
@@ -105,7 +105,7 @@ export default function MultiplayerPage() {
 
         <Section title="Tips for a good room">
           <List>
-            <li>Agree the setting first. Legend hides every rating, which makes it a test of memory rather than arithmetic.</li>
+            <li>Agree the setting first. Hard hides every rating, which makes it a test of memory rather than arithmetic.</li>
             <li>Everyone spins their own squads, so nobody can take a player from you. The limit of four overseas players applies to every manager, so spend those places on the picks that matter most.</li>
             <li>
               Every pick counts. A team&apos;s batting is the average of its batters and all-rounders,

@@ -160,9 +160,9 @@ export default function HowRatingsWorkPage() {
           <FactTable
             head={["Setting", "League opponents", "Playoff opponents"]}
             rows={[
-              ["Rookie", "About 73 to 83", "About 76 to 86"],
-              ["Pro", "77 to 87", "80 to 90"],
-              ["Legend", "About 81 to 91", "About 84 to 94"],
+              ["Easy", "About 75 to 85", "About 78 to 88"],
+              ["Medium", "77 to 87", "80 to 90"],
+              ["Hard", "About 81 to 91", "About 84 to 94"],
             ]}
           />
           <P>
