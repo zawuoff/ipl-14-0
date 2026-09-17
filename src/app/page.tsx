@@ -359,8 +359,7 @@ function HomeScreen({
           <div className="flex flex-col gap-4 lg:gap-5 lg:flex-1 lg:order-1 order-2">
             <Eyebrow className="hidden lg:block">{t("app.tagline")}</Eyebrow>
             <h1 className="head-display text-[46px] leading-[42px] lg:text-[76px] lg:leading-[68px]">
-              <span className="lg:hidden">{t("home.headline.mobile")}</span>
-              <span className="hidden lg:inline">{t("home.headline.desktop")}</span>
+              {t("home.headline")}
             </h1>
             <p className="text-[15px] leading-[22px] lg:text-[18px] lg:leading-7 text-muted lg:max-w-[540px]">
               {t("home.sub")}
