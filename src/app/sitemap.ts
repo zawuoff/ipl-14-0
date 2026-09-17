@@ -22,6 +22,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     page(PAGES.home, "daily", 1, new Date()),
     page(PAGES.howItWorks, "monthly", 0.8),
     page(PAGES.leaderboard, "daily", 0.8, new Date()),
+    page(PAGES.allTimeXI, "monthly", 0.8),
     page(PAGES.multiplayer, "monthly", 0.7),
     page(PAGES.howRatingsWork, "monthly", 0.6),
   ];
