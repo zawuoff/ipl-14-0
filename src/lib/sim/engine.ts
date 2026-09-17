@@ -59,7 +59,16 @@ export function teamStrength(xi: PlayerSeason[], config: XIConfig = ROLE_QUOTA):
   return { bat, bowl, power: round1(power), avg: round1(avgRating), penalties, bonuses };
 }
 
-const DIFF_MOD: Record<Difficulty, number> = { Rookie: -7, Pro: 0, Legend: 7 };
+/* Shown to players as Easy, Medium and Hard; the keys stay Rookie, Pro and
+   Legend because every stored result and draft carries them.
+
+   Rookie was -7 until 17 Sep 2026, and real players won the trophy on 53% of
+   Rookie seasons: a trophy every other season is not a reason to come back.
+   At -3, measured with scripts/balance.ts over 4,000 seasons a row, a sharp
+   drafter wins it about 1 in 3 (was 49%), a casual one 1 in 10 (was 20%), and
+   14-0 stays possible. Pro, which plays right, is 19% and 4% on the same
+   harness. Run the script before changing any of these. */
+export const DIFF_MOD: Record<Difficulty, number> = { Rookie: -3, Pro: 0, Legend: 7 };
 
 // Opponent pool strength by difficulty (Pro league ~ 77-87 — tuned so real drafted
 // XIs go ~8-10 wins and 14-0 stays mythical; playoffs draw elite 82-92 sides)

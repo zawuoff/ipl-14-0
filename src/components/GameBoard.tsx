@@ -60,7 +60,8 @@ import {
   roomReady,
   roomSeats,
 } from "@/lib/game/room";
-import { useT, localiseMargin, ordinal } from "@/lib/i18n";
+import { dailySpins } from "@/lib/game/daily";
+import { useT, localiseMargin, ordinal, translate } from "@/lib/i18n";
 import {
   challengeInviteText,
   readChallengeRoom,
@@ -117,36 +118,6 @@ function oneRowPerPlayer(pool: PlayerSeason[]): PlayerSeason[] {
   return [...best.values()].sort((a, b) => b.overall - a.overall);
 }
 
-function hashStr(s: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return h >>> 0;
-}
-function mulberry(a: number) {
-  return function () {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function dailySpinsLocal(date: string): string[] {
-  const pool = ALL_TEAMS.map((t) => t.teamId).sort();
-  // The "14-0" seed prefix is frozen: it must match convex/daily.ts exactly,
-  // and changing it would deal a different squad for a date people already played.
-  const rng = mulberry(hashStr("14-0:" + date));
-  const copy = [...pool];
-  const out: string[] = [];
-  while (out.length < 11 && copy.length) {
-    out.push(copy.splice(Math.floor(rng() * copy.length), 1)[0]);
-  }
-  return out;
-}
 
 function randomSpins(): string[] {
   // every team-season now has a full real squad — uniform across all 156
@@ -264,7 +235,7 @@ export function GameBoard({
         (initialSpins && initialSpins.length === 11
           ? [...initialSpins]
           : m === "daily"
-            ? (dailyQuery?.spins as string[] | undefined) ?? dailySpinsLocal(today)
+            ? (dailyQuery?.spins as string[] | undefined) ?? dailySpins(today)
             : randomSpins());
       const seed = makeSeed(spins);
       const diff = opts?.difficulty ?? difficulty;
@@ -627,7 +598,7 @@ export function GameBoard({
       const tag = draft.mode === "daily" ? ` Daily ${today}` : "";
       const origin = typeof window !== "undefined" ? window.location.origin : SITE_URL;
       const url = withVia(`${origin}/r/${draft.seed}`, via);
-      return `BuildXI · IPL Draft${tag} — ${head}\n${boxes}\n${draft.difficulty} · ${url}\nCan you go 14-0?`;
+      return `BuildXI · IPL Draft${tag} — ${head}\n${boxes}\n${translate("en", `difficulty.${draft.difficulty}`)} · ${url}\nCan you go 14-0?`;
     },
     [draft, result, today]
   );

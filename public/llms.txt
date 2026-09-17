@@ -13,7 +13,7 @@
 
 - 156 real IPL team-seasons from 2008 to 2025, each a squad of twelve: 1,872 player-seasons across 436 players.
 - Eleven spins, one pick from each squad, at most four overseas players.
-- Settings: Rookie (3 re-spins, weaker opposition), Pro (1 re-spin), Legend (no re-spins, ratings hidden until you pick, stronger opposition).
+- Settings: Easy (3 re-spins, weaker opposition), Medium (1 re-spin), Hard (no re-spins, ratings hidden until you pick, stronger opposition).
 - A season is 14 league games simulated ball by ball; the top four reach the playoffs.
 - Today's challenge gives everyone the same eleven opening squads and resets at midnight IST.
 - Available in English and Hindi.

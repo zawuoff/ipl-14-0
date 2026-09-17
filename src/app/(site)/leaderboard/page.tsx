@@ -69,14 +69,14 @@ export default function LeaderboardPage() {
 
         <Section title="How the board is ranked">
           <P>
-            Wins alone would put a lucky 11–3 on Rookie above a hard-won title on Legend, so the
+            Wins alone would put a lucky 11–3 on Easy above a hard-won title on Hard, so the
             board sorts seasons into three groups first and ranks within each.
           </P>
           <List ordered>
             <li>
               <strong className="text-white font-semibold">Perfect seasons.</strong> Any 14–0 league
               record, even one that went on to lose in the playoffs. Among them, the harder setting
-              ranks higher (Legend, then Pro, then Rookie), then a season that also won the title,
+              ranks higher (Hard, then Medium, then Easy), then a season that also won the title,
               then net run rate.
             </li>
             <li>

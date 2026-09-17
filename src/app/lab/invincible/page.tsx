@@ -76,7 +76,7 @@ export default function InvincibleLab() {
       </div>
 
       {/* the screen it lands on: a real unbeaten season */}
-      <PageBand eyebrow="Classic · Pro" title="An unbeaten season" tone="trophy" />
+      <PageBand eyebrow="Classic · Medium" title="An unbeaten season" tone="trophy" />
 
       <div className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-4 lg:pt-6 pb-12">
         <div className="-mx-5 lg:mx-0 lg:rounded-card lg:overflow-hidden bg-surface text-white px-5 py-6 lg:px-9 lg:py-9 flex flex-col xl:flex-row xl:items-end gap-6 xl:gap-10">
