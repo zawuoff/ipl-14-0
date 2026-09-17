@@ -21,17 +21,18 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   },
 
   /* ------------------------------------------------------------------ home */
-  "home.headline.mobile": {
-    en: "Draft an all-time IPL XI. Then try to win every single game.",
-    hi: "IPL की ऑल-टाइम XI चुनिए। फिर हर एक मैच जीतकर दिखाइए।",
+  // One headline at every width. The mobile and desktop variants that used to
+  // live here were both in the DOM at once — CSS chose between them, so a
+  // crawler read all three sentences as one run-on line, and on desktop the
+  // heaviest element on the page named neither IPL, nor draft, nor the game.
+  "home.headline": {
+    en: "Draft an all-time IPL XI",
+    hi: "IPL की ऑल-टाइम XI चुनिए",
   },
-  "home.headline.desktop": {
-    en: "The scoreboard nobody has filled in yet.",
-    hi: "वो स्कोरबोर्ड जो आज तक कोई नहीं भर पाया।",
-  },
+  // The scoreboard line earned its keep, so it lands here as the hook.
   "home.sub": {
-    en: "Spin real IPL squads from 2008 to 2025, take one player from each, and play a full season. Win all fourteen and the board reads 14–0.",
-    hi: "2008 से 2025 तक की असली IPL स्क्वाड घुमाइए, हर एक से एक खिलाड़ी चुनिए, और पूरा सीज़न खेलिए। चौदहों जीत लीजिए और बोर्ड पर लिखा होगा 14–0।",
+    en: "Spin real IPL squads from 2008 to 2025, take one player from each, and play a full season. Win all fourteen and the board reads 14–0 — nobody has done it yet.",
+    hi: "2008 से 2025 तक की असली IPL स्क्वाड घुमाइए, हर एक से एक खिलाड़ी चुनिए, और पूरा सीज़न खेलिए। चौदहों जीत लीजिए और बोर्ड पर लिखा होगा 14–0 — यह आज तक कोई नहीं कर पाया।",
   },
   "home.cta": { en: "Play", hi: "खेलें" },
   "home.multiplayer": { en: "Multiplayer", hi: "मल्टीप्लेयर" },
