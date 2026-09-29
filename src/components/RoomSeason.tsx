@@ -44,6 +44,7 @@ import { analytics } from "@/lib/analytics";
 import { useT, localiseMargin, ordinal } from "@/lib/i18n";
 import { withVia, type ShareVia } from "@/lib/share";
 import { SITE_URL } from "@/lib/site";
+import { CommunityCard, RunCommunityPrompt } from "./Community";
 
 function stageWords(stage: string | undefined, t: (k: string) => string): string {
   return t(stage ? `stage.${stage}` : "stage.playoffs");
@@ -798,6 +799,8 @@ export function RoomSeason({ room }: { room: any }) {
             <WhatsAppIcon />
             {t("share.whatsapp")}
           </a>
+          <RunCommunityPrompt />
+          <CommunityCard surface="room" className="max-w-[640px]" />
           <SeasonReport
             result={report}
             forecast={null}

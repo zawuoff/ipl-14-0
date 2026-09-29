@@ -29,6 +29,7 @@ import { SlotSpin } from "./SlotSpin";
 import { Confetti } from "./Confetti";
 import { Invincible } from "./Invincible";
 import { ASKED_KEY, GiftPrompt, useMayAsk } from "./GiftPrompt";
+import { CommunityCard, RunCommunityPrompt } from "./Community";
 import { ShareCard } from "./ShareCard";
 import { usePublishRun } from "./Chrome";
 import { fireworks, prefetchRoar, roar } from "@/lib/sound";
@@ -1383,6 +1384,10 @@ export function GameBoard({
                         onShare={() => setShareOpen("report")}
                         onPlayAgain={() => startDraft(mode, draft.config, { origin: "again" })}
                       />
+                      {/* Missing the top four ends the run here rather than on
+                          the result screen below, so it is asked here too. */}
+                      <RunCommunityPrompt />
+                      <CommunityCard surface="result" className="mt-6 max-w-[640px]" />
                     </>
                   )}
                 </div>
@@ -1471,6 +1476,8 @@ export function GameBoard({
               {invincible && giftAsked && mayAskForGift && draft && (
                 <GiftPrompt seed={draft.seed} deviceId={deviceId()} />
               )}
+              {/* An unbeaten season is the gift prompt's moment, not this one's. */}
+              {!invincible && <RunCommunityPrompt />}
               <PageBand
                 eyebrow={modeLabel}
                 title={headline(result, t)}
@@ -1560,6 +1567,7 @@ export function GameBoard({
                     <p className="text-[13px] leading-5 text-muted text-center">
                       {t("end.playAnotherNote")}
                     </p>
+                    <CommunityCard surface="result" className="mt-3" />
                   </div>
                 </div>
               </div>
