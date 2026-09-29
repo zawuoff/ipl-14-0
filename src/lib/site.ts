@@ -15,7 +15,7 @@ export const SITE_DESCRIPTION =
 /* The BuildXI WhatsApp community. Every invite to it — the arrival ask, the
    ask after a run, the cards and the footer link — reads this one address, and
    renders nothing at all while it is empty. */
-export const WHATSAPP_COMMUNITY_URL = "";
+export const WHATSAPP_COMMUNITY_URL = "https://chat.whatsapp.com/Fx4g2YzBCcn5tZkBSIhtdg";
 
 /* Every page with an address of its own. `dailyChallenge` is the one that is
    not a page: it opens the game straight onto today's squads, and is linked so
