@@ -13,7 +13,9 @@ import { WHATSAPP_COMMUNITY_URL } from "@/lib/site";
    community is the group chat the game keeps for itself. It is offered in
    three ways, each quieter than the last:
 
-   - once, a few seconds after someone first lands on the home page;
+   - a few seconds after landing on the home page — on the first visit and on
+     every return after that, but no more than once a day, so a regular who
+     opens the game five times an evening is asked once, not five times;
    - after a finished run, at most twice in a browser's life and never twice in
      one page load, and never over an unbeaten season, which the gift prompt
      already owns;
@@ -28,12 +30,15 @@ import { WHATSAPP_COMMUNITY_URL } from "@/lib/site";
    against. The cards read nothing at all. */
 
 const JOINED_KEY = "14-0-community-joined";
-const ARRIVAL_KEY = "14-0-community-arrival-asked";
+/* When the welcome ask last went up, in ms. */
+const ARRIVAL_KEY = "14-0-community-arrival-at";
 const RUN_ASKS_KEY = "14-0-community-run-asks";
 
 /* Long enough for the page to land and be looked at, short enough that it
    still reads as a welcome rather than as an interruption. */
 const ARRIVAL_DELAY_MS = 3000;
+/* A returning visitor is asked again once this much time has passed. */
+const ARRIVAL_EVERY_MS = 24 * 60 * 60 * 1000;
 /* The result has to land before anything goes over it. */
 const RUN_DELAY_MS = 1800;
 const RUN_ASKS_EVER = 2;
@@ -160,7 +165,8 @@ function CommunitySheet({
   );
 }
 
-/** The welcome ask: once per browser, a few seconds after landing on the home page. */
+/** The welcome ask: a few seconds after landing on the home page, at most once
+    a day, for first-time and returning visitors alike, until they join. */
 export function ArrivalCommunityPrompt() {
   const [open, setOpen] = useState(false);
 
@@ -168,9 +174,11 @@ export function ArrivalCommunityPrompt() {
     if (!communityOn) return;
     // Someone who went unbeaten and still owes the gift an answer is asked
     // that first; this can wait for another visit.
-    if (joined() || read(ARRIVAL_KEY) === "1" || owesAnAnswer()) return;
+    if (joined() || owesAnAnswer()) return;
+    const last = Number(read(ARRIVAL_KEY) ?? "0") || 0;
+    if (Date.now() - last < ARRIVAL_EVERY_MS) return;
     const id = setTimeout(() => {
-      write(ARRIVAL_KEY, "1");
+      write(ARRIVAL_KEY, String(Date.now()));
       analytics.communityPromptShown("arrival");
       setOpen(true);
     }, ARRIVAL_DELAY_MS);
