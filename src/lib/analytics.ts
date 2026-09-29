@@ -164,4 +164,20 @@ export const analytics = {
   soundToggled(muted: boolean) {
     track("sound_toggled", { muted });
   },
+
+  // The WhatsApp community. `surface` is which ask or which card it came from,
+  // so the two pop-ups can be judged against the cards that stay on the page.
+  communityPromptShown(surface: CommunitySurface) {
+    track("community_prompt_shown", { surface });
+  },
+
+  communityPromptDismissed(surface: CommunitySurface) {
+    track("community_prompt_dismissed", { surface });
+  },
+
+  communityJoinClicked(surface: CommunitySurface) {
+    track("community_join_clicked", { surface });
+  },
 };
+
+export type CommunitySurface = "arrival" | "run" | "home" | "result" | "room" | "footer";

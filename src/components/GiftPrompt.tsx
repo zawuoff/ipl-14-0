@@ -280,7 +280,7 @@ export function GiftPrompt({
   );
 }
 
-function CloseButton({ onClick, label }: { onClick: () => void; label: string }) {
+export function CloseButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
     <button
       type="button"

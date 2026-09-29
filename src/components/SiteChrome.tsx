@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { CommunityFooterLink } from "./Community";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { IconButton, Logo, SoundIcon } from "@/components/ui";
@@ -139,6 +140,7 @@ export function SiteFooter() {
             <GameLink href={PAGES.dailyChallenge}>{t("home.daily.title")}</GameLink>
             <FooterLink href={PAGES.multiplayer}>{t("home.friend.title")}</FooterLink>
             <FooterLink href={PAGES.leaderboard}>{t("nav.leaderboard")}</FooterLink>
+            <CommunityFooterLink className={footerLink} />
           </FooterColumn>
           <FooterColumn title={t("footer.learn")}>
             <FooterLink href={PAGES.howItWorks}>{t("nav.howItWorks")}</FooterLink>

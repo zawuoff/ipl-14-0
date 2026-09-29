@@ -12,6 +12,11 @@ export const SITE_TITLE = "BuildXI · Draft an all-time IPL XI and try to go 14�
 export const SITE_DESCRIPTION =
   "A free IPL draft game. Spin real IPL squads from 2008 to 2025, pick one player from each, and play a full season. Nobody has gone 14–0 yet.";
 
+/* The BuildXI WhatsApp community. Every invite to it — the arrival ask, the
+   ask after a run, the cards and the footer link — reads this one address, and
+   renders nothing at all while it is empty. */
+export const WHATSAPP_COMMUNITY_URL = "https://chat.whatsapp.com/Fx4g2YzBCcn5tZkBSIhtdg";
+
 /* Every page with an address of its own. `dailyChallenge` is the one that is
    not a page: it opens the game straight onto today's squads, and is linked so
    that a reader can get there in one tap. */

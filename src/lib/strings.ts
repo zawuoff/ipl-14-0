@@ -11,6 +11,20 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   "nav.playAFriend": { en: "Multiplayer", hi: "मल्टीप्लेयर" },
   "nav.howRatingsWork": { en: "How ratings work", hi: "रेटिंग कैसे बनती है" },
   "nav.allTimeXI": { en: "All-time XI", hi: "ऑल-टाइम XI" },
+  // The WhatsApp community: one set of words for both asks and every card.
+  "community.eyebrow": { en: "Community", hi: "कम्युनिटी" },
+  "community.title": {
+    en: "Talk cricket with people who love it",
+    hi: "क्रिकेट के दीवानों के साथ क्रिकेट की बातें",
+  },
+  "community.runTitle": { en: "Enjoyed that? Come talk cricket", hi: "मज़ा आया? आइए क्रिकेट की बातें करें" },
+  "community.body": {
+    en: "Join others who love cricket in the BuildXI WhatsApp community. Talk cricket, argue about XIs and share your best runs.",
+    hi: "BuildXI की WhatsApp कम्युनिटी में क्रिकेट के दूसरे दीवानों से जुड़िए। क्रिकेट की बातें कीजिए, XI पर बहस कीजिए और अपने सबसे अच्छे रन शेयर कीजिए।",
+  },
+  "community.join": { en: "Join on WhatsApp", hi: "WhatsApp पर जुड़ें" },
+  "community.notNow": { en: "Not now", hi: "अभी नहीं" },
+  "community.footer": { en: "WhatsApp community", hi: "WhatsApp कम्युनिटी" },
   "footer.play": { en: "Play", hi: "खेलें" },
   "footer.playClassic": { en: "Play a season", hi: "सीज़न खेलें" },
   "footer.learn": { en: "Learn", hi: "जानें" },

@@ -44,6 +44,7 @@ import { useShareOpened } from "@/lib/share";
 import Link from "next/link";
 import { BoardRows, type Row } from "@/components/Leaderboard";
 import { SiteFooter, SiteNav } from "@/components/SiteChrome";
+import { ArrivalCommunityPrompt, CommunityCard } from "@/components/Community";
 import { PAGES, SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
 
 type Screen = "home" | "game";
@@ -150,6 +151,10 @@ export default function Home() {
       {/* Somebody who went unbeaten and closed the card prompt without filling
           it in gets asked once more, here, and then never again. */}
       {show === "home" && <UnclaimedGift />}
+
+      {/* The welcome ask belongs to the home page only: a deep link into a
+          game, or a tap on Play inside three seconds, never sees it. */}
+      {show === "home" && <ArrivalCommunityPrompt />}
 
       {show === "game" && (
         <GameBoard
@@ -517,6 +522,10 @@ function HomeScreen({
           <Step n={2} title={t("home.step2.title")} body={t("home.step2.body")} />
           <Step n={3} title={t("home.step3.title")} body={t("home.step3.body")} />
         </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-[1440px] px-5 lg:px-16 pt-10 lg:pt-16">
+        <CommunityCard surface="home" />
       </section>
 
       <HomeFaq />
