@@ -46,8 +46,8 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   },
   // The scoreboard line earned its keep, so it lands here as the hook.
   "home.sub": {
-    en: "Spin real IPL squads from 2008 to 2025, take one player from each, and play a full season. Win all fourteen and the board reads 14–0 — nobody has done it yet.",
-    hi: "2008 से 2025 तक की असली IPL स्क्वाड घुमाइए, हर एक से एक खिलाड़ी चुनिए, और पूरा सीज़न खेलिए। चौदहों जीत लीजिए और बोर्ड पर लिखा होगा 14–0 — यह आज तक कोई नहीं कर पाया।",
+    en: "Spin real IPL squads from 2008 to 2025, take one player from each, and play a full season. Win all fourteen and the board reads 14–0. Nobody has done it yet.",
+    hi: "2008 से 2025 तक की असली IPL स्क्वाड घुमाइए, हर एक से एक खिलाड़ी चुनिए, और पूरा सीज़न खेलिए। चौदहों जीत लीजिए और बोर्ड पर लिखा होगा 14–0। यह आज तक कोई नहीं कर पाया।",
   },
   "home.cta": { en: "Play", hi: "खेलें" },
   "home.multiplayer": { en: "Multiplayer", hi: "मल्टीप्लेयर" },
