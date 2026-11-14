@@ -194,43 +194,46 @@ function TopBar({
     return () => window.clearTimeout(id);
   }, [confirmRestart]);
 
-  /* The drawn design centres the wordmark and balances it: navigation on one
-     side, one action on the other. Three chips crowded down the right-hand end
-     was never the shape of it. The four pages only fit beside the wordmark on
-     a wide screen; below that the trophy stands in for the leaderboard and the
-     footer carries the rest, so the game keeps its one bar on a phone. */
+  /* On a wide screen the wordmark sits at the left edge, where a reader looks
+     for home, and the pages take the centre of the bar, balanced by the
+     actions on the right. The pages only fit on a wide screen; below that the
+     wordmark keeps the centre, the trophy stands in for the leaderboard and
+     the footer carries the rest, so the game keeps its one bar on a phone. */
   return (
     <header className="bg-band">
       <div className="relative mx-auto w-full max-w-[1440px] px-3 lg:px-10 h-[56px] lg:h-[72px] flex items-center">
-        <div className="flex items-center gap-1 lg:gap-7 min-w-0">
-          <SiteNav className="hidden xl:flex" />
+        {/* Already on the home route, so a click only has to bring the home
+            screen back; the address is still there for everything else. */}
+        <div className="xl:flex-1 xl:basis-0 xl:flex xl:items-center">
+          <Link
+            href="/"
+            onClick={(e) => {
+              if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+              e.preventDefault();
+              if (!inGame) go("home");
+            }}
+            aria-label="BuildXI home"
+            className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 xl:static xl:translate-x-0 xl:translate-y-0"
+          >
+            <Logo className="text-[30px] lg:text-[40px]" />
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-1 min-w-0 lg:hidden">
           <IconButton
             onClick={toggleMuted}
             label={muted ? t("run.soundOff") : t("run.soundOn")}
-            className="w-10 lg:hidden"
+            className="w-10"
           >
             <SoundIcon on={!muted} />
           </IconButton>
-          <LangToggle plain className="lg:hidden w-10 h-9 text-[13px]" />
+          <LangToggle plain className="w-10 h-9 text-[13px]" />
         </div>
 
-        {/* Already on the home route, so a click only has to bring the home
-            screen back; the address is still there for everything else. */}
-        <Link
-          href="/"
-          onClick={(e) => {
-            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-            e.preventDefault();
-            if (!inGame) go("home");
-          }}
-          aria-label="BuildXI home"
-          className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2"
-        >
-          <Logo className="text-[30px] lg:text-[40px]" />
-        </Link>
+        <SiteNav className="hidden xl:flex" />
 
-        <span className="flex-1" />
-        <div className="shrink-0 flex items-center gap-1 lg:gap-3">
+        <span className="flex-1 xl:hidden" />
+        <div className="shrink-0 flex items-center justify-end gap-1 lg:gap-3 xl:flex-1 xl:basis-0">
           <IconButton
             onClick={toggleMuted}
             label={muted ? t("run.soundOff") : t("run.soundOn")}
