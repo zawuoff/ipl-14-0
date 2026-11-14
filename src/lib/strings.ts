@@ -51,7 +51,7 @@ export const STRINGS: Record<string, { en: string; hi: string }> = {
   },
   "home.cta": { en: "Play", hi: "खेलें" },
   "home.multiplayer": { en: "Multiplayer", hi: "मल्टीप्लेयर" },
-  "home.ctaNote": { en: "About 3 minutes. No sign-up.", hi: "करीब 3 मिनट। कोई साइन-अप नहीं।" },
+  "home.ctaNote": { en: "About 3 minutes. No sign-up and completely free.", hi: "करीब 3 मिनट। कोई साइन-अप नहीं और बिल्कुल मुफ़्त।" },
   // The three questions a first-time visitor asks before playing. They are
   // written out on the page and fed to the FAQ structured data from these same
   // strings, so the markup can never describe something a reader cannot see.
