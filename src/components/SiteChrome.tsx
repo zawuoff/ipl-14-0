@@ -21,7 +21,7 @@ const NAV: { href: string; label: string }[] = [
   { href: PAGES.howRatingsWork, label: "nav.howRatingsWork" },
 ];
 
-const navLink = "text-[15px] leading-5 font-medium transition-colors hover:text-accent";
+const navLink = "text-[15px] leading-5 font-medium whitespace-nowrap transition-colors hover:text-accent";
 
 export function SiteNav({ className = "" }: { className?: string }) {
   const t = useT();
@@ -50,16 +50,20 @@ export function SiteHeader() {
   return (
     <header className="bg-band">
       <div className="relative mx-auto w-full max-w-[1440px] px-3 lg:px-10 h-[56px] lg:h-[72px] flex items-center">
+        {/* Wide screens: wordmark at the left edge, the pages in the centre.
+            A phone keeps the wordmark centred above its strip of pages. */}
+        <div className="lg:flex-1 lg:basis-0 lg:flex lg:items-center">
+          <Link
+            href="/"
+            aria-label="BuildXI home"
+            className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 lg:static lg:translate-x-0 lg:translate-y-0"
+          >
+            <Logo className="text-[30px] lg:text-[40px]" />
+          </Link>
+        </div>
         <SiteNav className="hidden lg:flex" />
-        <Link
-          href="/"
-          aria-label="BuildXI home"
-          className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2"
-        >
-          <Logo className="text-[30px] lg:text-[40px]" />
-        </Link>
-        <span className="flex-1" />
-        <div className="shrink-0 flex items-center gap-1 lg:gap-3">
+        <span className="flex-1 lg:hidden" />
+        <div className="shrink-0 flex items-center justify-end gap-1 lg:gap-3 lg:flex-1 lg:basis-0">
           <IconButton
             onClick={toggleMuted}
             label={muted ? t("run.soundOff") : t("run.soundOn")}
