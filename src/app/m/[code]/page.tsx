@@ -70,7 +70,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
             aria-label="BuildXI"
             className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2"
           >
-            <Logo className="text-[30px] lg:text-[40px]" />
+            <Logo wordmark={false} className="text-[30px] lg:text-[40px]" />
           </Link>
           <span className="flex-1" />
           <div className="shrink-0 flex items-center gap-1 lg:gap-3">

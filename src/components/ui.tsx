@@ -680,15 +680,18 @@ export function LogoMark({ className = "" }: { className?: string }) {
   );
 }
 
-/** The logo: mark plus BUILDXI, set in Teko like everything else on the board. */
-export function Logo({ className = "" }: { className?: string }) {
+/** The logo: mark plus BUILDXI, set in Teko like everything else on the board.
+    The top bars pass wordmark={false} and show the mark alone. */
+export function Logo({ className = "", wordmark = true }: { className?: string; wordmark?: boolean }) {
   return (
     <span className={`inline-flex items-center gap-[0.267em] ${className}`}>
       <LogoMark className="w-[1.333em] h-[1.067em] shrink-0" />
-      <span className="font-display font-bold leading-[0.867em] tracking-[0.01em] pt-[0.133em]">
-        <span className="text-white">BUILD</span>
-        <span className="text-accent">XI</span>
-      </span>
+      {wordmark && (
+        <span className="font-display font-bold leading-[0.867em] tracking-[0.01em] pt-[0.133em]">
+          <span className="text-white">BUILD</span>
+          <span className="text-accent">XI</span>
+        </span>
+      )}
     </span>
   );
 }
